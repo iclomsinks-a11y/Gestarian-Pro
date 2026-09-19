@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print-hidden,
+  .no-print,
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+  .print-clean-page {
+    position: static !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  /* Asegurar que el logo del taller en impresión/PDF nunca supere los 250x250px */
+  .issuer-logo-box {
+    width: 250px !important;
+    height: 250px !important;
+    max-width: 250px !important;
+    max-height: 250px !important;
+    min-width: 250px !important;
+    min-height: 250px !important;
+  }
+  .issuer-logo-img {
+    width: 250px !important;
+    height: 250px !important;
+    max-width: 250px !important;
+    max-height: 250px !important;
+    object-fit: contain !important;
+  }
+}

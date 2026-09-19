@@ -1,0 +1,90 @@
+================================================================================
+ MANUAL DE PROCEDIMIENTO: SOLICITUDES DE PRESUPUESTO Y CONFIRMACIÓN DE CITAS
+                         DESDE EL ÁREA DE CLIENTES
+================================================================================
+
+1. ORIGEN DE LA SOLICITUD: EL PORTAL / ÁREA DE CLIENTES
+--------------------------------------------------------------------------------
+El cliente accede a su Área de Clientes (mediante su NIF/CIF o teléfono) y cuenta 
+con un apartado específico para solicitar presupuestos de reparación, mantenimiento 
+o revisión de su vehículo.
+
+Paso 1.1: Cumplimentación del Formulario por el Cliente
+  - Datos del Vehículo: Matrícula, Marca, Modelo y Año/Kilometraje.
+  - Motivo de la Solicitud: Descripción detallada de la avería, síntomas, ruidos o 
+    servicios deseados (ej: "Revisión anual, cambio de pastillas de freno y correa").
+  - Evidencias visuales: Adjunta fotos de la ficha técnica, daños en carrocería o 
+    testigos del cuadro de mandos.
+
+Paso 1.2: Clasificación y Reserva Automática de ID (S26XXXX)
+  - Al pulsar "Enviar Solicitud", el sistema calcula el número correlativo global:
+    * ID de Solicitud: S26XXXX (ejemplo: S260004).
+    * Cálculo: Año actual ("26") + Número del último documento/solicitud registrado + 1.
+  - REGLA DE ORO DE RESERVA DE DÍGITOS:
+    Los cuatro dígitos generados ("0004") quedan automáticamente BLOQUEADOS Y 
+    RESERVADOS en el sistema. Ningún otro presupuesto nuevo independiente podrá 
+    utilizar esta numeración; está destinada única y exclusivamente al presupuesto 
+    que derive de esta solicitud.
+
+
+2. RECEPCIÓN Y TRATAMIENTO EN EL PANEL DEL TALLER
+--------------------------------------------------------------------------------
+Paso 2.1: Entrada en la sección "Solicitudes"
+  - La solicitud aparece instantáneamente en la bandeja de "Solicitudes" del taller.
+  - Se genera un aviso acústico y una notificación en el centro de alertas de la app.
+  - La tarjeta de solicitud muestra el ID S26XXXX, el expediente reservado E26XXXX,
+    nombre del cliente, teléfono, matrícula, fotos y descripción.
+
+Paso 2.2: Elaboración del Presupuesto con Número Reservado
+  - El usuario del taller pulsa el botón "Presupuestar" en la tarjeta de solicitud.
+  - El sistema abre el Creador de Documentos con:
+    * Número de Presupuesto asignado automáticamente: P260004 (mismo sufijo reservado).
+    * Número de Expediente asignado: E260004.
+    * Datos fiscales del cliente y del vehículo ya pre-cargados.
+    * Fotografías adjuntas vinculadas al expediente.
+  - El taller añade los conceptos: mano de obra, recambios, tiempos y precios.
+  - El taller define la "Fecha Propuesta de Entrega" (día y franja horaria sugerida 
+    para que el cliente traiga el vehículo).
+  - Se guarda y se emite el presupuesto.
+
+
+3. ENVÍO, NEGOCIACIÓN Y CONFIRMACIÓN DE LA CITA
+--------------------------------------------------------------------------------
+Paso 3.1: Envío del Presupuesto al Cliente
+  - El taller envía el presupuesto al cliente por correo electrónico o enlace de acceso.
+  - El presupuesto cambia a estado "enviado" y queda inmutable (bloqueado).
+
+Paso 3.2: Notificación y Visualización en el Área de Clientes
+  - El cliente recibe la alerta y visualiza el presupuesto desglosado en su portal.
+  - Junto al presupuesto aparece de forma destacada la "Fecha Propuesta de Entrega".
+
+Paso 3.3: Opciones de Decisión del Cliente
+  Opción A: Aceptación Completa (Presupuesto + Fecha)
+    - El cliente hace clic en el botón verde:
+      "ACEPTAR PRESUPUESTO Y FECHA PROPUESTA"
+    - Efectos automáticos:
+      * El presupuesto pasa a estado "aceptado" con marca temporal (acceptedAt).
+      * La fecha de cita queda formalmente CONFIRMADA en la agenda del taller.
+      * En el Roadmap del taller, la parada 1 [PRESUPUESTO] se ilumina en VERDE con 
+        el texto "PRESUPUESTO ACEPTADO".
+      * El expediente avanza a la parada 2 [CITA] con check verde, listo para recepcionar 
+        el coche.
+
+  Opción B: Contrapropuesta de Fecha por el Cliente
+    - Si el cliente está de acuerdo con el precio pero no puede acudir el día sugerido,
+      pulsa "Proponer otra fecha".
+    - Selecciona su fecha/hora preferida en el selector de calendario y envía la propuesta.
+    - En el Roadmap del taller aparece la alerta: "El cliente propone: DD/MM/AAAA".
+    - El taller dispone de las opciones:
+      * "Aceptar Fecha del Cliente": Se valida la cita inmediatamente.
+      * "Contraproponer Fecha": El taller ofrece una alternativa hasta alcanzar acuerdo.
+
+Paso 3.4: Formalización de la Cita
+  - Una vez confirmada la fecha por ambas partes, la cita queda registrada en:
+    1. La Agenda General del Taller.
+    2. La parada 2 del Roadmap del Expediente E26XXXX.
+    3. El panel de citas del Área de Cliente con recordatorio de entrega.
+
+================================================================================
+Fin del Documento Técnico - Gestarian ERP Taller
+================================================================================

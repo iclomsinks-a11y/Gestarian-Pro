@@ -1,0 +1,6 @@
+{
+  "name": "GESTARIAN",
+  "description": "Gestión minimalista de presupuestos y facturas para autónomos y pequeñas empresas con control fiscal e informes trimestrales.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

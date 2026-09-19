@@ -1,0 +1,132 @@
+================================================================================
+          MANUAL TÉCNICO Y OPERATIVO: FLUJO DEL ROADMAP DE EXPEDIENTES
+                               GESTARIAN TALLER
+================================================================================
+
+1. INTRODUCCIÓN Y ARQUITECTURA DEL EXPEDIENTE
+--------------------------------------------------------------------------------
+En Gestarian, toda intervención sobre un vehículo se articula mediante un 
+Expediente Único (formato E26XXXX, donde "26" representa el año en curso y "XXXX" 
+los 4 dígitos correlativos del presupuesto que lo originó).
+
+El Roadmap es el panel de control interactivo que monitoriza visualmente el estado
+y ciclo de vida completo de cada vehículo en el taller a través de sus 6 paradas 
+secuenciales:
+  [1. RECEPCIÓN] -> [2. PRESUPUESTO] -> [3. CITA] -> [4. TALLER] -> [5. FACTURACIÓN] -> [6. COBRO]
+
+El estado global de un expediente en el listado se rige por un código de colores 
+estricto en su borde y tarjeta:
+  - AZUL: En curso / Presupuesto emitido o pendiente de inicio.
+  - AMARILLO: En taller / Orden de trabajo en ejecución.
+  - VERDE (CERRADO): Factura emitida y formalmente enviada al cliente.
+  - ROJO: Factura emitida, enviada y vencida con cobro pendiente (Impagada).
+
+
+2. DETALLE PASO A PASO DE LAS 6 PARADAS DEL ROADMAP
+--------------------------------------------------------------------------------
+
+PARADA 1: RECEPCIÓN
+-------------------
+- Función: Registro de entrada inicial del vehículo y toma de requerimientos.
+- Estado: Siempre en VERDE ("RECEPCIÓN REGISTRADA") al estar formalizado el expediente.
+- Al pulsar / desplegar la parada, muestra de forma detallada:
+  1. Datos del Cliente: Nombre o Razón Social, Teléfono de contacto y Correo electrónico.
+  2. Datos del Vehículo: Marca, Modelo, Tipo de vehículo y Matrícula troquelada en placa oficial.
+  3. Trabajos a Realizar propuestos por el Cliente: Descripción íntegra y detallada 
+     de las averías reportadas, síntomas o intervenciones solicitadas (aceite, frenos, 
+     distribución, chapa y pintura, etc.).
+  4. Fotografías de Recepción: Galería de imágenes adjuntas (estado de entrada, daños 
+     previos, testigos del cuadro o ficha técnica).
+
+
+PARADA 2: PRESUPUESTO
+---------------------
+- Función: Valoración económica, desglose de partidas y aprobación formal.
+- Estados:
+  * Borrador: El taller cumplimenta las partidas, precios de mano de obra y piezas.
+  * Enviado: El presupuesto se envía al cliente por email/PDF/WhatsApp. 
+    Al enviarse, el presupuesto queda BLOQUEADO (isLocked = true) para garantizar
+    la inalterabilidad legal del documento.
+  * Aceptación Exclusiva por el Cliente: El taller no puede auto-aceptar presupuestos.
+    El cliente es el único facultado para aceptar el presupuesto desde su Área de 
+    Clientes privada.
+- Feedback visual en el Roadmap:
+  * Mientras no esté aceptado: Indicador en color ámbar/azul con texto "Pendiente 
+    de aceptación por el cliente".
+  * Una vez aceptado: La parada se ilumina en VERDE ESMERALDA con la insignia 
+    "PRESUPUESTO ACEPTADO" y la fecha de aceptación.
+
+
+PARADA 3: CITA / RECEPCIÓN DEL VEHÍCULO
+---------------------------------------
+- Función: Gestión del día y hora de entrega física del vehículo en las 
+  instalaciones del taller.
+- Negociación de Cita:
+  * Propuesta inicial del Taller: Se fija una "Fecha Propuesta de Entrega" al 
+    elaborar el presupuesto.
+  * Validación / Contrapropuesta del Cliente: El cliente puede aceptar la fecha o 
+    solicitar una fecha alternativa desde su portal.
+  * Aceptación por el Taller: Si el cliente plantea otra fecha, el Roadmap muestra 
+    la propuesta con botones directos para que el taller la acepte o contraproponga.
+- Feedback visual en el Roadmap:
+  * Fecha confirmada: Se muestra la fecha y hora validada con check verde.
+  * Permite el avance hacia la entrada efectiva del vehículo en taller.
+
+
+PARADA 4: TALLER (ÓRDENES DE TRABAJO Y REPARACIÓN)
+--------------------------------------------------
+- Función: Asignación mecánica y control de la ejecución técnica.
+- Fases operativas:
+  1. "Enviar a Taller": Se genera la Orden de Trabajo (OT), vinculando las líneas 
+     del presupuesto a los operarios o mecánicos asignados.
+  2. "En Reparación": El vehículo está físicamente en boxes/elevador. Se registran 
+     los tiempos y posibles incidencias con fotos y notas de taller.
+  3. "Finalizar Reparación": El mecánico o jefe de taller marca los trabajos como 
+     completados.
+- Feedback visual en el Roadmap:
+  * Mientras está en taller: Fondo ámbar de trabajo activo.
+  * Al finalizar: Icono de verificación verde "REPARACIÓN FINALIZADA".
+
+
+PARADA 5: FACTURACIÓN
+---------------------
+- Función: Conversión legal de la orden de trabajo finalizada a Factura Oficial 
+  (F26XXXX), heredando el número reservado del expediente.
+- Requisitos de activación:
+  * No se puede facturar hasta que la parada "Taller" esté en estado "Reparación Finalizada".
+- Envío de Factura:
+  * Tras generarse la factura (en formato A4 legal con desglose de base imponible, 
+    IVA 21%, retención IRPF si aplica y forma de pago), el taller debe enviarla al 
+    cliente (facturaSentAt).
+- Feedback visual en el Roadmap:
+  * Factura generada pero no enviada: Estado pendiente de notificación.
+  * Factura enviada al cliente: La parada Facturación se ilumina en VERDE ESMERALDA 
+    mostrando el texto "FACTURA ENVIADA" con la fecha y hora exacta debajo.
+
+
+PARADA 6: COBRO Y CIERRE DEL EXPEDIENTE
+---------------------------------------
+- Función: Registro de cobro íntegro o fraccionado mediante Recibos Oficiales 
+  (R26XXXX, 2R26XXXX, 3R26XXXX...).
+- Medios de pago: Transferencia, Tarjeta, Efectivo o Domiciliación.
+- Criterio de Expediente Cerrado:
+  * Un expediente se traslada a la pestaña "Expedientes Cerrados" exclusivamente 
+    cuando:
+    1. La reparación ha concluido.
+    2. La factura ha sido efectivamente generada y ENVIADA al cliente.
+    3. El ciclo administrativo queda completado.
+
+
+3. ACCIONES COMPLEMENTARIAS DENTRO DEL ROADMAP
+--------------------------------------------------------------------------------
+- Datos del Expediente: Acceso rápido a la ficha técnica del vehículo, titular, 
+  matrícula, CIF/NIF, teléfono y dirección fiscal.
+- Galería de Imágenes: Visualización en alta resolución de las fotografías de 
+  recepción, daños y recambios aportadas por el cliente o fotografiadas en taller.
+- Trazabilidad Documental: Botones de acceso directo para visualizar o imprimir 
+  el Presupuesto (P26XXXX), Orden de Trabajo (OT) y Factura (F26XXXX) en formato 
+  oficial A4 con logotipo del taller.
+
+================================================================================
+Fin del Documento Técnico - Gestarian ERP Taller
+================================================================================
