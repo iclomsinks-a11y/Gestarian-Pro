@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserCheck, Smartphone, Lock, Mail, FileText, ArrowRight, ShieldCheck, CheckCircle2, Building, AlertCircle, Wrench, Users, LogOut, Check } from 'lucide-react';
+import { X, UserCheck, Smartphone, Lock, Mail, FileText, ArrowRight, ShieldCheck, CheckCircle2, Building, AlertCircle, Wrench, Users, LogOut, Check, Code2 } from 'lucide-react';
 import { Client, AppUser, Employee, GestarianDocument } from '../types';
 
 interface AccessSelectorModalProps {
@@ -29,7 +29,13 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
   onNavigateToTaller,
   onOpenNewUserModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'cliente' | 'autorizado' | 'usuario'>('cliente');
+  const [activeTab, setActiveTab] = useState<'cliente' | 'autorizado' | 'usuario' | 'desarrollador'>('cliente');
+
+  // Estado tab Desarrollador
+  const [devPin, setDevPin] = useState('');
+  const [devUnlocked, setDevUnlocked] = useState(false);
+  const [devPinError, setDevPinError] = useState('');
+  const DEV_PIN = '050525'; // PIN maestro desarrollador (chmbia en producción)
 
   // Formulario cliente
   const [clientEmail, setClientEmail] = useState('');
@@ -156,7 +162,7 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
         </div>
 
         {/* Pestañas de Selección */}
-        <div className="grid grid-cols-3 border-b border-[#E2E0D8] bg-white text-center">
+        <div className="grid grid-cols-4 border-b border-[#E2E0D8] bg-white text-center">
           <button
             type="button"
             onClick={() => setActiveTab('cliente')}
@@ -197,6 +203,19 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
           >
             <UserCheck className="w-4 h-4 text-[#0F2942] shrink-0" />
             <span className="truncate">Titular / Taller</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('desarrollador')}
+            className={`py-3 px-2 sm:px-4 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+              activeTab === 'desarrollador'
+                ? 'border-orange-500 text-orange-700 bg-orange-50'
+                : 'border-transparent text-[#64748B] hover:text-orange-700'
+            }`}
+          >
+            <Code2 className="w-4 h-4 text-orange-500 shrink-0" />
+            <span className="truncate">Dev</span>
           </button>
         </div>
 
@@ -456,6 +475,83 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
+            </div>
+          ) : activeTab === 'desarrollador' ? (
+            <div className="space-y-4">
+              <div className="p-3.5 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3 text-xs text-orange-900">
+                <Code2 className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold">Acceso Desarrollador</h4>
+                  <p className="mt-0.5 text-[11px] text-orange-800 leading-relaxed">
+                    Area restringida para el equipo de desarrollo. Introduce el PIN de 6 digitos para acceder al panel de diagnostico del sistema.
+                  </p>
+                </div>
+              </div>
+
+              {!devUnlocked ? (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (devPin === DEV_PIN) {
+                    setDevUnlocked(true);
+                    setDevPinError('');
+                  } else {
+                    setDevPinError('PIN incorrecto. Acceso denegado.');
+                    setDevPin('');
+                  }
+                }} className="space-y-3">
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3 top-2.5 text-orange-400" />
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={devPin}
+                      onChange={(e) => setDevPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="PIN de 6 digitos"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm font-mono bg-white border border-orange-300 rounded-lg focus:outline-none focus:border-orange-500 tracking-[0.4em]"
+                    />
+                  </div>
+                  {devPinError && (
+                    <p className="text-xs text-red-600 font-semibold">{devPinError}</p>
+                  )}
+                  <button type="submit" className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                    <Lock className="w-4 h-4" />
+                    <span>Verificar PIN</span>
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-xs font-bold">Acceso Dev concedido</span>
+                  </div>
+
+                  <div className="bg-slate-900 text-emerald-400 rounded-xl p-4 font-mono text-[11px] space-y-1.5 leading-relaxed max-h-80 overflow-y-auto">
+                    <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-2">--- Sistema GESTARIAN Debug Panel ---</p>
+                    <p><span className="text-slate-500">App Version:</span> 2.6.0-fusion</p>
+                    <p><span className="text-slate-500">Build:</span> {new Date().toISOString().split('T')[0]}</p>
+                    <p><span className="text-slate-500">User ID:</span> {user.id || 'N/A'}</p>
+                    <p><span className="text-slate-500">User Role:</span> {user.role || 'boss'}</p>
+                    <p><span className="text-slate-500">Tier:</span> {user.currentTier || 'pro'}</p>
+                    <p><span className="text-slate-500">Supabase URL:</span> {import.meta.env.VITE_SUPABASE_URL || 'No configurada'}</p>
+                    <p><span className="text-slate-500">Resend Email:</span> {import.meta.env.VITE_APP_EMAIL_FROM || 'No configurado'}</p>
+                    <p><span className="text-slate-500">Base URL:</span> {import.meta.env.VITE_APP_BASE_URL || window.location.origin}</p>
+                    <p><span className="text-slate-500">Gemini Key:</span> {import.meta.env.VITE_GEMINI_API_KEY ? '[configurado]' : '[NO configurado]'}</p>
+                    <p><span className="text-slate-500">Plate API Key:</span> {import.meta.env.VITE_PLATE_RECOGNIZER_API_KEY ? '[configurado]' : '[NO configurado]'}</p>
+                    <p><span className="text-slate-500">Clientes:</span> {clients.length}</p>
+                    <p><span className="text-slate-500">Empleados:</span> {(user.employees || []).length}</p>
+                    <p><span className="text-slate-500">LocalStorage:</span> {(() => { try { return `${(JSON.stringify(localStorage)).length} bytes`; } catch { return 'N/A'; } })()}</p>
+                    <p className="text-slate-400 text-[10px] uppercase tracking-wider mt-3">--- Fin Panel Dev ---</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => { setDevUnlocked(false); setDevPin(''); }}
+                    className="text-xs text-orange-600 hover:underline cursor-pointer"
+                  >
+                    Cerrar sesion dev
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

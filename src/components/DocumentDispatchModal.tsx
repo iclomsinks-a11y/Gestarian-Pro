@@ -4,8 +4,7 @@ import {
   Sparkles, Smartphone, CheckCircle2, ShieldCheck, ArrowRight, Loader2
 } from 'lucide-react';
 import { GestarianDocument, Client, AppUser } from '../types';
-import { buildDocumentDispatchPayload, DispatchResult } from '../services/documentDispatchService';
-import { sendDocumentEmail } from '../services/emailService';
+import { buildDocumentDispatchPayload, DispatchResult, sendDocumentViaApi } from '../services/documentDispatchService';
 
 interface DocumentDispatchModalProps {
   isOpen: boolean;
@@ -61,43 +60,28 @@ export const DocumentDispatchModal: React.FC<DocumentDispatchModalProps> = ({
       setIsSent(true);
       if (onSentConfirmed) onSentConfirmed();
     } else {
-      // Envío directo con Resend API
+      // Envio directo con Resend API via /api/send-document-dispatch
       setIsSendingResend(true);
       setResendStatusMessage(null);
       try {
-        const result = await sendDocumentEmail(
-          client.email || 'correo@empresa.com',
-          client.name,
-          doc.type,
-          doc.number || 'DOC-2026',
-          doc.total || 0,
-          {
-            shortUrl: dispatch.shortUrl,
-            trackingUrl: dispatch.trackingUrl,
-            clientPortalUrl: dispatch.clientPortalDownloadUrl,
-            userLogoUrl: dispatch.userLogoUrl,
-            userName: currentUser.fullName,
-            observations: doc.notes,
-          }
-        );
-
+        const result = await sendDocumentViaApi(dispatch, doc, currentUser);
         if (result.success) {
           setIsSent(true);
-          setResendStatusMessage('¡Correo enviado con éxito mediante Resend API!');
+          setResendStatusMessage(
+            result.isSimulated
+              ? 'Simulado correctamente (configura RESEND_API_KEY para envio real).'
+              : '¡Correo enviado con exito mediante Resend!'
+          );
           if (onSentConfirmed) onSentConfirmed();
         } else {
-          // fallback mailto
-          if (dispatch.actionUrl) {
-            window.open(dispatch.actionUrl, '_blank', 'noopener,noreferrer');
-          }
+          // Fallback: abrir mailto
+          if (dispatch.actionUrl) window.open(dispatch.actionUrl, '_blank', 'noopener,noreferrer');
           setIsSent(true);
-          setResendStatusMessage('Cliente de correo local abierto como respaldo.');
+          setResendStatusMessage(`Respaldo: cliente de correo local abierto. (${result.error || ''})`);
           if (onSentConfirmed) onSentConfirmed();
         }
       } catch {
-        if (dispatch.actionUrl) {
-          window.open(dispatch.actionUrl, '_blank', 'noopener,noreferrer');
-        }
+        if (dispatch.actionUrl) window.open(dispatch.actionUrl, '_blank', 'noopener,noreferrer');
         setIsSent(true);
       } finally {
         setIsSendingResend(false);

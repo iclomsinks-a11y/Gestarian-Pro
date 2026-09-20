@@ -34,6 +34,7 @@ import { ImageCustomizerModal } from './components/ImageCustomizerModal';
 import { ClientAppLandingModal } from './components/ClientAppLandingModal';
 import { AccessSelectorModal } from './components/AccessSelectorModal';
 import { ClientPortalModal } from './components/ClientPortalModal';
+import { LandingPage } from './components/LandingPagePublica';
 import {
   AppUser,
   Client,
@@ -90,6 +91,17 @@ export default function App() {
   const [appointments, setAppointments] = useState<Appointment[]>(getStoredAppointments);
   const [notifications, setNotifications] = useState<InternalNotification[]>(getStoredNotifications);
   const [currentTier, setCurrentTier] = useState<'lite' | 'pro' | 'enterprise'>(user.currentTier || 'pro');
+
+  // Landing pública — visible cuando el usuario no ha configurado la app
+  const isUserConfigured = Boolean(user.fullName && user.fullName.trim().length > 2);
+  const [showLanding, setShowLanding] = useState<boolean>(() => {
+    // Si hay ?view= param en URL, no mostrar landing (enlace directo)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') || params.get('exp') || params.get('doc')) return false;
+    }
+    return !Boolean(localStorage.getItem('gestarian_user_configured'));
+  });
 
   // Configuración del Sistema (GitHub repo, API Plate Recognizer)
   const [systemConfig, setSystemConfig] = useState<SystemConfig>({
@@ -793,6 +805,22 @@ export default function App() {
     }
   };
 
+  // Mostrar landing si el usuario no ha configurado la app
+  if (showLanding) {
+    return (
+      <LandingPage
+        onEnterApp={() => {
+          localStorage.setItem('gestarian_user_configured', 'true');
+          setShowLanding(false);
+          // Si no tiene usuario configurado, abrir el modal de configuración
+          if (!isUserConfigured) {
+            setTimeout(() => setIsNewUserOpen(true), 500);
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <div className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#F8F7F3] text-[#1E293B] font-sans selection:bg-[#0F2942] selection:text-white">
       {/* Botón Flotante Pantalla Completa (Bottom Left) */}
@@ -1350,6 +1378,21 @@ export default function App() {
           setClients((prev) => [newClient, ...prev]);
           syncClientToSupabase(newClient);
           showToast(`Cliente ${newClient.name} (ID #${newClient.clientNumber}) guardado correctamente`);
+          // Enviar email de bienvenida si tiene email
+          if (newClient.email) {
+            const appBaseUrl = window.location.origin;
+            fetch('/api/send-client-welcome', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientName: newClient.name,
+                clientEmail: newClient.email,
+                portalUrl: `${appBaseUrl}/?view=app-clientes`,
+                appUrl: `${appBaseUrl}/?view=app`,
+                workshopName: user.fullName,
+              }),
+            }).catch(() => {});
+          }
           setIsNewClientFullScreenOpen(false);
           setEditingClient(null);
         }}
@@ -1370,6 +1413,21 @@ export default function App() {
           setClients((prev) => [newClient, ...prev]);
           syncClientToSupabase(newClient);
           showToast(`Cliente ${newClient.name} (ID #${newClient.clientNumber}) guardado correctamente`);
+          // Email bienvenida
+          if (newClient.email) {
+            const appBaseUrl = window.location.origin;
+            fetch('/api/send-client-welcome', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientName: newClient.name,
+                clientEmail: newClient.email,
+                portalUrl: `${appBaseUrl}/?view=app-clientes`,
+                appUrl: `${appBaseUrl}/?view=app`,
+                workshopName: user.fullName,
+              }),
+            }).catch(() => {});
+          }
           setIsNewClientFullScreenOpen(false);
           setEditingClient(null);
           handleClientSelectForDoc(newClient, 'presupuesto');
@@ -1408,16 +1466,17 @@ export default function App() {
         clients={clients}
         documents={documents}
         hasApiKey={systemConfig.hasPlateRecognizerKey}
-        onStartBudget={({ plate, vehicleType, vehicleBrand, vehicleModel, client, vehicleImages }) => {
+        onStartBudgetWithVehicle={({ plate, vehicleModel, client, vehicleImages, isManualEntry }) => {
           setIsPlateScannerOpen(false);
           const clientToUse = client || null;
-          
+
           if (client) {
             showToast(`Cliente en memoria: ${client.name} (${plate})`);
           } else {
             showToast(`Matrícula ${plate} lista con ${vehicleImages.length} foto(s) para expediente`);
           }
-          
+
+          const newExp = `EXP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
           setBudgetToConvert({
             id: '',
             type: 'presupuesto',
@@ -1440,7 +1499,7 @@ export default function App() {
             items: [
               {
                 id: `item_${Date.now()}`,
-                description: `Reparación y pintura de chapa - Vehículo ${plate}${vehicleBrand ? ` (${vehicleBrand} ${vehicleModel || ''})` : ''}`,
+                description: `Reparación y servicios - Vehículo ${plate}${vehicleModel ? ` (${vehicleModel})` : ''}`,
                 quantity: 1,
                 unitPrice: 0,
                 amount: 0,
@@ -1456,15 +1515,13 @@ export default function App() {
             total: 0,
             status: 'borrador',
             isLocked: false,
-            expediente: `EXP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            expediente: newExp,
             vehiclePlate: plate,
-            vehicleType: vehicleType,
-            vehicleBrand: vehicleBrand,
             vehicleModel: vehicleModel,
             vehicleImages: vehicleImages,
-            notes: `Presupuesto taller chapa y pintura DM CAR. Vehículo matrícula ${plate}. ${vehicleImages.length} foto(s) de daños adjuntas al expediente. Validez: 30 días.`,
+            notes: `Vehículo matrícula ${plate}. ${vehicleImages.length} foto(s) adjuntas al expediente. Validez: 30 días.${isManualEntry ? ' (Entrada manual)' : ''}`,
           });
-          
+
           setCreateDocType('presupuesto');
           setIsCreateDocOpen(true);
         }}

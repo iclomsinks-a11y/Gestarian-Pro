@@ -373,6 +373,12 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   })();
 
   const handleConfirmCita = () => {
+    // BLOQUEO SECUENCIAL: requiere presupuesto aceptado
+    if (!isPresupuestoGreen) {
+      if (onShowToast) onShowToast('El presupuesto debe estar aceptado antes de confirmar la cita.', 4000);
+      setConfirmToast({ stepName: 'Cita', message: 'Parada bloqueada: el presupuesto no ha sido aceptado todavia. Pide aceptacion al cliente antes de continuar.', isLocked: true });
+      return;
+    }
     const updated: GestarianDocument = {
       ...doc,
       citaStatus: 'cita_confirmada',
@@ -380,11 +386,17 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     };
     onUpdateDocument(updated);
     if (onShowToast) {
-      onShowToast('Cita confirmada. Vehículo entregado en taller y listo para reparar.');
+      onShowToast('Cita confirmada. Vehiculo entregado en taller y listo para reparar.');
     }
   };
 
   const handleEnviarATaller = () => {
+    // BLOQUEO SECUENCIAL: requiere cita confirmada
+    if (!isCitaGreen) {
+      if (onShowToast) onShowToast('Debes confirmar la cita antes de enviar al taller.', 4000);
+      setConfirmToast({ stepName: 'Taller', message: 'Parada bloqueada: la cita no ha sido confirmada todavia. Confirma la cita primero.', isLocked: true });
+      return;
+    }
     setShowAssignEmployeeModal(true);
   };
 
@@ -423,9 +435,15 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   };
 
   const handleFacturar = () => {
+    // BLOQUEO SECUENCIAL: requiere taller finalizado
+    if (!isTallerGreen) {
+      if (onShowToast) onShowToast('La reparacion debe estar finalizada antes de generar la factura.', 4000);
+      setConfirmToast({ stepName: 'Facturacion', message: 'Parada bloqueada: la reparacion no esta finalizada todavia. Finaliza los trabajos en el taller primero.', isLocked: true });
+      return;
+    }
     onGenerateInvoiceFromBudget(doc);
     if (onShowToast) {
-      onShowToast('Factura generada y guardada con éxito. Recuerde enviarla al cliente por WhatsApp o Email para activar el Cobro.', 6000);
+      onShowToast('Factura generada y guardada con exito. Recuerde enviarla al cliente por WhatsApp o Email para activar el Cobro.', 6000);
     }
   };
 
