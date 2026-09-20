@@ -716,6 +716,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       id: `cli_temp_${Date.now()}`,
       name: quickName.trim() || "Empresa",
       cif: quickCif.trim().toUpperCase(),
+      address: quickAddress || "",
       phone: quickPhone.trim(),
       email: email,
       isAutonomo: quickIsAutonomo,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, 
@@ -28,76 +28,76 @@ import {
   Clock
 } from 'lucide-react';
 
-// Características ampliadas para Gestarian Lite
+// CaracterÃ­sticas ampliadas para Gestarian Lite
 const LITE_FEATURES_AMPLIADAS = [
   {
     icon: Smartphone,
-    titulo: 'Facturación Ultrarrápida en tu Smartphone',
-    desc: 'Emite facturas legales en menos de 30 segundos directamente desde tu teléfono móvil. Diseñado específicamente para profesionales en movilidad, sin instalaciones complejas ni curva de aprendizaje.'
+    titulo: 'FacturaciÃ³n UltrarrÃ¡pida en tu Smartphone',
+    desc: 'Emite facturas legales en menos de 30 segundos directamente desde tu telÃ©fono mÃ³vil. DiseÃ±ado especÃ­ficamente para profesionales en movilidad, sin instalaciones complejas ni curva de aprendizaje.'
   },
   {
     icon: Lock,
     titulo: 'Cumplimiento Veri*Factu Oficial',
-    desc: 'Adaptado a la normativa fiscal y antifraude de la Agencia Tributaria. Genera registros inalterables y códigos QR reglamentarios en cada factura para total tranquilidad ante cualquier inspección.'
+    desc: 'Adaptado a la normativa fiscal y antifraude de la Agencia Tributaria. Genera registros inalterables y cÃ³digos QR reglamentarios en cada factura para total tranquilidad ante cualquier inspecciÃ³n.'
   },
   {
     icon: Send,
-    titulo: 'Envío Directo por WhatsApp sin Guardar Contactos',
-    desc: 'Envía facturas y presupuestos directamente al chat de WhatsApp de tu cliente con un formato elegante y profesional, sin saturar la agenda de tu teléfono.'
+    titulo: 'EnvÃ­o Directo por WhatsApp sin Guardar Contactos',
+    desc: 'EnvÃ­a facturas y presupuestos directamente al chat de WhatsApp de tu cliente con un formato elegante y profesional, sin saturar la agenda de tu telÃ©fono.'
   },
   {
     icon: FileText,
-    titulo: 'Generación de PDF Profesional',
+    titulo: 'GeneraciÃ³n de PDF Profesional',
     desc: 'Documentos en formato PDF vectorial de alta calidad, limpios y con tus datos fiscales perfectamente organizados, listos para descargar, imprimir o archivar.'
   },
   {
     icon: Zap,
     titulo: '100% Gratuito: Cero Costes y Cero Comisiones',
-    desc: 'Descarga libre y uso ilimitado sin cuotas mensuales, sin comisiones por factura y sin sorpresas. Una herramienta esencial para autónomos que empiezan o necesitan agilidad inmediata.'
+    desc: 'Descarga libre y uso ilimitado sin cuotas mensuales, sin comisiones por factura y sin sorpresas. Una herramienta esencial para autÃ³nomos que empiezan o necesitan agilidad inmediata.'
   },
   {
     icon: Clock,
     titulo: 'Arranque Inmediato y Modo Ligero',
-    desc: 'Carga instantánea en cualquier navegador móvil o de escritorio. No consume espacio ni batería en tu dispositivo gracias a su arquitectura ultraligera.'
+    desc: 'Carga instantÃ¡nea en cualquier navegador mÃ³vil o de escritorio. No consume espacio ni baterÃ­a en tu dispositivo gracias a su arquitectura ultraligera.'
   }
 ];
 
-// Características ampliadas para Gestarian Pro
+// CaracterÃ­sticas ampliadas para Gestarian Pro
 const PRO_FEATURES_AMPLIADAS = [
   {
     icon: Database,
-    titulo: 'Nube Documental y Facturación VeriFactu',
-    desc: 'Facturas oficiales, presupuestos y albaranes centralizados 24/7 en la nube. Máxima seguridad de almacenamiento, acceso inmediato desde móvil, tablet o PC y total cumplimiento legal con códigos QR antifraude.'
+    titulo: 'Nube Documental y FacturaciÃ³n VeriFactu',
+    desc: 'Facturas oficiales, presupuestos y albaranes centralizados 24/7 en la nube. MÃ¡xima seguridad de almacenamiento, acceso inmediato desde mÃ³vil, tablet o PC y total cumplimiento legal con cÃ³digos QR antifraude.'
   },
   {
     icon: Send,
-    titulo: 'Gestión Directa y Envíos a Gestoría',
-    desc: 'Olvídate de buscar, imprimir o escanear papeles a final de trimestre. GESTARIAN compila automáticamente todas tus facturas de ingresos, gastos y modelos, y los remite en un solo clic al correo de tu gestor.'
+    titulo: 'GestiÃ³n Directa y EnvÃ­os a GestorÃ­a',
+    desc: 'OlvÃ­date de buscar, imprimir o escanear papeles a final de trimestre. GESTARIAN compila automÃ¡ticamente todas tus facturas de ingresos, gastos y modelos, y los remite en un solo clic al correo de tu gestor.'
   },
   {
     icon: PieChart,
-    titulo: 'Balance Económico y Financiero en Vivo',
-    desc: 'Controla al céntimo la salud económica de tu negocio. Visualiza ingresos brutos, gastos operativos, beneficio neto e IVA devengado en tiempo real con estadísticas y gráficos automáticos.'
+    titulo: 'Balance EconÃ³mico y Financiero en Vivo',
+    desc: 'Controla al cÃ©ntimo la salud econÃ³mica de tu negocio. Visualiza ingresos brutos, gastos operativos, beneficio neto e IVA devengado en tiempo real con estadÃ­sticas y grÃ¡ficos automÃ¡ticos.'
   },
   {
     icon: Camera,
-    titulo: 'Registro de Gastos mediante OCR Móvil',
-    desc: 'Haz una foto a cualquier ticket de combustible, factura de proveedor o recambio desde tu smartphone. La IA extrae automáticamente el CIF, razón social, base imponible e IVA sin que tengas que teclear nada.'
+    titulo: 'Registro de Gastos mediante OCR MÃ³vil',
+    desc: 'Haz una foto a cualquier ticket de combustible, factura de proveedor o recambio desde tu smartphone. La IA extrae automÃ¡ticamente el CIF, razÃ³n social, base imponible e IVA sin que tengas que teclear nada.'
   },
   {
     icon: Car,
-    titulo: 'Lectura de Matrículas OCR (para talleres)',
-    desc: 'Apunta con la cámara al vehículo para cargar en segundos su ficha técnica, histórico de averías, cliente titular y presupuestos asociados, agilizando la recepción al máximo.'
+    titulo: 'Lectura de MatrÃ­culas OCR (para talleres)',
+    desc: 'Apunta con la cÃ¡mara al vehÃ­culo para cargar en segundos su ficha tÃ©cnica, histÃ³rico de averÃ­as, cliente titular y presupuestos asociados, agilizando la recepciÃ³n al mÃ¡ximo.'
   },
   {
     icon: Receipt,
     titulo: 'Control de Abonos, Deudas y Pagos Parciales',
-    desc: 'Seguimiento riguroso de cobros pendientes, entregas a cuenta y pagos fraccionados con emisión instantánea de recibos oficiales de liquidación para mayor tranquilidad.'
+    desc: 'Seguimiento riguroso de cobros pendientes, entregas a cuenta y pagos fraccionados con emisiÃ³n instantÃ¡nea de recibos oficiales de liquidaciÃ³n para mayor tranquilidad.'
   },
   {
     icon: FileText,
     titulo: 'Presupuestos Online con Enlaces WhatsApp y Email',
-    desc: 'Crea presupuestos en segundos y compártelos con enlaces ultra-cortos interactivos. Tus clientes los revisan y aprueban al instante con un simple toque desde su smartphone.'
+    desc: 'Crea presupuestos en segundos y compÃ¡rtelos con enlaces ultra-cortos interactivos. Tus clientes los revisan y aprueban al instante con un simple toque desde su smartphone.'
   },
   {
     icon: Calendar,
@@ -107,41 +107,41 @@ const PRO_FEATURES_AMPLIADAS = [
   {
     icon: Sparkles,
     titulo: 'Roadmap Visual de Estados de Trabajo',
-    desc: 'Panel visual por fases (recepción, diagnóstico, chapa, pintura, mecánica, listo para entrega) para que todo el equipo sepa qué hacer en cada instante.'
+    desc: 'Panel visual por fases (recepciÃ³n, diagnÃ³stico, chapa, pintura, mecÃ¡nica, listo para entrega) para que todo el equipo sepa quÃ© hacer en cada instante.'
   },
   {
     icon: Lock,
-    titulo: 'Emisión Automática de Recibos y Proformas',
-    desc: 'Genera documentación mercantil profesional y numerada con validez legal, lista para firmar o enviar por medios telemáticos a tus clientes.'
+    titulo: 'EmisiÃ³n AutomÃ¡tica de Recibos y Proformas',
+    desc: 'Genera documentaciÃ³n mercantil profesional y numerada con validez legal, lista para firmar o enviar por medios telemÃ¡ticos a tus clientes.'
   }
 ];
 
-// Características ampliadas para Gestarian Enterprise (Próximamente)
+// CaracterÃ­sticas ampliadas para Gestarian Enterprise (PrÃ³ximamente)
 const ENTERPRISE_FEATURES_AMPLIADAS = [
   {
     icon: Building2,
-    titulo: 'Gestoría Online Integral en Tiempo Real',
-    desc: 'Tu asesoría fiscal conectada en vivo a tu plataforma. Los asesores acceden directamente a libros contables, retenciones y modelos fiscales oficiales sin intercambiar archivos por email.'
+    titulo: 'GestorÃ­a Online Integral en Tiempo Real',
+    desc: 'Tu asesorÃ­a fiscal conectada en vivo a tu plataforma. Los asesores acceden directamente a libros contables, retenciones y modelos fiscales oficiales sin intercambiar archivos por email.'
   },
   {
     icon: Activity,
-    titulo: 'Business Intelligence y Análisis Predictivo',
-    desc: 'Cuadro de mando integral con previsión de tesorería, rentabilidad por operario, análisis de márgenes por servicio y detección automática de cuellos de botella.'
+    titulo: 'Business Intelligence y AnÃ¡lisis Predictivo',
+    desc: 'Cuadro de mando integral con previsiÃ³n de tesorerÃ­a, rentabilidad por operario, anÃ¡lisis de mÃ¡rgenes por servicio y detecciÃ³n automÃ¡tica de cuellos de botella.'
   },
   {
     icon: Boxes,
-    titulo: 'Control Automatizado de Stock y Almacén',
-    desc: 'Trazabilidad de recambios con avisos automáticos de rotura de stock, pedidos directos a distribuidores y valoración continua de inventario.'
+    titulo: 'Control Automatizado de Stock y AlmacÃ©n',
+    desc: 'Trazabilidad de recambios con avisos automÃ¡ticos de rotura de stock, pedidos directos a distribuidores y valoraciÃ³n continua de inventario.'
   },
   {
     icon: Layers,
-    titulo: 'Gestión Multi-Sede y Multi-Taller',
-    desc: 'Supervisa varios centros de trabajo, talleres o delegaciones desde un panel único centralizado con informes comparativos y permisos por delegación.'
+    titulo: 'GestiÃ³n Multi-Sede y Multi-Taller',
+    desc: 'Supervisa varios centros de trabajo, talleres o delegaciones desde un panel Ãºnico centralizado con informes comparativos y permisos por delegaciÃ³n.'
   },
   {
     icon: Users,
     titulo: 'Portal de Empleados y Control Horario',
-    desc: 'Fichaje digital homologado, gestión de turnos, partes de trabajo por operario y liquidación automática de productividades.'
+    desc: 'Fichaje digital homologado, gestiÃ³n de turnos, partes de trabajo por operario y liquidaciÃ³n automÃ¡tica de productividades.'
   },
   {
     icon: Sparkles,
@@ -181,7 +181,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px]" />
       </div>
 
-      {/* Oscurecimiento cinematográfico global al expandir cualquiera de las tarjetas */}
+      {/* Oscurecimiento cinematogrÃ¡fico global al expandir cualquiera de las tarjetas */}
       <AnimatePresence>
         {expandedCard && (
           <motion.div
@@ -208,7 +208,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
           </div>
           <div className="flex gap-4">
             <button 
-              onClick={() => navigate('/login')}
+              onClick={onEnterApp}
               className="px-6 py-3 lg:px-8 lg:py-3.5 text-base lg:text-lg font-bold rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
             >
               <span>Acceso a Roles</span>
@@ -226,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             className="inline-flex items-center gap-2 lg:gap-3 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-6 lg:mb-8"
           >
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-xs lg:text-sm font-medium tracking-wide">Asistente de IA y automatización a tu servicio</span>
+            <span className="text-xs lg:text-sm font-medium tracking-wide">Asistente de IA y automatizaciÃ³n a tu servicio</span>
           </motion.div>
 
           <motion.h1 
@@ -235,7 +235,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 leading-[1.15]"
           >
-            Automatiza tu documentación y <br className="hidden md:block" />
+            Automatiza tu documentaciÃ³n y <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-500 to-cyan-400">
               recupera tu tiempo libre
             </span>
@@ -247,14 +247,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             transition={{ duration: 0.4, delay: 0.2 }}
             className="text-base sm:text-lg md:text-xl text-slate-300 max-w-3xl mb-8 leading-relaxed font-normal mx-auto"
           >
-            Ahorra horas de trabajo a la semana automatizando la documentación de tu empresa con GESTARIAN. 
-            Una plataforma asistida por IA y accesible 100% online con solo el móvil.
+            Ahorra horas de trabajo a la semana automatizando la documentaciÃ³n de tu empresa con GESTARIAN. 
+            Una plataforma asistida por IA y accesible 100% online con solo el mÃ³vil.
             <span className="text-slate-400 block mt-2 font-medium">
-              Tu oficina en la nube con acceso total en todo momento, estés donde estés.
+              Tu oficina en la nube con acceso total en todo momento, estÃ©s donde estÃ©s.
             </span>
           </motion.p>
 
-          {/* Botón CTA Acceder x2 */}
+          {/* BotÃ³n CTA Acceder x2 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: expandedCard ? 0.2 : 1, y: 0 }}
@@ -262,7 +262,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             className="mb-14"
           >
             <button
-              onClick={() => navigate('/login')}
+              onClick={onEnterApp}
               className="inline-flex items-center gap-3 px-8 py-4 sm:px-10 sm:py-5 text-lg sm:text-xl font-extrabold rounded-2xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white shadow-2xl shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer border border-indigo-400/30"
             >
               <span>Acceso a Roles</span>
@@ -270,7 +270,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </button>
           </motion.div>
 
-          {/* Grid de Productos (3 Tarjetas con animación y despliegue individual) */}
+          {/* Grid de Productos (3 Tarjetas con animaciÃ³n y despliegue individual) */}
           <div className="relative w-full max-w-[96vw] xl:max-w-[1500px]">
             <div className={`flex overflow-x-auto md:grid gap-6 w-full snap-x snap-mandatory pt-8 pb-8 md:pb-0 px-4 md:px-0 transition-all duration-500 ${
               expandedCard ? 'md:grid-cols-1 justify-items-center' : 'md:grid-cols-[1fr_1.2fr_1fr]'
@@ -302,7 +302,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   </p>
 
                   <ul className="space-y-3 mb-8">
-                    {['Cero configuración', 'Envío por WhatsApp', 'PDF profesional', 'Descarga y uso 100% gratis'].map((feat, i) => (
+                    {['Cero configuraciÃ³n', 'EnvÃ­o por WhatsApp', 'PDF profesional', 'Descarga y uso 100% gratis'].map((feat, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         <span className="xl:whitespace-nowrap">{feat}</span>
@@ -361,17 +361,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                   <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-white">Gestarian Pro</h3>
                   <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
-                    Haz un presupuesto online y olvídate del resto de documentación, GESTARIAN lo hace por ti. 
-                    Confirma la factura y la enviamos junto a tus informes a tu gestoría.
+                    Haz un presupuesto online y olvÃ­date del resto de documentaciÃ³n, GESTARIAN lo hace por ti. 
+                    Confirma la factura y la enviamos junto a tus informes a tu gestorÃ­a.
                   </p>
 
                   <ul className="space-y-3 mb-8">
                     {[
-                      'Además de lo ofrecido en Lite...',
-                      'Nube para documentación, facturas y gastos',
-                      'Balance económico y financiero',
-                      'Gestión directa y envíos a gestoría',
-                      'Registro de gastos OCR y matrículas',
+                      'AdemÃ¡s de lo ofrecido en Lite...',
+                      'Nube para documentaciÃ³n, facturas y gastos',
+                      'Balance econÃ³mico y financiero',
+                      'GestiÃ³n directa y envÃ­os a gestorÃ­a',
+                      'Registro de gastos OCR y matrÃ­culas',
                       'Roadmap visual y control de citas'
                     ].map((feat, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
@@ -426,16 +426,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   </div>
 
                   <div className="absolute top-8 right-8 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold tracking-wide border border-purple-500/20">
-                    Evolución de Pro
+                    EvoluciÃ³n de Pro
                   </div>
                   
                   <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-slate-200">Gestarian Enterprise</h3>
                   <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
-                    Tu gestoría completa online con acceso en tiempo real a todos tus documentos e informes, gráficos y control de stocks.
+                    Tu gestorÃ­a completa online con acceso en tiempo real a todos tus documentos e informes, grÃ¡ficos y control de stocks.
                   </p>
 
                   <ul className="space-y-3 mb-8">
-                    {['Gestoría completa online en vivo', 'Gráficos y análisis de negocio', 'Estadísticas y control de stocks', 'Multi-taller y multi-sede'].map((feat, i) => (
+                    {['GestorÃ­a completa online en vivo', 'GrÃ¡ficos y anÃ¡lisis de negocio', 'EstadÃ­sticas y control de stocks', 'Multi-taller y multi-sede'].map((feat, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
                         <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
                         <span className="xl:whitespace-nowrap">{feat}</span>
@@ -456,14 +456,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       disabled
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-slate-800/40 text-slate-500 border border-slate-700/50 cursor-not-allowed"
                     >
-                      Acceder (Próx.)
+                      Acceder (PrÃ³x.)
                     </button>
                     <button
                       disabled
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-slate-800/40 text-slate-500 border border-slate-700/50 cursor-not-allowed flex items-center justify-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Descargar (Próx.)</span>
+                      <span>Descargar (PrÃ³x.)</span>
                     </button>
                   </div>
                   </motion.div>
@@ -471,7 +471,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               </AnimatePresence>
             </div>
 
-            {/* VISTAS EXPANDIDAS CON ANIMACIÓN: DESPLAZAMIENTO A LA IZQUIERDA Y CRECIMIENTO HACIA LA DERECHA */}
+            {/* VISTAS EXPANDIDAS CON ANIMACIÃ“N: DESPLAZAMIENTO A LA IZQUIERDA Y CRECIMIENTO HACIA LA DERECHA */}
 
             {/* 1. EXPANDIDO: GESTARIAN LITE */}
             <AnimatePresence>
@@ -506,7 +506,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                         <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3">Gestarian Lite</h2>
                         <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-                          Facturación en 30 segundos desde tu móvil con homologación Veri*Factu. 
+                          FacturaciÃ³n en 30 segundos desde tu mÃ³vil con homologaciÃ³n Veri*Factu. 
                           Pensado para que no pierdas ni un minuto en papeleo innecesario.
                         </p>
 
@@ -516,7 +516,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                             <span>Descarga y Uso Gratuito</span>
                           </div>
                           <p className="text-xs text-slate-300 leading-relaxed">
-                            Sin registro de tarjeta bancaria, sin suscripciones mensuales y sin límite de facturas. Totalmente libre para ti.
+                            Sin registro de tarjeta bancaria, sin suscripciones mensuales y sin lÃ­mite de facturas. Totalmente libre para ti.
                           </p>
                         </div>
                       </div>
@@ -524,11 +524,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       <div className="text-xs text-slate-400 space-y-1">
                         <p className="flex items-center gap-1.5 text-emerald-400 font-semibold">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Envío de facturas por WhatsApp</span>
+                          <span>EnvÃ­o de facturas por WhatsApp</span>
                         </p>
                         <p className="flex items-center gap-1.5 text-slate-400">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span>Generador de PDF instantáneo</span>
+                          <span>Generador de PDF instantÃ¡neo</span>
                         </p>
                       </div>
                     </div>
@@ -585,7 +585,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       onClick={() => setExpandedCard(null)}
                       className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer order-last sm:order-first"
                     >
-                      ← Volver a todas las versiones
+                      â† Volver a todas las versiones
                     </button>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -643,8 +643,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                         <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3">Gestarian Pro</h2>
                         <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-                          Haz un presupuesto online y olvídate del resto de documentación, GESTARIAN lo hace por ti. 
-                          Solo confirma la factura y nosotros nos encargamos de enviarla junto a tus informes trimestrales y anuales a tu gestoría.
+                          Haz un presupuesto online y olvÃ­date del resto de documentaciÃ³n, GESTARIAN lo hace por ti. 
+                          Solo confirma la factura y nosotros nos encargamos de enviarla junto a tus informes trimestrales y anuales a tu gestorÃ­a.
                         </p>
 
                         <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2 mb-6">
@@ -653,7 +653,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                             <span>Tranquilidad y tiempo libre</span>
                           </div>
                           <p className="text-xs text-slate-300 leading-relaxed">
-                            Diseñado para talleres y pymes que quieren delegar el papeleo en la tecnología y recuperar su tiempo libre.
+                            DiseÃ±ado para talleres y pymes que quieren delegar el papeleo en la tecnologÃ­a y recuperar su tiempo libre.
                           </p>
                         </div>
                       </div>
@@ -722,12 +722,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       onClick={() => setExpandedCard(null)}
                       className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer order-last sm:order-first"
                     >
-                      ← Volver a todas las versiones
+                      â† Volver a todas las versiones
                     </button>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                       <button
-                        onClick={() => navigate('/login')}
+                        onClick={onEnterApp}
                         className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Shield className="w-4 h-4 text-indigo-400" />
@@ -783,13 +783,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                         </div>
 
                         <div className="inline-block px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold tracking-wider border border-purple-500/30 mb-3">
-                          PRÓXIMA EVOLUCIÓN EMPRESARIAL
+                          PRÃ“XIMA EVOLUCIÃ“N EMPRESARIAL
                         </div>
 
                         <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3">Gestarian Enterprise</h2>
                         <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-                          Evolución avanzada de Gestarian Pro. Conecta a tu gestoría en tiempo real, 
-                          controla stocks automatizados, supervisa múltiples sedes y analiza tu negocio con business intelligence predictivo.
+                          EvoluciÃ³n avanzada de Gestarian Pro. Conecta a tu gestorÃ­a en tiempo real, 
+                          controla stocks automatizados, supervisa mÃºltiples sedes y analiza tu negocio con business intelligence predictivo.
                         </p>
 
                         <div className="p-4 rounded-2xl bg-purple-950/30 border border-purple-500/20 space-y-2 mb-6">
@@ -798,7 +798,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                             <span>En Fase de Desarrollo</span>
                           </div>
                           <p className="text-xs text-slate-400 leading-relaxed">
-                            Actualmente en diseño para grandes talleres y redes comerciales. Los botones de acceso y descarga se habilitarán muy pronto.
+                            Actualmente en diseÃ±o para grandes talleres y redes comerciales. Los botones de acceso y descarga se habilitarÃ¡n muy pronto.
                           </p>
                         </div>
                       </div>
@@ -828,7 +828,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                           <span>Capacidades Avanzadas de Enterprise</span>
                         </h3>
                         <span className="text-xs font-semibold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20">
-                          Próximamente
+                          PrÃ³ximamente
                         </span>
                       </div>
 
@@ -861,13 +861,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     </motion.div>
                   </div>
 
-                  {/* Botones inferiores de Enterprise (no operativos todavía) */}
+                  {/* Botones inferiores de Enterprise (no operativos todavÃ­a) */}
                   <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <button
                       onClick={() => setExpandedCard(null)}
                       className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer order-last sm:order-first"
                     >
-                      ← Volver a todas las versiones
+                      â† Volver a todas las versiones
                     </button>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -876,7 +876,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                         className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800/50 text-slate-500 font-bold text-xs sm:text-sm border border-slate-700/50 cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         <Download className="w-4 h-4" />
-                        <span>Descargar Enterprise (Próximamente)</span>
+                        <span>Descargar Enterprise (PrÃ³ximamente)</span>
                       </button>
 
                       <button
@@ -895,9 +895,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
         </main>
 
         <footer className="py-8 text-center text-sm text-slate-500">
-          <p>© {new Date().getFullYear()} Gestarian. Todos los derechos reservados.</p>
+          <p>Â© {new Date().getFullYear()} Gestarian. Todos los derechos reservados.</p>
         </footer>
       </div>
     </div>
   );
 };
+

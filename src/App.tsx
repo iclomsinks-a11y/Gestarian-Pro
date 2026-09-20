@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from './components/Header';
 import { TierCards } from './components/TierCards';
@@ -149,7 +149,7 @@ export default function App() {
 
   // Notificación global breve sin animación y con sonido suave
   const [toastMessage, setToastMessage] = useState<string>('');
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (msg: string, duration = 3500) => {
     playGentleChime();
@@ -1045,7 +1045,7 @@ export default function App() {
             onNewBudget={handleOpenNewBudget}
             onAcceptBudget={handleAcceptBudget}
             onConvertToInvoice={handleConvertToInvoice}
-            onEditBudgetPricing={handleOpenBudgetPricingReview}
+            onEditBudgetPricing={(doc) => handleOpenBudgetPricingReview(doc.id)}
             onDispatchDoc={handleOpenDocumentDispatch}
           />
         </PlaceholderView>

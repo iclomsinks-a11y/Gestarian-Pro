@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+﻿import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Check, ArrowRight, PlusCircle, MinusCircle, User, Car, Phone, Mail, 
   Calendar, Wrench, Camera, MessageCircle, Printer, Download, Share2, 
@@ -38,7 +38,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   const [showImagesModal, setShowImagesModal] = useState<boolean>(false);
   const [showPaymentsControlModal, setShowPaymentsControlModal] = useState<boolean>(false);
 
-  // Form para negociación de fecha de entrega
+  // Form para negociaciÃ³n de fecha de entrega
   const [showDenyCalendarModal, setShowDenyCalendarModal] = useState<boolean>(false);
   const [counterProposalDate, setCounterProposalDate] = useState<string>(
     doc.proposedDeliveryDate || doc.vehicleDeliveryDate || new Date().toISOString().split('T')[0]
@@ -102,7 +102,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
   const isFacturaGenerada = doc.type === 'factura' || Boolean(doc.convertedToInvoiceId) || doc.facturacionStatus === 'facturado' || doc.facturacionStatus === 'factura_enviada';
   
-  // Factura enviada al cliente (requerido para color verde en Facturación y activar la parada Cobro)
+  // Factura enviada al cliente (requerido para color verde en FacturaciÃ³n y activar la parada Cobro)
   const invoiceSentAt = 
     doc.facturaSentAt || 
     (doc.type === 'factura' ? doc.sentAt : undefined) ||
@@ -145,16 +145,16 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   const isPartiallyPaid = totalPaid > 0 && !isPaid;
 
   // Estados verdes (finalizados) para la dependencia secuencial
-  const isRecepcionGreen = true; // Recepción siempre verde al existir el expediente
+  const isRecepcionGreen = true; // RecepciÃ³n siempre verde al existir el expediente
   const isPresupuestoGreen = isBudgetAccepted;
   const isCitaGreen = isCitaConfirmed;
   const isTallerGreen = isTallerFinalizado;
-  const isFacturacionGreen = isFacturaEnviada; // Facturación verde = FACTURA ENVIADA
+  const isFacturacionGreen = isFacturaEnviada; // FacturaciÃ³n verde = FACTURA ENVIADA
   const isCobroGreen = isPaid;
 
   const phoneClean = (client?.phone || doc.clientPhone || '').replace(/\D/g, '');
 
-  // Fechas y cálculos de mora / impago para la parada de Cobro
+  // Fechas y cÃ¡lculos de mora / impago para la parada de Cobro
   const now = new Date();
   const getDaysDiff = (dateStr?: string) => {
     if (!dateStr) return 0;
@@ -249,7 +249,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   const creatorEmployee = currentUser.employees?.find((e) => e.id === doc.createdByEmployeeId);
 
   // Budget document resolution
-  // Handlers para negociación de fecha de entrega
+  // Handlers para negociaciÃ³n de fecha de entrega
   const handleAcceptProposedDate = () => {
     const now = new Date().toISOString();
     const agreedDate = doc.proposedDeliveryDate || doc.vehicleDeliveryDate || now.split('T')[0];
@@ -411,14 +411,14 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     };
     onUpdateDocument(updated);
     if (onShowToast) {
-      onShowToast(`REPARACIÓN EN PROCESO. Empleado asignado: ${employeeName}`, 6000);
+      onShowToast(`REPARACIÃ“N EN PROCESO. Empleado asignado: ${employeeName}`, 6000);
     }
   };
 
   const handleFinalizarReparacion = () => {
     const canManage = currentUser.role === 'boss' || currentUser.permissions?.manageWorkOrders !== false;
     if (!canManage) {
-      if (onShowToast) onShowToast('No tiene permisos para finalizar órdenes de trabajo.');
+      if (onShowToast) onShowToast('No tiene permisos para finalizar Ã³rdenes de trabajo.');
       return;
     }
 
@@ -430,7 +430,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     };
     onUpdateDocument(updated);
     if (onShowToast) {
-      onShowToast('Reparación finalizada por el operario/superior. Listo para facturar.');
+      onShowToast('ReparaciÃ³n finalizada por el operario/superior. Listo para facturar.');
     }
   };
 
@@ -449,7 +449,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
   const handleSendInvoiceViaWhatsApp = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const targetPhone = phoneClean || prompt('Introduzca el teléfono/móvil para enviar la factura por WhatsApp:', client?.phone || doc.clientPhone || '');
+    const targetPhone = phoneClean || prompt('Introduzca el telÃ©fono/mÃ³vil para enviar la factura por WhatsApp:', client?.phone || doc.clientPhone || '');
     if (!targetPhone) return;
     const clean = targetPhone.replace(/\D/g, '');
     const url = `https://wa.me/${clean.startsWith('34') ? clean : '34' + clean}?text=${encodeURIComponent(
@@ -469,7 +469,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     onUpdateDocument(updatedDoc);
     const dateFormatted = formatInvoiceSentDate(nowIso);
     if (onShowToast) {
-      onShowToast(`Factura enviada por WhatsApp el ${dateFormatted}. Parada Facturación finalizada en verde y parada Cobro activada.`);
+      onShowToast(`Factura enviada por WhatsApp el ${dateFormatted}. Parada FacturaciÃ³n finalizada en verde y parada Cobro activada.`);
     }
   };
 
@@ -477,7 +477,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     if (e) e.stopPropagation();
     const targetEmail = client?.email || doc.clientEmail || prompt('Introduzca el email del cliente para enviar la factura:');
     if (!targetEmail) return;
-    const mailtoUrl = `mailto:${targetEmail}?subject=Factura%20${invoiceNumberOnly}&body=Estimado%20cliente,%20le%20adjuntamos%20su%20factura%20${invoiceNumberOnly}%20por%20importe%20de%20${(doc.total || 0).toFixed(2)}€.%20Puede%20consultarla%20aquí:%20${encodeURIComponent(generateDocumentPdfUrl(invoiceDoc || doc))}`;
+    const mailtoUrl = `mailto:${targetEmail}?subject=Factura%20${invoiceNumberOnly}&body=Estimado%20cliente,%20le%20adjuntamos%20su%20factura%20${invoiceNumberOnly}%20por%20importe%20de%20${(doc.total || 0).toFixed(2)}â‚¬.%20Puede%20consultarla%20aquÃ­:%20${encodeURIComponent(generateDocumentPdfUrl(invoiceDoc || doc))}`;
     window.location.href = mailtoUrl;
 
     const nowIso = new Date().toISOString();
@@ -492,7 +492,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     onUpdateDocument(updatedDoc);
     const dateFormatted = formatInvoiceSentDate(nowIso);
     if (onShowToast) {
-      onShowToast(`Factura enviada por Email el ${dateFormatted}. Parada Facturación finalizada en verde y parada Cobro activada.`);
+      onShowToast(`Factura enviada por Email el ${dateFormatted}. Parada FacturaciÃ³n finalizada en verde y parada Cobro activada.`);
     }
   };
 
@@ -532,7 +532,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       items: [
         {
           id: '1',
-          description: `Recibo de abono parcial / entrega a cuenta para el expediente ${doc.expediente || doc.number} (${doc.vehiclePlate || 'Vehículo'}). Método: ${paymentMethod}.`,
+          description: `Recibo de abono parcial / entrega a cuenta para el expediente ${doc.expediente || doc.number} (${doc.vehiclePlate || 'VehÃ­culo'}). MÃ©todo: ${paymentMethod}.`,
           quantity: 1,
           unitPrice: paymentAmount,
           amount: paymentAmount,
@@ -548,7 +548,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       total: paymentAmount,
       status: 'enviado',
       isLocked: true,
-      notes: `Abono a cuenta registrado el ${paymentDate} mediante ${paymentMethod}.\nTotal presupuestado/facturado: ${totalDoc.toFixed(2)} €.\nTotal acumulado abonado: ${currentTotalPaid.toFixed(2)} €.\nSaldo pendiente restante: ${remainingPending.toFixed(2)} €.`,
+      notes: `Abono a cuenta registrado el ${paymentDate} mediante ${paymentMethod}.\nTotal presupuestado/facturado: ${totalDoc.toFixed(2)} â‚¬.\nTotal acumulado abonado: ${currentTotalPaid.toFixed(2)} â‚¬.\nSaldo pendiente restante: ${remainingPending.toFixed(2)} â‚¬.`,
     };
   };
 
@@ -581,20 +581,20 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     const currentTotalPaid = (doc.payments || []).reduce((acc, p) => acc + p.amount, 0);
     const remainingPending = Math.max(0, totalDoc - currentTotalPaid);
 
-    const targetPhone = phoneClean || prompt('Introduzca el teléfono/móvil para enviar el recibo por WhatsApp:', client?.phone || doc.clientPhone || '');
+    const targetPhone = phoneClean || prompt('Introduzca el telÃ©fono/mÃ³vil para enviar el recibo por WhatsApp:', client?.phone || doc.clientPhone || '');
     if (!targetPhone) return;
     const clean = targetPhone.replace(/\D/g, '');
     const receiptUrl = generateDocumentPdfUrl(receiptDoc);
     const plateText = doc.vehiclePlate ? ` [${doc.vehiclePlate}]` : '';
     const expText = doc.expediente ? ` (Expediente: ${doc.expediente})` : '';
 
-    const text = `Hola ${client?.name || doc.clientName},\nLe confirmamos la recepción de su abono a cuenta por importe de *${paymentAmount.toFixed(2)} €*${expText}${plateText}.\n\n` +
-      `• Número de Recibo: *${receiptNum}*\n` +
-      `• Fecha: ${paymentDate}\n` +
-      `• Método: ${paymentMethod}\n` +
-      `• Total del presupuesto: ${totalDoc.toFixed(2)} €\n` +
-      `• Total abonado hasta la fecha: ${currentTotalPaid.toFixed(2)} €\n` +
-      `• Saldo pendiente restante: *${remainingPending.toFixed(2)} €*\n\n` +
+    const text = `Hola ${client?.name || doc.clientName},\nLe confirmamos la recepciÃ³n de su abono a cuenta por importe de *${paymentAmount.toFixed(2)} â‚¬*${expText}${plateText}.\n\n` +
+      `â€¢ NÃºmero de Recibo: *${receiptNum}*\n` +
+      `â€¢ Fecha: ${paymentDate}\n` +
+      `â€¢ MÃ©todo: ${paymentMethod}\n` +
+      `â€¢ Total del presupuesto: ${totalDoc.toFixed(2)} â‚¬\n` +
+      `â€¢ Total abonado hasta la fecha: ${currentTotalPaid.toFixed(2)} â‚¬\n` +
+      `â€¢ Saldo pendiente restante: *${remainingPending.toFixed(2)} â‚¬*\n\n` +
       `Puede consultar y descargar su Recibo de Abono oficial en el siguiente enlace:\n${receiptUrl}`;
 
     const waUrl = `https://wa.me/${clean.startsWith('34') ? clean : '34' + clean}?text=${encodeURIComponent(text)}`;
@@ -629,24 +629,24 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     const receiptUrl = generateDocumentPdfUrl(receiptDoc);
     const plateText = doc.vehiclePlate ? ` [${doc.vehiclePlate}]` : '';
     const subject = `Recibo de Abono Parcial ${receiptNum} - Expediente ${doc.expediente || ''}${plateText}`;
-    const body = `Estimado/a ${client?.name || doc.clientName},\n\nLe confirmamos la recepción de su abono a cuenta por importe de ${paymentAmount.toFixed(2)} €.\n\n` +
+    const body = `Estimado/a ${client?.name || doc.clientName},\n\nLe confirmamos la recepciÃ³n de su abono a cuenta por importe de ${paymentAmount.toFixed(2)} â‚¬.\n\n` +
       `Detalles del cobro registrado:\n` +
       `- Recibo Oficial: ${receiptNum}\n` +
       `- Expediente: ${doc.expediente || '-'}\n` +
-      `- Vehículo: ${doc.vehiclePlate || '-'}\n` +
+      `- VehÃ­culo: ${doc.vehiclePlate || '-'}\n` +
       `- Fecha de cobro: ${paymentDate}\n` +
-      `- Método de pago: ${paymentMethod}\n` +
-      `- Importe abonado: ${paymentAmount.toFixed(2)} €\n` +
-      `- Total presupuestado/facturado: ${totalDoc.toFixed(2)} €\n` +
-      `- Total cobrado acumulado: ${currentTotalPaid.toFixed(2)} €\n` +
-      `- Saldo pendiente restante: ${remainingPending.toFixed(2)} €\n\n` +
+      `- MÃ©todo de pago: ${paymentMethod}\n` +
+      `- Importe abonado: ${paymentAmount.toFixed(2)} â‚¬\n` +
+      `- Total presupuestado/facturado: ${totalDoc.toFixed(2)} â‚¬\n` +
+      `- Total cobrado acumulado: ${currentTotalPaid.toFixed(2)} â‚¬\n` +
+      `- Saldo pendiente restante: ${remainingPending.toFixed(2)} â‚¬\n\n` +
       `Puede acceder y descargar su recibo oficial en el siguiente enlace:\n${receiptUrl}\n\n` +
       `Atentamente,\n${currentUser.fullName || 'DM CAR'}`;
 
     window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     if (onShowToast) {
-      onShowToast(`Recibo de abono parcial ${receiptNum} preparado para envío por Email.`);
+      onShowToast(`Recibo de abono parcial ${receiptNum} preparado para envÃ­o por Email.`);
     }
   };
 
@@ -676,14 +676,14 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       console.error(e);
     }
 
-    const targetPhone = phoneClean || prompt('Introduzca el teléfono/móvil para enviar la factura por WhatsApp:', client?.phone || doc.clientPhone || '');
+    const targetPhone = phoneClean || prompt('Introduzca el telÃ©fono/mÃ³vil para enviar la factura por WhatsApp:', client?.phone || doc.clientPhone || '');
     if (!targetPhone) return;
     const clean = targetPhone.replace(/\D/g, '');
     const invoiceUrl = generateDocumentPdfUrl(invoiceDoc || doc);
     const plateText = doc.vehiclePlate ? ` [${doc.vehiclePlate}]` : '';
     const expText = doc.expediente ? ` (Expediente: ${doc.expediente})` : '';
 
-    const text = `Hola ${client?.name || doc.clientName},\nLe confirmamos que su expediente ${expText}${plateText} ha quedado *TOTALMENTE ABONADO Y LIQUIDADO* (Total: ${(doc.total || 0).toFixed(2)} €, Saldo pendiente: 0,00 €).\n\n` +
+    const text = `Hola ${client?.name || doc.clientName},\nLe confirmamos que su expediente ${expText}${plateText} ha quedado *TOTALMENTE ABONADO Y LIQUIDADO* (Total: ${(doc.total || 0).toFixed(2)} â‚¬, Saldo pendiente: 0,00 â‚¬).\n\n` +
       `Le adjuntamos su *Factura Oficial ${invoiceNumberOnly}* con justificante de cobro total. Puede consultarla y descargarla en el siguiente enlace:\n${invoiceUrl}\n\n` +
       `Gracias por su confianza en nuestro taller.`;
 
@@ -723,8 +723,8 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     const invoiceUrl = generateDocumentPdfUrl(invoiceDoc || doc);
     const plateText = doc.vehiclePlate ? ` [${doc.vehiclePlate}]` : '';
     const subject = `Factura Oficial ${invoiceNumberOnly} (Totalmente Abonada) - Expediente ${doc.expediente || ''}${plateText}`;
-    const body = `Estimado/a ${client?.name || doc.clientName},\n\nLe confirmamos que su expediente ${doc.expediente || ''}${plateText} ha quedado TOTALMENTE ABONADO Y LIQUIDADO por un importe total de ${(doc.total || 0).toFixed(2)} € (Saldo pendiente: 0,00 €).\n\n` +
-      `Le adjuntamos el acceso a su Factura Oficial ${invoiceNumberOnly} con el justificante de liquidación:\n${invoiceUrl}\n\n` +
+    const body = `Estimado/a ${client?.name || doc.clientName},\n\nLe confirmamos que su expediente ${doc.expediente || ''}${plateText} ha quedado TOTALMENTE ABONADO Y LIQUIDADO por un importe total de ${(doc.total || 0).toFixed(2)} â‚¬ (Saldo pendiente: 0,00 â‚¬).\n\n` +
+      `Le adjuntamos el acceso a su Factura Oficial ${invoiceNumberOnly} con el justificante de liquidaciÃ³n:\n${invoiceUrl}\n\n` +
       `Agradecemos su confianza en nuestro taller.\n\nAtentamente,\n${currentUser.fullName || 'DM CAR'}`;
 
     window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -742,7 +742,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     onUpdateDocument(updatedDoc);
 
     if (onShowToast) {
-      onShowToast(`Factura ${invoiceNumberOnly} preparada para envío por Email (Abono Total).`);
+      onShowToast(`Factura ${invoiceNumberOnly} preparada para envÃ­o por Email (Abono Total).`);
     }
   };
 
@@ -779,11 +779,11 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
     if (isNowPaid) {
       if (onShowToast) {
-        onShowToast(`¡Abono total completado! Saldo de ${total.toFixed(2)} € 100% cobrado. Ya puede enviar la factura.`);
+        onShowToast(`Â¡Abono total completado! Saldo de ${total.toFixed(2)} â‚¬ 100% cobrado. Ya puede enviar la factura.`);
       }
     } else {
       if (onShowToast) {
-        onShowToast(`Abono parcial de ${amount.toFixed(2)} € registrado. Ya puede enviar el recibo de abono parcial.`);
+        onShowToast(`Abono parcial de ${amount.toFixed(2)} â‚¬ registrado. Ya puede enviar el recibo de abono parcial.`);
       }
     }
   };
@@ -804,8 +804,8 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     switch (stepId) {
       case 'recepcion':
         setConfirmToast({
-          stepName: 'Recepción',
-          message: 'La recepción del vehículo y expediente ya está registrada y completada en verde.',
+          stepName: 'RecepciÃ³n',
+          message: 'La recepciÃ³n del vehÃ­culo y expediente ya estÃ¡ registrada y completada en verde.',
           isLocked: true,
         });
         break;
@@ -814,19 +814,19 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         if (doc.status === 'aceptado') {
           setConfirmToast({
             stepName: 'Presupuesto',
-            message: 'El presupuesto ya está en el estado final "Aceptado".',
+            message: 'El presupuesto ya estÃ¡ en el estado final "Aceptado".',
             isLocked: true,
           });
         } else if (doc.status === 'enviado') {
           setConfirmToast({
             stepName: 'Presupuesto',
-            message: 'El presupuesto ha sido enviado al cliente. El presupuesto no puede ser aceptado por el taller; debe ser aceptado formalmente por el cliente desde su área de cliente.',
+            message: 'El presupuesto ha sido enviado al cliente. El presupuesto no puede ser aceptado por el taller; debe ser aceptado formalmente por el cliente desde su Ã¡rea de cliente.',
             isLocked: true,
           });
         } else {
           setConfirmToast({
             stepName: 'Presupuesto',
-            message: '¿Desea avanzar la parada "Presupuesto" al estado "Enviado al cliente"?',
+            message: 'Â¿Desea avanzar la parada "Presupuesto" al estado "Enviado al cliente"?',
             onConfirm: () => {
               const updated: GestarianDocument = {
                 ...doc,
@@ -843,19 +843,19 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         if (!isPresupuestoGreen) {
           setConfirmToast({
             stepName: 'Cita',
-            message: 'La parada "Cita" está en espera (gris). Para salir de espera, la parada anterior ("Presupuesto") debe estar finalizada en verde (Presupuesto Aceptado).',
+            message: 'La parada "Cita" estÃ¡ en espera (gris). Para salir de espera, la parada anterior ("Presupuesto") debe estar finalizada en verde (Presupuesto Aceptado).',
             isLocked: true,
           });
         } else if (isCitaConfirmed) {
           setConfirmToast({
             stepName: 'Cita',
-            message: 'La cita ya está en el estado final "Confirmada".',
+            message: 'La cita ya estÃ¡ en el estado final "Confirmada".',
             isLocked: true,
           });
         } else if (isCitaAccepted) {
           setConfirmToast({
             stepName: 'Cita',
-            message: '¿Desea avanzar la parada "Cita" al estado "Cita Confirmada (Vehículo entregado en Taller)"?',
+            message: 'Â¿Desea avanzar la parada "Cita" al estado "Cita Confirmada (VehÃ­culo entregado en Taller)"?',
             onConfirm: () => {
               handleConfirmCita();
             },
@@ -863,7 +863,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         } else {
           setConfirmToast({
             stepName: 'Cita',
-            message: '¿Desea avanzar la parada "Cita" al estado "Cita Aceptada por el cliente"?',
+            message: 'Â¿Desea avanzar la parada "Cita" al estado "Cita Aceptada por el cliente"?',
             onConfirm: () => {
               const updated: GestarianDocument = {
                 ...doc,
@@ -880,19 +880,19 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         if (!isCitaGreen) {
           setConfirmToast({
             stepName: 'Taller',
-            message: 'La parada "Taller" está en espera (gris). Para salir de espera, la parada anterior ("Cita") debe estar finalizada en verde (Cita Confirmada).',
+            message: 'La parada "Taller" estÃ¡ en espera (gris). Para salir de espera, la parada anterior ("Cita") debe estar finalizada en verde (Cita Confirmada).',
             isLocked: true,
           });
         } else if (isTallerFinalizado) {
           setConfirmToast({
             stepName: 'Taller',
-            message: 'La reparación ya está en el estado final "Reparación Finalizada".',
+            message: 'La reparaciÃ³n ya estÃ¡ en el estado final "ReparaciÃ³n Finalizada".',
             isLocked: true,
           });
         } else if (isTallerEnReparacion) {
           setConfirmToast({
             stepName: 'Taller',
-            message: '¿Desea avanzar la parada "Taller" al estado "Reparación Finalizada"?',
+            message: 'Â¿Desea avanzar la parada "Taller" al estado "ReparaciÃ³n Finalizada"?',
             onConfirm: () => {
               handleFinalizarReparacion();
             },
@@ -900,7 +900,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         } else {
           setConfirmToast({
             stepName: 'Taller',
-            message: '¿Desea avanzar la parada "Taller" al estado "Enviar a Taller / En Reparación"?',
+            message: 'Â¿Desea avanzar la parada "Taller" al estado "Enviar a Taller / En ReparaciÃ³n"?',
             onConfirm: () => {
               handleEnviarATaller();
             },
@@ -911,20 +911,20 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       case 'facturacion':
         if (!isTallerGreen) {
           setConfirmToast({
-            stepName: 'Facturación',
-            message: 'La parada "Facturación" está en espera (gris). Para salir de espera, la parada anterior ("Taller") debe estar finalizada en verde (Reparación Finalizada).',
+            stepName: 'FacturaciÃ³n',
+            message: 'La parada "FacturaciÃ³n" estÃ¡ en espera (gris). Para salir de espera, la parada anterior ("Taller") debe estar finalizada en verde (ReparaciÃ³n Finalizada).',
             isLocked: true,
           });
         } else if (isFacturaGenerada) {
           setConfirmToast({
-            stepName: 'Facturación',
+            stepName: 'FacturaciÃ³n',
             message: 'La factura oficial ya ha sido generada y confirmada.',
             isLocked: true,
           });
         } else {
           setConfirmToast({
-            stepName: 'Facturación',
-            message: '¿Desea avanzar la parada "Facturación" para "Confirmar y Emitir Factura Oficial"?',
+            stepName: 'FacturaciÃ³n',
+            message: 'Â¿Desea avanzar la parada "FacturaciÃ³n" para "Confirmar y Emitir Factura Oficial"?',
             onConfirm: () => {
               handleFacturar();
             },
@@ -936,7 +936,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         if (!isFacturacionGreen) {
           setConfirmToast({
             stepName: 'Cobro',
-            message: 'La parada "Cobro" está desactivada. Se activará automáticamente cuando la parada "Facturación" muestre "FACTURA ENVIADA" con la fecha de envío debajo tras enviarse por WhatsApp o Email.',
+            message: 'La parada "Cobro" estÃ¡ desactivada. Se activarÃ¡ automÃ¡ticamente cuando la parada "FacturaciÃ³n" muestre "FACTURA ENVIADA" con la fecha de envÃ­o debajo tras enviarse por WhatsApp o Email.',
             isLocked: true,
           });
         } else if (isPaid) {
@@ -958,8 +958,8 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   const steps = [
     {
       id: 'recepcion',
-      name: 'Recepción',
-      statusLabel: 'RECEPCIÓN REGISTRADA',
+      name: 'RecepciÃ³n',
+      statusLabel: 'RECEPCIÃ“N REGISTRADA',
       badgeClass: 'bg-emerald-500 text-white font-bold',
       isClickable: false,
       hasExpandButton: true,
@@ -995,16 +995,16 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         : 'bg-slate-200 text-slate-500 font-medium',
       isClickable: !isCitaConfirmed && isCitaAccepted,
       onClick: handleConfirmCita,
-      tooltip: 'Pulsar cuando el cliente entregue el vehículo el día acordado',
+      tooltip: 'Pulsar cuando el cliente entregue el vehÃ­culo el dÃ­a acordado',
       hasExpandButton: true,
     },
     {
       id: 'taller',
       name: 'Taller',
       statusLabel: isTallerFinalizado 
-        ? 'REPARACIÓN FINALIZADA' 
+        ? 'REPARACIÃ“N FINALIZADA' 
         : isTallerEnReparacion 
-        ? 'REPARACIÓN EN PROCESO' 
+        ? 'REPARACIÃ“N EN PROCESO' 
         : isTallerEnviar 
         ? 'ENVIAR A TALLER' 
         : 'PENDIENTE TALLER',
@@ -1017,12 +1017,12 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         : 'bg-slate-200 text-slate-500 font-medium',
       isClickable: !isTallerEnReparacion && !isTallerFinalizado && isTallerEnviar,
       onClick: handleEnviarATaller,
-      tooltip: 'Pulsar para enviar el vehículo al taller e iniciar reparación',
+      tooltip: 'Pulsar para enviar el vehÃ­culo al taller e iniciar reparaciÃ³n',
       hasExpandButton: true,
     },
     {
       id: 'facturacion',
-      name: 'Facturación',
+      name: 'FacturaciÃ³n',
       statusLabel: isFacturaEnviada 
         ? 'FACTURA ENVIADA' 
         : isFacturaGenerada 
@@ -1030,8 +1030,8 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         : canInvoice 
         ? 'FACTURAR' 
         : canFinalizeRepair 
-        ? 'FINALIZAR REPARACIÓN' 
-        : 'FACTURACIÓN BLOQUEADA',
+        ? 'FINALIZAR REPARACIÃ“N' 
+        : 'FACTURACIÃ“N BLOQUEADA',
       badgeClass: isFacturaEnviada 
         ? 'bg-emerald-500 text-white font-bold' 
         : isFacturaGenerada 
@@ -1043,14 +1043,14 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         : 'bg-slate-200 text-slate-500 font-medium',
       isClickable: canInvoice || canFinalizeRepair,
       onClick: canInvoice ? handleFacturar : handleFinalizarReparacion,
-      tooltip: canInvoice ? 'Pulsar para generar la factura' : 'Pulsar para dar por finalizada la reparación',
+      tooltip: canInvoice ? 'Pulsar para generar la factura' : 'Pulsar para dar por finalizada la reparaciÃ³n',
       hasExpandButton: true,
     },
     {
       id: 'cobro',
       name: 'Cobro',
       statusLabel: !isFacturaEnviada 
-        ? 'FACTURA PENDIENTE DE ENVÍO' 
+        ? 'FACTURA PENDIENTE DE ENVÃO' 
         : isPaid 
         ? 'COBRADO TOTALMENTE' 
         : isPartiallyPaid 
@@ -1068,7 +1068,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         if (!isFacturaEnviada) {
           setConfirmToast({
             stepName: 'Cobro',
-            message: 'La parada "Cobro" está desactivada. Se activará automáticamente cuando la parada "Facturación" muestre "FACTURA ENVIADA" con la fecha de envío debajo tras enviarse por WhatsApp o Email.',
+            message: 'La parada "Cobro" estÃ¡ desactivada. Se activarÃ¡ automÃ¡ticamente cuando la parada "FacturaciÃ³n" muestre "FACTURA ENVIADA" con la fecha de envÃ­o debajo tras enviarse por WhatsApp o Email.',
             isLocked: true,
           });
         } else {
@@ -1107,11 +1107,11 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2 text-slate-900 font-black text-base uppercase tracking-wide">
                 <ClipboardList className="w-5 h-5 text-emerald-600" />
-                <span>Recepción de Vehículo</span>
+                <span>RecepciÃ³n de VehÃ­culo</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
                 <Calendar className="w-3.5 h-3.5 text-slate-600" />
-                <span className="font-bold">Fecha Recepción:</span>
+                <span className="font-bold">Fecha RecepciÃ³n:</span>
                 <span>{doc.date || doc.createdAt?.split('T')[0] || 'No registrada'}</span>
               </div>
             </div>
@@ -1140,18 +1140,18 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 </div>
               </div>
 
-              {/* Vehículo */}
+              {/* VehÃ­culo */}
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                   <Car className="w-4 h-4 text-indigo-600" />
-                  <span>Datos del Vehículo</span>
+                  <span>Datos del VehÃ­culo</span>
                 </div>
                 <div className="font-bold text-[#0F172A] text-base">
-                  {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'Vehículo Registrado'}
+                  {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'VehÃ­culo Registrado'}
                 </div>
                 <div className="mt-2 inline-flex items-center bg-white border border-gray-400 rounded overflow-hidden h-7 shadow-2xs">
                   <div className="bg-blue-700 h-full w-5 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-[5px] text-yellow-300 font-bold leading-none">⭐</span>
+                    <span className="text-[5px] text-yellow-300 font-bold leading-none">â­</span>
                     <span className="text-[8px] text-white font-bold leading-none">E</span>
                   </div>
                   <div className="px-2 font-mono font-black text-xs tracking-widest text-[#0F172A]">
@@ -1173,13 +1173,13 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 </span>
               </div>
               {(!doc.items || doc.items.length === 0) ? (
-                <div className="text-xs text-slate-400 italic py-2">Sin operaciones registradas en la recepción.</div>
+                <div className="text-xs text-slate-400 italic py-2">Sin operaciones registradas en la recepciÃ³n.</div>
               ) : (
                 <div className="space-y-1.5">
                   {doc.items.map((it, idx) => (
                     <div key={it.id || idx} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100 text-xs">
                       <span className="font-semibold text-slate-800">{it.description}</span>
-                      {it.amount > 0 && <span className="font-bold text-slate-900">{it.amount.toFixed(2)} €</span>}
+                      {it.amount > 0 && <span className="font-bold text-slate-900">{it.amount.toFixed(2)} â‚¬</span>}
                     </div>
                   ))}
                 </div>
@@ -1191,7 +1191,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       case 'presupuesto':
         return (
           <div className="space-y-4">
-            {/* Header con Fecha de envío arriba */}
+            {/* Header con Fecha de envÃ­o arriba */}
             <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
               <div className="flex items-center gap-2 text-[#0F2942] font-black text-base uppercase tracking-wide">
                 <FileText className="w-5 h-5 text-amber-600" />
@@ -1199,7 +1199,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               </div>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 shadow-2xs">
                 <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                <span>Fecha de envío: {doc.sentAt || doc.date || 'Sin fecha de envío'}</span>
+                <span>Fecha de envÃ­o: {doc.sentAt || doc.date || 'Sin fecha de envÃ­o'}</span>
               </div>
             </div>
 
@@ -1208,13 +1208,13 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               <div className="bg-amber-500/10 border-2 border-amber-500 rounded-2xl p-5 shadow-lg my-3 text-center animate-pulse">
                 <div className="flex items-center justify-center gap-2 text-amber-900 text-xs sm:text-sm font-black uppercase tracking-wider mb-1">
                   <Calendar className="w-5 h-5 text-amber-600 animate-bounce" />
-                  <span>NUEVA FECHA DE ENTREGA PROPUESTA POR EL CLIENTE DESDE EL ÁREA DE CLIENTE</span>
+                  <span>NUEVA FECHA DE ENTREGA PROPUESTA POR EL CLIENTE DESDE EL ÃREA DE CLIENTE</span>
                 </div>
                 <div className="text-3xl sm:text-5xl font-black text-amber-700 font-mono tracking-tight my-3">
                   {doc.proposedDeliveryDate || doc.vehicleDeliveryDate}
                 </div>
                 <p className="text-xs text-amber-900 mb-4 font-medium max-w-xl mx-auto">
-                  El cliente ha solicitado esta fecha de entrega. Si pulsa Aceptar, la cita quedará confirmada y la parada Cita del roadmap pasará a Azul. Si pulsa Denegar, se abrirá el calendario para proponer una nueva fecha de entrega al cliente.
+                  El cliente ha solicitado esta fecha de entrega. Si pulsa Aceptar, la cita quedarÃ¡ confirmada y la parada Cita del roadmap pasarÃ¡ a Azul. Si pulsa Denegar, se abrirÃ¡ el calendario para proponer una nueva fecha de entrega al cliente.
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
@@ -1260,9 +1260,9 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     <span className="font-bold text-slate-800">{client?.name || doc.clientName || 'Cliente'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-bold block uppercase text-[10px]">Vehículo:</span>
+                    <span className="text-slate-400 font-bold block uppercase text-[10px]">VehÃ­culo:</span>
                     <span className="font-bold text-slate-800">
-                      {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehiclePlate || 'Vehículo'}
+                      {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehiclePlate || 'VehÃ­culo'}
                     </span>
                   </div>
                 </div>
@@ -1276,7 +1276,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     doc.items.map((it, i) => (
                       <div key={i} className="flex justify-between text-slate-600 py-0.5">
                         <span className="truncate pr-2">{it.description}</span>
-                        <span className="font-semibold whitespace-nowrap">{it.amount.toFixed(2)} €</span>
+                        <span className="font-semibold whitespace-nowrap">{it.amount.toFixed(2)} â‚¬</span>
                       </div>
                     ))
                   ) : (
@@ -1287,14 +1287,14 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 <div className="pt-2 border-t border-slate-200 flex justify-end">
                   <div className="text-right">
                     <span className="text-xs text-slate-500 font-bold block">Total Presupuestado:</span>
-                    <span className="text-lg font-black text-amber-700">{(doc.total || 0).toFixed(2)} €</span>
+                    <span className="text-lg font-black text-amber-700">{(doc.total || 0).toFixed(2)} â‚¬</span>
                   </div>
                 </div>
               </div>
 
-              {/* Todos los iconos de acción debajo */}
+              {/* Todos los iconos de acciÃ³n debajo */}
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-5 w-full">
-                {/* Botón Ver Presupuesto en Hoja A4 completa */}
+                {/* BotÃ³n Ver Presupuesto en Hoja A4 completa */}
                 <button
                   type="button"
                   onClick={() => setViewerDoc(budgetDoc)}
@@ -1308,7 +1308,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 {phoneClean ? (
                   <a
                     href={`https://wa.me/${phoneClean.startsWith('34') ? phoneClean : '34' + phoneClean}?text=${encodeURIComponent(
-                      `Hola ${client?.name || doc.clientName}, le adjuntamos la información de su presupuesto. Puede consultarlo y hacer el seguimiento en el siguiente enlace: ${generateDocumentPdfUrl(budgetDoc || doc)}`
+                      `Hola ${client?.name || doc.clientName}, le adjuntamos la informaciÃ³n de su presupuesto. Puede consultarlo y hacer el seguimiento en el siguiente enlace: ${generateDocumentPdfUrl(budgetDoc || doc)}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1322,7 +1322,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 {/* Email */}
                 {(client?.email || doc.clientEmail) ? (
                   <a
-                    href={`mailto:${client?.email || doc.clientEmail}?subject=Presupuesto%20${budgetNumberOnly}&body=Estimado%20cliente,%20le%20enviamos%20el%20presupuesto%20${budgetNumberOnly}%20por%20importe%20de%20${(doc.total || 0).toFixed(2)}€.`}
+                    href={`mailto:${client?.email || doc.clientEmail}?subject=Presupuesto%20${budgetNumberOnly}&body=Estimado%20cliente,%20le%20enviamos%20el%20presupuesto%20${budgetNumberOnly}%20por%20importe%20de%20${(doc.total || 0).toFixed(2)}â‚¬.`}
                     className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
                     title="Enviar por Email"
                   >
@@ -1423,7 +1423,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               <div className="bg-blue-50 border-2 border-blue-400 rounded-2xl p-4 shadow-sm my-3 text-center">
                 <div className="flex items-center justify-center gap-2 text-blue-900 text-xs sm:text-sm font-bold uppercase tracking-wider mb-1">
                   <Clock className="w-4 h-4 text-blue-600 animate-pulse" />
-                  <span>Propuesta de fecha enviada al cliente (Esperando aprobación):</span>
+                  <span>Propuesta de fecha enviada al cliente (Esperando aprobaciÃ³n):</span>
                 </div>
                 <div className="text-3xl sm:text-4xl font-black text-blue-700 font-mono tracking-tight my-2">
                   {doc.proposedDeliveryDate || doc.vehicleDeliveryDate}
@@ -1441,7 +1441,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               </div>
             )}
 
-            {/* Bloque de Cita Acordada y Aceptación con Aceptada por y Fecha/Hora */}
+            {/* Bloque de Cita Acordada y AceptaciÃ³n con Aceptada por y Fecha/Hora */}
             {(isCitaAccepted || isCitaConfirmed) && (
               <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 shadow-sm my-3 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-900 text-xs sm:text-sm font-black uppercase tracking-wider">
@@ -1461,7 +1461,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     </span>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-emerald-200">
-                    <span className="text-slate-400 font-bold uppercase block text-[10px]">Fecha y Hora de Aceptación:</span>
+                    <span className="text-slate-400 font-bold uppercase block text-[10px]">Fecha y Hora de AceptaciÃ³n:</span>
                     <span className="font-extrabold text-slate-900 text-sm font-mono flex items-center gap-1.5 mt-0.5">
                       <Clock className="w-4 h-4 text-emerald-600" />
                       {formatTimestamp(doc.citaAcceptedAt || doc.confirmedAt || doc.updatedAt)}
@@ -1483,7 +1483,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 </div>
               </div>
 
-              {/* Estado de negociación de cita */}
+              {/* Estado de negociaciÃ³n de cita */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                   Estado de la Cita / Acuerdo
@@ -1492,10 +1492,10 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <span>
                     {isCitaConfirmed
-                      ? `Vehículo recibido (${doc.confirmedAt?.split('T')[0] || 'Confirmado'})`
+                      ? `VehÃ­culo recibido (${doc.confirmedAt?.split('T')[0] || 'Confirmado'})`
                       : isCitaAccepted
                       ? `Fecha Acordada: ${doc.vehicleDeliveryDate}`
-                      : 'Negociación de fecha en curso (Naranja)'}
+                      : 'NegociaciÃ³n de fecha en curso (Naranja)'}
                   </span>
                 </div>
               </div>
@@ -1532,7 +1532,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                           item.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                           item.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
                         }`}>
-                          {item.status === 'accepted' ? '🟢 ACEPTADA' : item.status === 'rejected' ? '🔴 DENEGADA / REEMPLAZADA' : '🟠 PENDIENTE'}
+                          {item.status === 'accepted' ? 'ðŸŸ¢ ACEPTADA' : item.status === 'rejected' ? 'ðŸ”´ DENEGADA / REEMPLAZADA' : 'ðŸŸ  PENDIENTE'}
                         </span>
                       </div>
 
@@ -1561,7 +1561,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Confirmar Recepción de Vehículo</span>
+                  <span>Confirmar RecepciÃ³n de VehÃ­culo</span>
                 </button>
               </div>
             )}
@@ -1575,7 +1575,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2 text-[#0F2942] font-black text-base uppercase tracking-wide">
                 <Wrench className="w-5 h-5 text-orange-600" />
-                <span>Datos de Reparación y Taller</span>
+                <span>Datos de ReparaciÃ³n y Taller</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-lg border border-slate-200">
@@ -1588,7 +1588,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
               <div>
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Operario Activo en la Reparación
+                  Operario Activo en la ReparaciÃ³n
                 </span>
                 {assignedEmployee ? (
                   <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -1631,10 +1631,10 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               )}
             </div>
 
-            {/* Descripción de Trabajos */}
+            {/* DescripciÃ³n de Trabajos */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Descripción de los Trabajos a Realizar
+                DescripciÃ³n de los Trabajos a Realizar
               </span>
               {doc.items && doc.items.length > 0 ? (
                 <div className="space-y-1.5">
@@ -1656,7 +1656,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               <p className="whitespace-pre-line text-slate-800 font-medium">{doc.notes || 'Sin observaciones o comentarios adicionales.'}</p>
             </div>
 
-            {/* Acciones e Icono de Imágenes */}
+            {/* Acciones e Icono de ImÃ¡genes */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
@@ -1664,7 +1664,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
               >
                 <ImageIcon className="w-4 h-4" />
-                <span>Imágenes del Expediente ({doc.vehicleImages?.length || 0})</span>
+                <span>ImÃ¡genes del Expediente ({doc.vehicleImages?.length || 0})</span>
               </button>
 
               {!isTallerEnReparacion && !isTallerFinalizado && isTallerEnviar && (
@@ -1673,7 +1673,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   onClick={handleEnviarATaller}
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>Iniciar Reparación en Taller</span>
+                  <span>Iniciar ReparaciÃ³n en Taller</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -1688,7 +1688,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2 text-[#0F2942] font-black text-base uppercase tracking-wide">
                 <FileCheck2 className="w-5 h-5 text-emerald-600" />
-                <span>Factura Generada y Datos de Facturación</span>
+                <span>Factura Generada y Datos de FacturaciÃ³n</span>
               </div>
               <span className={`text-xs px-3 py-1 rounded-full font-bold ${
                 isFacturaGenerada ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
@@ -1697,7 +1697,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               </span>
             </div>
 
-            {/* Hoja A4 / Previsualización de Factura */}
+            {/* Hoja A4 / PrevisualizaciÃ³n de Factura */}
             <div className="bg-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-inner flex flex-col items-center">
               <div className="bg-white w-full max-w-xl p-5 sm:p-6 rounded-xl border border-slate-300 shadow-md space-y-4">
                 <div className="flex justify-between items-start border-b border-slate-200 pb-3">
@@ -1706,7 +1706,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     <div className="text-xs text-slate-500 font-mono">CIF: {doc.issuerCif || 'B-12345678'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider">Factura de Reparación</div>
+                    <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider">Factura de ReparaciÃ³n</div>
                     <div className="text-base font-black font-mono text-slate-900">{invoiceNumberOnly}</div>
                     <div className="text-[11px] text-slate-500">{invoiceDoc.date || doc.date}</div>
                   </div>
@@ -1718,9 +1718,9 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     <span className="font-bold text-slate-800">{client?.name || doc.clientName || 'Cliente'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-bold block uppercase text-[10px]">Vehículo:</span>
+                    <span className="text-slate-400 font-bold block uppercase text-[10px]">VehÃ­culo:</span>
                     <span className="font-bold text-slate-800">
-                      {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehiclePlate || 'Vehículo'}
+                      {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehiclePlate || 'VehÃ­culo'}
                     </span>
                   </div>
                 </div>
@@ -1734,7 +1734,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     doc.items.map((it, i) => (
                       <div key={i} className="flex justify-between text-slate-600 py-0.5">
                         <span className="truncate pr-2">{it.description}</span>
-                        <span className="font-semibold whitespace-nowrap">{it.amount.toFixed(2)} €</span>
+                        <span className="font-semibold whitespace-nowrap">{it.amount.toFixed(2)} â‚¬</span>
                       </div>
                     ))
                   ) : (
@@ -1744,17 +1744,17 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
                   <div className="text-xs text-slate-500">
-                    <div>IVA (21%): {((doc.total || 0) * 0.21 / 1.21).toFixed(2)} €</div>
-                    <div>Base Imponible: {((doc.total || 0) / 1.21).toFixed(2)} €</div>
+                    <div>IVA (21%): {((doc.total || 0) * 0.21 / 1.21).toFixed(2)} â‚¬</div>
+                    <div>Base Imponible: {((doc.total || 0) / 1.21).toFixed(2)} â‚¬</div>
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-slate-500 font-bold block">Total Factura:</span>
-                    <span className="text-lg font-black text-emerald-700">{(doc.total || 0).toFixed(2)} €</span>
+                    <span className="text-lg font-black text-emerald-700">{(doc.total || 0).toFixed(2)} â‚¬</span>
                   </div>
                 </div>
               </div>
 
-              {/* Estado de envío de factura y aviso de activación de Cobro */}
+              {/* Estado de envÃ­o de factura y aviso de activaciÃ³n de Cobro */}
               {isFacturaEnviada ? (
                 <div className="mt-4 p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-emerald-900">
                   <div className="flex items-center gap-2">
@@ -1772,7 +1772,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
                     <span>
-                      Factura generada pero <strong>pendiente de enviar</strong> al cliente. Envíela por WhatsApp o Email para activar la parada Cobro.
+                      Factura generada pero <strong>pendiente de enviar</strong> al cliente. EnvÃ­ela por WhatsApp o Email para activar la parada Cobro.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -1796,9 +1796,9 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 </div>
               ) : null}
 
-              {/* Botón ver factura generada en Hoja A4 completa e iconos de acciones */}
+              {/* BotÃ³n ver factura generada en Hoja A4 completa e iconos de acciones */}
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-5 w-full">
-                {/* Botón Ver Factura Generada */}
+                {/* BotÃ³n Ver Factura Generada */}
                 <button
                   type="button"
                   onClick={() => setViewerDoc(invoiceDoc)}
@@ -1844,7 +1844,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (onShowToast) onShowToast(`Factura ${invoiceNumberOnly} guardada con éxito. Recuerde enviarla al cliente.`, 6000);
+                    if (onShowToast) onShowToast(`Factura ${invoiceNumberOnly} guardada con Ã©xito. Recuerde enviarla al cliente.`, 6000);
                   }}
                   className="p-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
                   title="Guardar Factura / Descargar PDF"
@@ -1889,7 +1889,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
   return (
     <>
-      {/* Toast de confirmación estático sin animación (Aceptar-Cancelar) */}
+      {/* Toast de confirmaciÃ³n estÃ¡tico sin animaciÃ³n (Aceptar-Cancelar) */}
       {confirmToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-md bg-slate-900 text-white p-5 rounded-2xl shadow-2xl border-2 border-amber-500 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
@@ -1945,7 +1945,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 if (!isFacturacionGreen) {
                   setConfirmToast({
                     stepName: 'Cobro',
-                    message: 'La parada "Cobro" está desactivada. Se activará automáticamente cuando la parada "Facturación" muestre "FACTURA ENVIADA" con la fecha de envío debajo tras enviarse por WhatsApp o Email.',
+                    message: 'La parada "Cobro" estÃ¡ desactivada. Se activarÃ¡ automÃ¡ticamente cuando la parada "FacturaciÃ³n" muestre "FACTURA ENVIADA" con la fecha de envÃ­o debajo tras enviarse por WhatsApp o Email.',
                     isLocked: true,
                   });
                 } else {
@@ -1969,7 +1969,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       : ''
                   }`}
                 >
-                  {/* Botón + / - solo a la izquierda (tamaño x2, un solo círculo sin sombrear) */}
+                  {/* BotÃ³n + / - solo a la izquierda (tamaÃ±o x2, un solo cÃ­rculo sin sombrear) */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1982,7 +1982,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       st.id === 'cobro'
                         ? isFacturacionGreen
                           ? 'Abrir Control de Cobros'
-                          : 'Parada Cobro desactivada (requiere envío de factura)'
+                          : 'Parada Cobro desactivada (requiere envÃ­o de factura)'
                         : isExpanded
                         ? 'Ocultar detalles'
                         : 'Ver detalles (+)'
@@ -1995,7 +1995,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     )}
                   </button>
 
-                  {/* Título y Estado en el centro (máximo 2 líneas de texto) */}
+                  {/* TÃ­tulo y Estado en el centro (mÃ¡ximo 2 lÃ­neas de texto) */}
                   <div className="flex-1 text-center flex flex-col items-center justify-center px-2 py-0.5 min-h-[56px] max-h-[64px] overflow-hidden leading-tight shrink">
                     {st.id === 'facturacion' && isFacturaEnviada ? (
                       <div className="flex flex-col items-center justify-center leading-tight">
@@ -2018,7 +2018,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     )}
                   </div>
 
-                  {/* Espaciador a la derecha para mantener el título en el centro exacto */}
+                  {/* Espaciador a la derecha para mantener el tÃ­tulo en el centro exacto */}
                   <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 pointer-events-none" />
                 </div>
 
@@ -2066,7 +2066,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
           setViewerDoc(null);
           const dateFormatted = formatInvoiceSentDate(nowIso);
           if (onShowToast) {
-            onShowToast(`Factura enviada el ${dateFormatted}. Parada Facturación en verde y parada Cobro activada.`);
+            onShowToast(`Factura enviada el ${dateFormatted}. Parada FacturaciÃ³n en verde y parada Cobro activada.`);
           }
         }}
         onAcceptBudget={() => {}}
@@ -2076,7 +2076,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
         onShowToast={onShowToast}
       />
 
-      {/* Visor de Imágenes cuando se pulsa en Taller */}
+      {/* Visor de ImÃ¡genes cuando se pulsa en Taller */}
       <ExpedienteImagesModal
         isOpen={showImagesModal}
         onClose={() => setShowImagesModal(false)}
@@ -2104,7 +2104,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 <div>
                   <h3 className="font-black text-lg text-white">Panel de Control de Cobros</h3>
                   <p className="text-xs text-slate-300">
-                    Expediente: <span className="font-mono text-emerald-400 font-bold">{doc.expediente || 'EXP-001'}</span> • {client?.name || doc.clientName || 'Cliente'}
+                    Expediente: <span className="font-mono text-emerald-400 font-bold">{doc.expediente || 'EXP-001'}</span> â€¢ {client?.name || doc.clientName || 'Cliente'}
                   </p>
                 </div>
               </div>
@@ -2122,16 +2122,16 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Factura</span>
-                  <span className="text-base font-black text-slate-900">{(doc.total || 0).toFixed(2)} €</span>
+                  <span className="text-base font-black text-slate-900">{(doc.total || 0).toFixed(2)} â‚¬</span>
                 </div>
                 <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
                   <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Total Cobrado</span>
-                  <span className="text-base font-black text-emerald-900">{totalPaid.toFixed(2)} €</span>
+                  <span className="text-base font-black text-emerald-900">{totalPaid.toFixed(2)} â‚¬</span>
                 </div>
                 <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
                   <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pendiente</span>
                   <span className="text-base font-black text-amber-900">
-                    {Math.max(0, (doc.total || 0) - totalPaid).toFixed(2)} €
+                    {Math.max(0, (doc.total || 0) - totalPaid).toFixed(2)} â‚¬
                   </span>
                 </div>
               </div>
@@ -2148,10 +2148,10 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       <CheckCircle2 className={`w-5 h-5 shrink-0 ${lastAbonoFeedback.isTotal ? 'text-emerald-600' : 'text-amber-600'}`} />
                       <div>
                         <h4 className="text-xs font-black uppercase tracking-wider">
-                          {lastAbonoFeedback.isTotal ? '¡Abono Total Completado (100% Cobrado)!' : 'Abono Parcial Registrado'}
+                          {lastAbonoFeedback.isTotal ? 'Â¡Abono Total Completado (100% Cobrado)!' : 'Abono Parcial Registrado'}
                         </h4>
                         <p className="text-[11px] text-slate-600 leading-snug">
-                          Importe abonado: <strong className="font-mono">{lastAbonoFeedback.amount.toFixed(2)} €</strong> ({lastAbonoFeedback.method} - {lastAbonoFeedback.date}).
+                          Importe abonado: <strong className="font-mono">{lastAbonoFeedback.amount.toFixed(2)} â‚¬</strong> ({lastAbonoFeedback.method} - {lastAbonoFeedback.date}).
                           {lastAbonoFeedback.isTotal
                             ? ' El saldo del expediente ha quedado totalmente liquidado.'
                             : ` Recibo generado: ${lastAbonoFeedback.receiptNum}.`}
@@ -2168,7 +2168,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     </button>
                   </div>
 
-                  {/* Acciones de envío directo según sea Abono Total o Abono Parcial */}
+                  {/* Acciones de envÃ­o directo segÃºn sea Abono Total o Abono Parcial */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/80">
                     {lastAbonoFeedback.isTotal ? (
                       <>
@@ -2229,7 +2229,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 </div>
               )}
 
-              {/* Panel Permanente de Acciones de Envío según Estado del Abono */}
+              {/* Panel Permanente de Acciones de EnvÃ­o segÃºn Estado del Abono */}
               {isPaid ? (
                 <div className="bg-emerald-50 border-2 border-emerald-500 p-4 sm:p-5 rounded-xl space-y-3 shadow-xs">
                   <div className="flex items-start gap-3">
@@ -2246,12 +2246,12 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                         </span>
                       </div>
                       <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                        La factura está totalmente abonada. El importe pendiente es de <strong>0,00 €</strong>. Puede enviar la factura oficial con justificante de cobro o consultar el historial de abonos a continuación.
+                        La factura estÃ¡ totalmente abonada. El importe pendiente es de <strong>0,00 â‚¬</strong>. Puede enviar la factura oficial con justificante de cobro o consultar el historial de abonos a continuaciÃ³n.
                       </p>
                       <div className="flex flex-wrap items-center gap-3 mt-2 text-xs font-mono">
-                        <span className="text-slate-600">Total Factura: <strong>{doc.total.toFixed(2)} €</strong></span>
-                        <span className="text-emerald-700">Total Abonado: <strong>{totalPaid.toFixed(2)} €</strong></span>
-                        <span className="text-emerald-800 font-bold">Saldo Pendiente: 0,00 €</span>
+                        <span className="text-slate-600">Total Factura: <strong>{doc.total.toFixed(2)} â‚¬</strong></span>
+                        <span className="text-emerald-700">Total Abonado: <strong>{totalPaid.toFixed(2)} â‚¬</strong></span>
+                        <span className="text-emerald-800 font-bold">Saldo Pendiente: 0,00 â‚¬</span>
                       </div>
                     </div>
                   </div>
@@ -2288,10 +2288,10 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     <Receipt className="w-5 h-5 text-amber-700 shrink-0" />
                     <div>
                       <h4 className="text-xs font-black uppercase tracking-wider text-amber-950">
-                        Abono Parcial Registrado — Enviar Recibo al Cliente
+                        Abono Parcial Registrado â€” Enviar Recibo al Cliente
                       </h4>
                       <p className="text-[11px] text-amber-800">
-                        Total abonado: <strong>{totalPaid.toFixed(2)} €</strong> • Pendiente: <strong>{Math.max(0, (doc.total || 0) - totalPaid).toFixed(2)} €</strong>.
+                        Total abonado: <strong>{totalPaid.toFixed(2)} â‚¬</strong> â€¢ Pendiente: <strong>{Math.max(0, (doc.total || 0) - totalPaid).toFixed(2)} â‚¬</strong>.
                       </p>
                     </div>
                   </div>
@@ -2337,7 +2337,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
               {!isPaid && (
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                   <div className="text-xs font-bold text-[#0F2942] uppercase tracking-wider flex items-center justify-between">
-                    <span>Añadir Nuevo Pago / Cobro</span>
+                    <span>AÃ±adir Nuevo Pago / Cobro</span>
                     {Math.max(0, (doc.total || 0) - totalPaid) > 0 && (
                       <button
                         type="button"
@@ -2351,7 +2351,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Importe (€)</label>
+                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Importe (â‚¬)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -2363,7 +2363,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Método de Pago</label>
+                      <label className="text-[11px] font-bold text-slate-500 block mb-1">MÃ©todo de Pago</label>
                       <select
                         value={newPaymentMethod}
                         onChange={(e) => setNewPaymentMethod(e.target.value)}
@@ -2373,8 +2373,8 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                         <option value="Tarjeta">Tarjeta Bancaria</option>
                         <option value="Transferencia">Transferencia</option>
                         <option value="Bizum">Bizum</option>
-                        <option value="Financiacion">Financiación</option>
-                        <option value="Cheque">Cheque / Pagaré</option>
+                        <option value="Financiacion">FinanciaciÃ³n</option>
+                        <option value="Cheque">Cheque / PagarÃ©</option>
                       </select>
                     </div>
 
@@ -2395,7 +2395,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       onClick={() => {
                         const amount = parseFloat(newPaymentAmount);
                         if (isNaN(amount) || amount <= 0) {
-                          if (onShowToast) onShowToast('Por favor introduzca un importe válido.');
+                          if (onShowToast) onShowToast('Por favor introduzca un importe vÃ¡lido.');
                           return;
                         }
                         handleAddPayment(amount, newPaymentDate, newPaymentMethod);
@@ -2417,7 +2417,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
 
                 {(!doc.payments || doc.payments.length === 0) ? (
                   <div className="text-xs text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center border border-slate-200">
-                    No se ha registrado ningún cobro aún.
+                    No se ha registrado ningÃºn cobro aÃºn.
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -2426,7 +2426,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                         <div className="flex items-center gap-2">
                           <CreditCard className="w-4 h-4 text-emerald-600" />
                           <div>
-                            <span className="font-bold text-slate-800">{p.amount.toFixed(2)} €</span>
+                            <span className="font-bold text-slate-800">{p.amount.toFixed(2)} â‚¬</span>
                             <span className="text-slate-400 text-[11px] ml-2">({p.date})</span>
                           </div>
                         </div>
@@ -2504,7 +2504,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
             </div>
 
             <p className="text-xs text-slate-600">
-              Seleccione en el calendario la nueva fecha de entrega propuesta para enviar al cliente. El cliente podrá aceptarla o solicitar otra fecha.
+              Seleccione en el calendario la nueva fecha de entrega propuesta para enviar al cliente. El cliente podrÃ¡ aceptarla o solicitar otra fecha.
             </p>
 
             <div className="space-y-2">
@@ -2552,3 +2552,4 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     </>
   );
 };
+

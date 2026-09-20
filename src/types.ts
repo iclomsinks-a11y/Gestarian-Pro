@@ -1,7 +1,7 @@
-export type DocumentType = 'presupuesto' | 'factura' | 'orden_trabajo' | 'factura_recibida' | 'factura_proforma' | 'recibo_abono';
+export type DocumentType = 'presupuesto' | 'budget' | 'factura_rectificativa' | 'factura' | 'orden_trabajo' | 'factura_recibida' | 'factura_proforma' | 'recibo_abono';
 
-export type BudgetStatus = 'borrador' | 'enviado' | 'aceptado' | 'rechazado';
-export type InvoiceStatus = 'borrador' | 'confirmada' | 'enviada';
+export type BudgetStatus = 'borrador' | 'pagado' | 'PAGADO' | 'enviado' | 'aceptado' | 'rechazado';
+export type InvoiceStatus = 'borrador' | 'enviado' | 'pagada' | 'pagado' | 'confirmada' | 'enviada';
 export type WorkOrderStatus = 'pendiente' | 'en_ejecucion' | 'finalizada';
 
 export interface DocumentItem {
@@ -96,6 +96,13 @@ export interface GestarianDocument {
   citaStatus?: 'pendiente' | 'cita_aceptada' | 'cita_confirmada';
   tallerStatus?: 'pendiente' | 'enviar_a_taller' | 'en_reparacion' | 'reparacion_finalizada';
   facturacionStatus?: 'bloqueado' | 'finalizar_reparacion' | 'facturar' | 'facturado' | 'factura_enviada';
+  // Campos de compatibilidad (ICLOM + ais-2 fusion)
+  acceptedByClient?: boolean;
+  linkedBudgetId?: string;
+  linkedBudgetNumber?: string;
+  createdAt?: string;
+  cobroStatus?: string;
+  updatedAt?: string;
 }
 
 export interface PlateRecognizerResult {
@@ -178,6 +185,7 @@ export type HighContrastThemeId =
 export interface AppUser {
   id: string;
   fullName: string;
+  name?: string;
   fiscalAddress: string;
   cif: string;
   phone: string;
@@ -187,12 +195,19 @@ export interface AppUser {
   currentTier: 'lite' | 'pro' | 'enterprise';
   agencyEmail?: string;
   
+  role?: 'boss' | 'employee' | 'client' | 'developer';
   businessType?: 'autonomo' | 'empresa';
   sector?: string;
   branch?: string;
   specialty?: string;
   
   employees?: Employee[];
+  permissions?: {
+    manageWorkOrders?: boolean;
+    viewInvoices?: boolean;
+    manageClients?: boolean;
+    manageDocuments?: boolean;
+  };
   
   // Personalización y Temas
   themeId?: HighContrastThemeId;
@@ -251,9 +266,10 @@ export interface Client {
   name: string;
   cif: string;
   address: string;
+  fiscalAddress?: string; // Para compatibilidad
   phone: string;
   email: string;
-  clientType?: 'particular' | 'empresa'; // 'empresa' o 'particular'
+  clientType?: 'particular' | 'empresa' | 'autonomo'; // 'empresa' o 'particular' o 'autonomo'
   isAutonomo?: boolean; // Verdadero si es un autónomo profesional
   hasAppInstalled?: boolean; // Verdadero si el cliente tiene la app móvil instalada
   appInstalledAt?: string;

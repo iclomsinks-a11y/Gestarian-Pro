@@ -34,7 +34,7 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
   onOpenMenu,
   initialExpedienteId = null,
   initialClientId = null,
-  currentUser = { id: 'boss', fullName: 'Administrador', role: 'boss', cif: '00000000X', fiscalAddress: '', phone: '', email: '' },
+  currentUser = { id: 'boss', fullName: 'Administrador', role: 'boss', cif: '00000000X', fiscalAddress: '', phone: '', email: '', verified: true, createdAt: new Date().toISOString(), currentTier: 'pro' } as AppUser,
   onUpdateDocument,
   onGenerateInvoiceFromBudget,
   onShowToast,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Clock, Upload, Sparkles, Image as ImageIcon } from 'lucide-react';
 
 interface LongPressImagePreviewProps {
@@ -26,8 +26,8 @@ export const LongPressImagePreview: React.FC<LongPressImagePreviewProps> = ({
   const [progress, setProgress] = useState(0); // 0 to 100
   const [remainingSeconds, setRemainingSeconds] = useState(3);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
   const touchStartCoords = useRef<{ x: number; y: number } | null>(null);
   const triggeredRef = useRef(false);

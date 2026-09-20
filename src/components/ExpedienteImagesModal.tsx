@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { 
   X, Camera, Plus, Trash2, Smartphone, MessageCircle, Mail, 
   CheckCircle2, AlertCircle, Eye, ChevronLeft, ChevronRight,
@@ -14,6 +14,7 @@ interface ExpedienteImagesModalProps {
   client?: Client | null;
   onUpdateImages: (updatedImages: string[]) => void;
   onOpenClientArea?: () => void;
+  onShowToast?: (msg: string, duration?: number) => void; // Opcional
 }
 
 export const ExpedienteImagesModal: React.FC<ExpedienteImagesModalProps> = ({

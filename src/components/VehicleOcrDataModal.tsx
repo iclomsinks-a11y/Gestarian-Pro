@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, FileText, Calendar, Zap, ShieldCheck, Truck, Car, Eye, Download, Printer, CheckCircle2 } from 'lucide-react';
 import { ClientVehicle, VehicleOcrData } from '../types';
 
@@ -7,6 +7,7 @@ interface VehicleOcrDataModalProps {
   onClose: () => void;
   vehicle: ClientVehicle;
   clientName?: string;
+  onEdit?: () => void; // Opcional: boton editar vehiculo
 }
 
 export const VehicleOcrDataModal: React.FC<VehicleOcrDataModalProps> = ({

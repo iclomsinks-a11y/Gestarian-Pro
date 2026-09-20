@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { ArrowLeft, Home, Menu } from 'lucide-react';
 
 const PAGES = [
@@ -16,11 +16,13 @@ const PAGES = [
 ];
 
 interface PageHeaderProps {
-  pageId: string;
+  pageId?: string;
   title: string;
   onOpenMenu?: () => void;
   onBack?: () => void;
   onNavigateHome?: () => void;
+  logoUrl?: string;
+  userFullName?: string;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
