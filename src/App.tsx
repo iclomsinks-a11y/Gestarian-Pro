@@ -95,12 +95,16 @@ export default function App() {
   // Landing pública — visible cuando el usuario no ha configurado la app
   const isUserConfigured = Boolean(user.fullName && user.fullName.trim().length > 2);
   const [showLanding, setShowLanding] = useState<boolean>(() => {
-    // Si hay ?view= param en URL, no mostrar landing (enlace directo)
+    // Si hay ?view= param en URL o rutas específicas, no mostrar landing (enlace directo)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      const pathname = window.location.pathname;
+      
       if (params.get('view') || params.get('exp') || params.get('doc')) return false;
+      if (pathname.includes('/doc/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
     }
-    return !Boolean(localStorage.getItem('gestarian_user_configured'));
+    // Siempre mostrar la landing page pública con las 4 tarjetas por defecto
+    return true;
   });
 
   // Configuración del Sistema (GitHub repo, API Plate Recognizer)
