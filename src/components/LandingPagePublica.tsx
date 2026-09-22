@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, 
@@ -27,6 +27,25 @@ import {
   Users,
   Clock
 } from 'lucide-react';
+
+// Características ampliadas para Gestarian Quick
+const QUICK_FEATURES_AMPLIADAS = [
+  {
+    icon: Zap,
+    titulo: 'Agilidad Extrema en un Clic',
+    desc: 'La forma más rápida de generar una factura. Interfaz ultraligera y minimalista para aquellos que solo necesitan rellenar datos y emitir.'
+  },
+  {
+    icon: FileText,
+    titulo: 'Facturas Exprés',
+    desc: 'Sin complicaciones. Solo los campos necesarios para que tu factura sea legal y profesional en tiempo récord. (Solo facturas).'
+  },
+  {
+    icon: CheckCircle2,
+    titulo: 'Totalmente Gratuito',
+    desc: 'Accede de forma gratuita y empieza a facturar sin costes ocultos ni suscripciones.'
+  }
+];
 
 // CaracterÃ­sticas ampliadas para Gestarian Lite
 const LITE_FEATURES_AMPLIADAS = [
@@ -66,53 +85,33 @@ const LITE_FEATURES_AMPLIADAS = [
 const PRO_FEATURES_AMPLIADAS = [
   {
     icon: Database,
-    titulo: 'Nube Documental y FacturaciÃ³n VeriFactu',
-    desc: 'Facturas oficiales, presupuestos y albaranes centralizados 24/7 en la nube. MÃ¡xima seguridad de almacenamiento, acceso inmediato desde mÃ³vil, tablet o PC y total cumplimiento legal con cÃ³digos QR antifraude.'
+    titulo: 'Base de Datos sin Límite',
+    desc: 'Almacenamiento ilimitado para clientes, vehículos, histórico de reparaciones, facturas y presupuestos. Todo centralizado y seguro 24/7.'
   },
   {
     icon: Send,
-    titulo: 'GestiÃ³n Directa y EnvÃ­os a GestorÃ­a',
-    desc: 'OlvÃ­date de buscar, imprimir o escanear papeles a final de trimestre. GESTARIAN compila automÃ¡ticamente todas tus facturas de ingresos, gastos y modelos, y los remite en un solo clic al correo de tu gestor.'
+    titulo: 'Envío de Documentos por Email',
+    desc: 'Envía tus facturas y presupuestos profesionales directamente a través de correo electrónico con un solo clic.'
   },
   {
-    icon: PieChart,
-    titulo: 'Balance EconÃ³mico y Financiero en Vivo',
-    desc: 'Controla al cÃ©ntimo la salud econÃ³mica de tu negocio. Visualiza ingresos brutos, gastos operativos, beneficio neto e IVA devengado en tiempo real con estadÃ­sticas y grÃ¡ficos automÃ¡ticos.'
+    icon: Users,
+    titulo: 'Portal de Cliente Integrado',
+    desc: 'Ofrece a tus clientes un acceso privado donde podrán consultar el estado de sus vehículos y descargar sus facturas.'
   },
   {
     icon: Camera,
-    titulo: 'Registro de Gastos mediante OCR MÃ³vil',
-    desc: 'Haz una foto a cualquier ticket de combustible, factura de proveedor o recambio desde tu smartphone. La IA extrae automÃ¡ticamente el CIF, razÃ³n social, base imponible e IVA sin que tengas que teclear nada.'
+    titulo: 'Imágenes Disponibles de los Trabajos',
+    desc: 'Adjunta fotos del estado del vehículo antes y después de la reparación para documentar el trabajo ante el cliente.'
   },
   {
-    icon: Car,
-    titulo: 'Lectura de MatrÃ­culas OCR (para talleres)',
-    desc: 'Apunta con la cÃ¡mara al vehÃ­culo para cargar en segundos su ficha tÃ©cnica, histÃ³rico de averÃ­as, cliente titular y presupuestos asociados, agilizando la recepciÃ³n al mÃ¡ximo.'
+    icon: Activity,
+    titulo: 'Seguimiento de Trabajos en Tiempo Real',
+    desc: 'Visualiza el estado de las reparaciones en vivo y mantén informados a tus clientes del progreso.'
   },
   {
-    icon: Receipt,
-    titulo: 'Control de Abonos, Deudas y Pagos Parciales',
-    desc: 'Seguimiento riguroso de cobros pendientes, entregas a cuenta y pagos fraccionados con emisiÃ³n instantÃ¡nea de recibos oficiales de liquidaciÃ³n para mayor tranquilidad.'
-  },
-  {
-    icon: FileText,
-    titulo: 'Presupuestos Online con Enlaces WhatsApp y Email',
-    desc: 'Crea presupuestos en segundos y compÃ¡rtelos con enlaces ultra-cortos interactivos. Tus clientes los revisan y aprueban al instante con un simple toque desde su smartphone.'
-  },
-  {
-    icon: Calendar,
-    titulo: 'Agenda y Control de Citas Integrado',
-    desc: 'Planificador de entradas, citas y recepciones para organizar el trabajo diario de tu equipo, evitar solapamientos y garantizar los plazos de entrega pactados.'
-  },
-  {
-    icon: Sparkles,
-    titulo: 'Roadmap Visual de Estados de Trabajo',
-    desc: 'Panel visual por fases (recepciÃ³n, diagnÃ³stico, chapa, pintura, mecÃ¡nica, listo para entrega) para que todo el equipo sepa quÃ© hacer en cada instante.'
-  },
-  {
-    icon: Lock,
-    titulo: 'EmisiÃ³n AutomÃ¡tica de Recibos y Proformas',
-    desc: 'Genera documentaciÃ³n mercantil profesional y numerada con validez legal, lista para firmar o enviar por medios telemÃ¡ticos a tus clientes.'
+    icon: Zap,
+    titulo: 'Envío Automático a Gestoría',
+    desc: 'Remite automáticamente toda la documentación necesaria para tus informes trimestrales, declaraciones de IVA y rendimientos directamente a tu gestor.'
   }
 ];
 
@@ -120,8 +119,8 @@ const PRO_FEATURES_AMPLIADAS = [
 const ENTERPRISE_FEATURES_AMPLIADAS = [
   {
     icon: Building2,
-    titulo: 'GestorÃ­a Online Integral en Tiempo Real',
-    desc: 'Tu asesorÃ­a fiscal conectada en vivo a tu plataforma. Los asesores acceden directamente a libros contables, retenciones y modelos fiscales oficiales sin intercambiar archivos por email.'
+    titulo: 'Asesoramiento y Toma de Decisiones',
+    desc: 'Orientación proactiva y analítica avanzada diseñada para empresas de mayor tamaño que necesitan tomar decisiones estratégicas fundamentadas.'
   },
   {
     icon: Activity,
@@ -129,24 +128,9 @@ const ENTERPRISE_FEATURES_AMPLIADAS = [
     desc: 'Cuadro de mando integral con previsiÃ³n de tesorerÃ­a, rentabilidad por operario, anÃ¡lisis de mÃ¡rgenes por servicio y detecciÃ³n automÃ¡tica de cuellos de botella.'
   },
   {
-    icon: Boxes,
-    titulo: 'Control Automatizado de Stock y AlmacÃ©n',
-    desc: 'Trazabilidad de recambios con avisos automÃ¡ticos de rotura de stock, pedidos directos a distribuidores y valoraciÃ³n continua de inventario.'
-  },
-  {
-    icon: Layers,
-    titulo: 'GestiÃ³n Multi-Sede y Multi-Taller',
-    desc: 'Supervisa varios centros de trabajo, talleres o delegaciones desde un panel Ãºnico centralizado con informes comparativos y permisos por delegaciÃ³n.'
-  },
-  {
-    icon: Users,
-    titulo: 'Portal de Empleados y Control Horario',
-    desc: 'Fichaje digital homologado, gestiÃ³n de turnos, partes de trabajo por operario y liquidaciÃ³n automÃ¡tica de productividades.'
-  },
-  {
     icon: Sparkles,
     titulo: 'Incluye Todo lo Ofrecido en Gestarian Pro',
-    desc: 'Toda la potencia de Pro potenciada a escala corporativa con soporte prioritario 24/7 y copias de seguridad de alta disponibilidad.'
+    desc: 'Toda la potencia de Pro potenciada a escala corporativa con soporte prioritario 24/7 y herramientas a gran escala.'
   }
 ];
 
@@ -155,22 +139,11 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
-  const [expandedCard, setExpandedCard] = useState<'lite' | 'pro' | 'enterprise' | null>(null);
+  const [expandedCard, setExpandedCard] = useState<'quick' | 'lite' | 'pro' | 'enterprise' | null>(null);
 
-  const handleAccederPro = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleDownloadApp = () => {
+    // Todos los botones de acceso redirigen a la entrada unificada
     onEnterApp();
-  };
-
-  const handleDownloadApp = (version: 'lite' | 'pro') => {
-    if (version === 'lite') {
-      window.open('https://lite-gestarian.web.app', '_blank');
-    } else {
-      onEnterApp();
-    }
   };
 
   return (
@@ -206,12 +179,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               GESTARIAN
             </span>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-2 sm:gap-4 flex-col sm:flex-row">
             <button 
               onClick={onEnterApp}
-              className="px-6 py-3 lg:px-8 lg:py-3.5 text-base lg:text-lg font-bold rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+              className="px-4 py-2 sm:px-6 sm:py-3 lg:px-6 lg:py-3 text-xs sm:text-sm lg:text-base font-bold rounded-full bg-slate-800 hover:bg-slate-700 text-white shadow-lg border border-slate-700 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>Acceso a Roles</span>
+              <Users className="w-4 h-4" />
+              <span>Área de Cliente</span>
+            </button>
+            <button 
+              onClick={onEnterApp}
+              className="px-4 py-2 sm:px-6 sm:py-3 lg:px-6 lg:py-3 text-xs sm:text-sm lg:text-base font-bold rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Database className="w-4 h-4" />
+              <span>Zona Usuarios (Dashboard)</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -270,11 +251,66 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             </button>
           </motion.div>
 
-          {/* Grid de Productos (3 Tarjetas con animaciÃ³n y despliegue individual) */}
+          {/* Grid de Productos (4 Tarjetas con animación y despliegue individual) */}
           <div className="relative w-full max-w-[96vw] xl:max-w-[1500px]">
-            <div className={`flex overflow-x-auto md:grid gap-6 w-full snap-x snap-mandatory pt-8 pb-8 md:pb-0 px-4 md:px-0 transition-all duration-500 ${
-              expandedCard ? 'md:grid-cols-1 justify-items-center' : 'md:grid-cols-[1fr_1.2fr_1fr]'
+            <div className={`flex overflow-x-auto xl:grid gap-6 w-full snap-x snap-mandatory pt-8 pb-8 xl:pb-0 px-4 xl:px-0 transition-all duration-500 ${
+              expandedCard ? 'xl:grid-cols-1 justify-items-center' : 'xl:grid-cols-4'
             }`}>
+
+              {/* 0. GESTARIAN QUICK (NUEVO) */}
+              <AnimatePresence mode="popLayout">
+                {!expandedCard && (
+                  <motion.div 
+                    layoutId="card-quick"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                    onClick={() => setExpandedCard('quick')}
+                    className="group relative rounded-3xl bg-slate-900/50 border border-slate-800 p-8 flex flex-col text-left hover:bg-slate-800/50 hover:border-amber-500/40 transition-colors min-w-[85vw] md:min-w-[400px] xl:min-w-0 snap-center shrink-0 cursor-pointer shadow-xl hover:scale-[1.02]"
+                  >
+                  <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
+                  
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-6 border border-amber-500/20">
+                    <Clock className="w-6 h-6 text-amber-400" />
+                  </div>
+
+                  <div className="absolute top-8 right-8 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-bold tracking-wider border border-amber-500/30">
+                    GRATIS 100%
+                  </div>
+                  
+                  <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-white">Gestarian Quick</h3>
+                  <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
+                    Solo para facturas. La forma más rápida y ágil de generar documentos sin complicaciones.
+                  </p>
+
+                  <ul className="space-y-3 mb-8">
+                    {['Exclusivo para facturas', 'Interfaz ultraligera', 'Gestión rápida', 'Gratis para siempre'].map((feat, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                        <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="xl:whitespace-nowrap">{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setExpandedCard('quick'); }}
+                    className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-amber-600/90 hover:bg-amber-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-amber-600/20 mb-3"
+                  >
+                    <span>Ver más detalles de Quick</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDownloadApp(); }}
+                      className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+                    >
+                      Acceder a Quick
+                    </button>
+                  </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <AnimatePresence mode="popLayout">
                 {!expandedCard && (
@@ -289,7 +325,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
                   
                   <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
-                    <Zap className="w-6 h-6 text-emerald-400" />
+                    <Smartphone className="w-6 h-6 text-emerald-400" />
                   </div>
 
                   <div className="absolute top-8 right-8 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold tracking-wider border border-emerald-500/30">
@@ -298,11 +334,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   
                   <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-white">Gestarian Lite</h3>
                   <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
-                    Factura con tu smartphone cumpliendo con VeriFactu. Cero complicaciones.
+                    Facturas y presupuestos con tu smartphone cumpliendo con VeriFactu. Cero complicaciones.
                   </p>
 
                   <ul className="space-y-3 mb-8">
-                    {['Cero configuraciÃ³n', 'EnvÃ­o por WhatsApp', 'PDF profesional', 'Descarga y uso 100% gratis'].map((feat, i) => (
+                    {['Facturas y Presupuestos', 'Envío por WhatsApp', 'PDF profesional', 'Descarga y uso 100% gratis'].map((feat, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         <span className="xl:whitespace-nowrap">{feat}</span>
@@ -319,15 +355,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   </button>
 
                   <div className="flex gap-2">
-                    <a
-                      href="https://lite-gestarian.web.app"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDownloadApp(); }}
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
                     >
                       Acceder a Lite
-                    </a>
+                    </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDownloadApp('lite'); }}
+                      onClick={(e) => { e.stopPropagation(); handleDownloadApp(); }}
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 transition-colors border border-emerald-500/30 flex items-center justify-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -347,7 +382,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                     onClick={() => setExpandedCard('pro')}
-                    className="group relative rounded-3xl bg-gradient-to-b from-indigo-900/40 to-slate-900/50 border border-indigo-500/30 p-8 flex flex-col text-left transform md:-translate-y-6 hover:border-indigo-400/60 transition-colors shadow-2xl shadow-indigo-900/25 min-w-[85vw] md:min-w-0 snap-center shrink-0 cursor-pointer hover:scale-[1.02]"
+                    className="group relative rounded-3xl bg-gradient-to-b from-indigo-900/40 to-slate-900/50 border border-indigo-500/30 p-8 flex flex-col text-left transform xl:-translate-y-6 hover:border-indigo-400/60 transition-colors shadow-2xl shadow-indigo-900/25 min-w-[85vw] md:min-w-[400px] xl:min-w-0 snap-center shrink-0 cursor-pointer hover:scale-[1.02]"
                   >
                   <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-400 to-transparent opacity-60" />
                   
@@ -361,18 +396,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                   <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-white">Gestarian Pro</h3>
                   <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
-                    Haz un presupuesto online y olvÃ­date del resto de documentaciÃ³n, GESTARIAN lo hace por ti. 
-                    Confirma la factura y la enviamos junto a tus informes a tu gestorÃ­a.
+                    Diseñado para profesionales y pequeñas empresas. Todo lo que necesitas para tu negocio en una única plataforma.
                   </p>
 
                   <ul className="space-y-3 mb-8">
                     {[
-                      'AdemÃ¡s de lo ofrecido en Lite...',
-                      'Nube para documentaciÃ³n, facturas y gastos',
-                      'Balance econÃ³mico y financiero',
-                      'GestiÃ³n directa y envÃ­os a gestorÃ­a',
-                      'Registro de gastos OCR y matrÃ­culas',
-                      'Roadmap visual y control de citas'
+                      'Facturas y presupuestos (Email/WA)',
+                      'Base de datos sin límite',
+                      'Portal de cliente e imágenes',
+                      'Seguimiento en tiempo real',
+                      'Envío automático a gestoría',
+                      'Ideal para profesionales/PYMES'
                     ].map((feat, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
                         <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-indigo-400" />
@@ -391,13 +425,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={handleAccederPro}
+                      onClick={(e) => { e.stopPropagation(); handleDownloadApp(); }}
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700 cursor-pointer"
                     >
                       Acceder a Pro
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDownloadApp('pro'); }}
+                      onClick={(e) => { e.stopPropagation(); handleDownloadApp(); }}
                       className="flex-1 py-2 text-center text-xs font-semibold rounded-lg bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-300 transition-colors border border-indigo-500/30 flex items-center justify-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -417,7 +451,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                     onClick={() => setExpandedCard('enterprise')}
-                    className="group relative rounded-3xl bg-slate-900/50 border border-purple-500/20 p-8 flex flex-col text-left min-w-[85vw] md:min-w-0 snap-center shrink-0 cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/40 transition-colors shadow-xl hover:scale-[1.02]"
+                    className="group relative rounded-3xl bg-slate-900/50 border border-purple-500/20 p-8 flex flex-col text-left min-w-[85vw] md:min-w-[400px] xl:min-w-0 snap-center shrink-0 cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/40 transition-colors shadow-xl hover:scale-[1.02]"
                   >
                   <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
                   
@@ -431,11 +465,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   
                   <h3 className="text-2xl lg:text-3xl font-bold mb-2 text-slate-200">Gestarian Enterprise</h3>
                   <p className="text-slate-400 mb-6 flex-1 text-sm lg:text-base">
-                    Tu gestorÃ­a completa online con acceso en tiempo real a todos tus documentos e informes, grÃ¡ficos y control de stocks.
+                    Para empresas de mayor tamaño. Incluye todo lo anterior más herramientas de asesoramiento y toma de decisiones estratégicas.
                   </p>
 
                   <ul className="space-y-3 mb-8">
-                    {['GestorÃ­a completa online en vivo', 'GrÃ¡ficos y anÃ¡lisis de negocio', 'EstadÃ­sticas y control de stocks', 'Multi-taller y multi-sede'].map((feat, i) => (
+                    {['Para grandes empresas', 'Asesoramiento proactivo', 'Toma de decisiones', 'Todo lo incluido en Pro'].map((feat, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
                         <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
                         <span className="xl:whitespace-nowrap">{feat}</span>
@@ -471,7 +505,140 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               </AnimatePresence>
             </div>
 
-            {/* VISTAS EXPANDIDAS CON ANIMACIÃ“N: DESPLAZAMIENTO A LA IZQUIERDA Y CRECIMIENTO HACIA LA DERECHA */}
+            {/* 0. EXPANDIDO: GESTARIAN QUICK */}
+            <AnimatePresence>
+              {expandedCard === 'quick' && (
+                <motion.div
+                  layoutId="card-quick"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="fixed inset-4 xl:inset-auto xl:top-1/2 xl:left-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-50 w-auto xl:w-[min(1280px,96vw)] max-h-[92vh] overflow-y-auto bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col text-left"
+                >
+                  <button
+                    onClick={() => setExpandedCard(null)}
+                    className="absolute top-6 right-6 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700 z-20"
+                    title="Cerrar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 xl:gap-12 flex-1 items-start">
+                    {/* Columna Izquierda */}
+                    <div className="flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800 pb-6 lg:pb-0 lg:pr-8">
+                      <div>
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30">
+                          <Clock className="w-8 h-8 text-white" />
+                        </div>
+
+                        <div className="inline-block px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold tracking-wider border border-amber-500/30 mb-3">
+                          100% GRATIS DE POR VIDA
+                        </div>
+
+                        <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3">Gestarian Quick</h2>
+                        <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+                          Facturación en 30 segundos desde tu móvil. Pensado para que no pierdas ni un minuto en papeleo innecesario con una interfaz diseñada para ser lo más rápida posible.
+                        </p>
+
+                        <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/20 space-y-2 mb-6">
+                          <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase tracking-wider">
+                            <Check className="w-4 h-4 text-amber-400" />
+                            <span>Descarga y Uso Gratuito</span>
+                          </div>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Sin registro de tarjeta bancaria, sin suscripciones mensuales y sin límite de facturas. Totalmente libre para ti.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-400 space-y-1">
+                        <p className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Envío de facturas por WhatsApp</span>
+                        </p>
+                        <p className="flex items-center gap-1.5 text-slate-400">
+                          <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                          <span>Generador de PDF instantáneo</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Columna Derecha */}
+                    <motion.div 
+                      initial={{ opacity: 0, x: 30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, delay: 0.15 }}
+                      className="flex flex-col space-y-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                          <Clock className="w-5 h-5 text-amber-400" />
+                          <span>Todo lo que incluye Gestarian Quick</span>
+                        </h3>
+                        <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                          Uso y Descarga Gratis
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[50vh] lg:max-h-[58vh] overflow-y-auto pr-2">
+                        {QUICK_FEATURES_AMPLIADAS.map((item, idx) => {
+                          const IconComp = item.icon;
+                          return (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 15 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: 0.1 + idx * 0.04 }}
+                              className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/90 hover:border-amber-500/40 hover:bg-slate-900/80 transition-all text-left space-y-1.5"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
+                                  <IconComp className="w-4 h-4" />
+                                </div>
+                                <h4 className="text-xs sm:text-sm font-bold text-white leading-snug">
+                                  {item.titulo}
+                                </h4>
+                              </div>
+                              <p className="text-xs text-slate-400 leading-relaxed pl-9">
+                                {item.desc}
+                              </p>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Botones inferiores de Quick */}
+                  <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <button
+                      onClick={() => setExpandedCard(null)}
+                      className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer order-last sm:order-first"
+                    >
+                      ← Volver a todas las versiones
+                    </button>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                      <button
+                        onClick={handleDownloadApp}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <Download className="w-4 h-4 text-amber-400" />
+                        <span>Descargar Quick (Gratis)</span>
+                      </button>
+
+                      <button
+                        onClick={handleDownloadApp}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center text-center cursor-pointer"
+                      >
+                        Acceder
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* 1. EXPANDIDO: GESTARIAN LITE */}
             <AnimatePresence>
@@ -482,7 +649,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-50 w-auto md:w-[min(1280px,96vw)] max-h-[92vh] overflow-y-auto bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col text-left"
+                  className="fixed inset-4 xl:inset-auto xl:top-1/2 xl:left-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-50 w-auto xl:w-[min(1280px,96vw)] max-h-[92vh] overflow-y-auto bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col text-left"
                 >
                   <button
                     onClick={() => setExpandedCard(null)}
@@ -590,7 +757,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                       <button
-                        onClick={() => handleDownloadApp('lite')}
+                        onClick={handleDownloadApp}
                         className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                       >
                         <Download className="w-4 h-4 text-emerald-400" />
@@ -722,7 +889,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       onClick={() => setExpandedCard(null)}
                       className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer order-last sm:order-first"
                     >
-                      â† Volver a todas las versiones
+                      â†  Volver a todas las versiones
                     </button>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
