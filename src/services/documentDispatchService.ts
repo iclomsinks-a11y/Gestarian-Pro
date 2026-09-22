@@ -1,4 +1,4 @@
-﻿import { AppUser, Client, GestarianDocument } from '../types';
+import { AppUser, Client, GestarianDocument } from '../types';
 import { sanitizePlate, getExpedienteFromDocNumber } from './storage';
 import { syncShortLinkToSupabase } from './supabaseClient';
 
@@ -17,10 +17,25 @@ export interface DispatchResult {
 }
 
 export const GESTARIAN_OFFICIAL_DOMAIN = 'https://www.gestarian.com';
+export const GESTARIAN_NOTIFICACIONES_DOMAIN = 'https://notificaciones.gestarian.com';
 
+/**
+ * Dominio base oficial para el despacho y generación de enlaces cortos a presupuestos,
+ * expedientes y documentos públicos de clientes.
+ */
 export function getAppBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location.origin) return window.location.origin;
-  return GESTARIAN_OFFICIAL_DOMAIN;
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('gestarian_notificaciones_domain');
+    if (custom && custom.trim()) return custom.trim().replace(/\/$/, '');
+
+    // En entorno de desarrollo local (localhost o red local), usar el origen local
+    // para permitir que las pruebas en WhatsApp Web abran el documento en la máquina actual
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.startsWith('192.168.')) {
+      return window.location.origin;
+    }
+  }
+  return GESTARIAN_NOTIFICACIONES_DOMAIN;
 }
 
 export function encodeDocData(doc: GestarianDocument): string {
@@ -30,10 +45,22 @@ export function encodeDocData(doc: GestarianDocument): string {
   } catch (e) { console.error('Error encoding doc data payload:', e); return ''; }
 }
 
+/**
+ * Genera el enlace corto directo al documento / presupuesto alojado en notificaciones.gestarian.com
+ * Incluye el payload codificado para garantizar que el documento se pueda visualizar inmediatamente
+ * en cualquier dispositivo aunque no esté en el almacenamiento local del cliente.
+ */
 export function generateDocumentPdfUrl(doc: GestarianDocument | string): string {
   const baseUrl = getAppBaseUrl();
   const docNum = typeof doc === 'object' ? (doc.number || doc.id) : doc;
-  return `${baseUrl}/doc/${encodeURIComponent(docNum.trim().toUpperCase())}`;
+  const cleanDoc = encodeURIComponent(docNum.trim().toUpperCase());
+  if (typeof doc === 'object') {
+    const encoded = encodeDocData(doc);
+    if (encoded) {
+      return `${baseUrl}/doc/${cleanDoc}?data=${encoded}`;
+    }
+  }
+  return `${baseUrl}/doc/${cleanDoc}`;
 }
 
 export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: GestarianDocument): string {
@@ -43,7 +70,7 @@ export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: Gesta
 }
 
 export function generateClientPortalAppUrl(): string {
-  return `${GESTARIAN_OFFICIAL_DOMAIN}/?view=app`;
+  return `${getAppBaseUrl()}/?view=app`;
 }
 
 export const CLIENT_PORTAL_DOWNLOAD_URL = generateClientPortalAppUrl();

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Check, ArrowRight, PlusCircle, MinusCircle, User, Car, Phone, Mail, 
@@ -338,14 +338,14 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   })();
 
   const budgetDoc: GestarianDocument = (() => {
-    if (doc.type === 'budget') return doc;
+    if (doc.type === 'presupuesto' || doc.type === 'budget') return doc;
     const found = allDocuments.find(
-      (d) => d.type === 'budget' && (d.expediente === doc.expediente || d.id === doc.linkedBudgetId || d.number === doc.linkedBudgetNumber)
+      (d) => (d.type === 'presupuesto' || d.type === 'budget') && (d.expediente === doc.expediente || d.id === doc.linkedBudgetId || d.number === doc.linkedBudgetNumber)
     );
     if (found) return found;
     return {
       ...doc,
-      type: 'budget' as const,
+      type: 'presupuesto' as const,
       number: budgetNumberOnly,
     };
   })();
@@ -1322,7 +1322,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                 {/* Email */}
                 {(client?.email || doc.clientEmail) ? (
                   <a
-                    href={`mailto:${client?.email || doc.clientEmail}?subject=Presupuesto%20${budgetNumberOnly}&body=Estimado%20cliente,%20le%20enviamos%20el%20presupuesto%20${budgetNumberOnly}%20por%20importe%20de%20${(doc.total || 0).toFixed(2)}â‚¬.`}
+                    href={`mailto:${client?.email || doc.clientEmail}?subject=Presupuesto%20${encodeURIComponent(budgetNumberOnly)}&body=${encodeURIComponent(`Estimado cliente,\n\nLe enviamos el presupuesto ${budgetNumberOnly} por importe de ${(doc.total || 0).toFixed(2)} €.\n\nPuede consultar y aceptar su presupuesto en el siguiente enlace:\n${generateDocumentPdfUrl(budgetDoc || doc)}\n\nGracias por su confianza.`)}`}
                     className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
                     title="Enviar por Email"
                   >

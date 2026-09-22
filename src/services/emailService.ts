@@ -85,9 +85,10 @@ export async function sendDocumentEmail(
     ? `<img src="${options.userLogoUrl}" alt="${senderName}" style="max-height:70px; max-width:220px; display:block; margin:0 auto 16px auto; border-radius:6px;" />`
     : `<h2 style="color: #0f2942; margin: 0; font-size: 22px; font-weight: 800; text-align:center;">${senderName}</h2>`;
 
-  const shortDocUrl = options?.shortUrl || `https://www.gestarian.com/doc/${docNumber}`;
-  const trackingUrl = options?.trackingUrl || `https://www.gestarian.com/exp/${docNumber}`;
-  const appPortalUrl = options?.clientPortalUrl || `https://www.gestarian.com/app`;
+  const notifDomain = 'https://notificaciones.gestarian.com';
+  const shortDocUrl = options?.shortUrl || `${notifDomain}/doc/${encodeURIComponent(docNumber.trim().toUpperCase())}`;
+  const trackingUrl = options?.trackingUrl || `${notifDomain}/exp/${encodeURIComponent(docNumber.trim().toUpperCase())}`;
+  const appPortalUrl = options?.clientPortalUrl || `${notifDomain}/app`;
 
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: auto; padding: 28px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">

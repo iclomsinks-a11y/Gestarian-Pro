@@ -453,6 +453,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     }
     updated[index] = target;
     setItems(updated);
+    setIsSaved(false);
   };
 
   const addItemRow = () => {
@@ -467,12 +468,14 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         amount: 0,
       },
     ]);
+    setIsSaved(false);
   };
 
   const removeItemRow = (index: number) => {
     if (isLocked) return;
     if (items.length <= 1) return;
     setItems(items.filter((_, i) => i !== index));
+    setIsSaved(false);
   };
 
   // Clasificación del cliente para envío de presupuestos:
@@ -578,7 +581,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   // Enviar por WhatsApp
   const handleSendWhatsApp = () => {
     if (!isSaved) {
-      handleSaveDocument();
+      if (onShowToast) {
+        onShowToast("Guarde el documento para enviarlo.");
+      }
+      return;
     }
     const phone = selectedClient?.phone || quickPhone;
     if (!phone) {
@@ -658,7 +664,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   // Enviar por Email
   const handleSendEmail = () => {
     if (!isSaved) {
-      handleSaveDocument();
+      if (onShowToast) {
+        onShowToast("Guarde el documento para enviarlo.");
+      }
+      return;
     }
     const email = selectedClient?.email || quickEmail;
     if (!email) {
@@ -1378,10 +1387,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               onClick={handleSendWhatsApp}
               className={`px-3 py-2 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer font-bold text-xs ${
                 isSaved
-                  ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 hover:scale-105 shadow-md shadow-emerald-200 animate-pulse"
-                  : "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:scale-105"
+                  ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-500 hover:scale-105 shadow-md shadow-emerald-200"
+                  : "bg-emerald-50 border-emerald-300 text-emerald-700 opacity-75 hover:opacity-100 hover:scale-105"
               }`}
-              title="Enviar presupuesto por WhatsApp"
+              title={isSaved ? "Enviar por WhatsApp" : "Guarde el documento para enviarlo"}
             >
               <MessageCircle className="w-4 h-4" strokeWidth={2} />
               <span>WhatsApp</span>
@@ -1394,9 +1403,9 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               className={`px-3 py-2 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer font-bold text-xs ${
                 isSaved
                   ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-500 hover:scale-105 shadow-md shadow-blue-200"
-                  : "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 hover:scale-105"
+                  : "bg-blue-50 border-blue-300 text-blue-700 opacity-75 hover:opacity-100 hover:scale-105"
               }`}
-              title="Enviar presupuesto por Email"
+              title={isSaved ? "Enviar por Email" : "Guarde el documento para enviarlo"}
             >
               <Mail className="w-4 h-4" strokeWidth={2} />
               <span>Email</span>

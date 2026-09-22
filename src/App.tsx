@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from './components/Header';
 import { TierCards } from './components/TierCards';
@@ -179,10 +179,13 @@ export default function App() {
     if (!viewParam && pathname) {
       if (pathname.includes('/doc/')) {
         viewParam = 'doc';
-        idParam = pathname.split('/doc/')[1];
+        idParam = pathname.split('/doc/')[1].split('/')[0].split('?')[0];
+      } else if (pathname.includes('/p/')) {
+        viewParam = 'doc';
+        idParam = pathname.split('/p/')[1].split('/')[0].split('?')[0];
       } else if (pathname.includes('/exp/')) {
         viewParam = 'expediente';
-        idParam = pathname.split('/exp/')[1];
+        idParam = pathname.split('/exp/')[1].split('/')[0].split('?')[0];
       } else if (pathname.includes('/app')) {
         viewParam = 'app-clientes';
       }

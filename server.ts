@@ -133,12 +133,12 @@ async function startServer() {
     <p>Hola <strong>${clientName || 'cliente'}</strong>,</p>
     <p>Has sido dado de alta como cliente en <strong>${taller}</strong>. Ya puedes acceder a tu portal personal para consultar el estado de tus reparaciones, ver tus presupuestos y documentos, y comunicarte con el taller.</p>
     <div style="text-align:center;margin:24px 0">
-      <a href="${portalUrl || 'https://www.gestarian.com'}" class="btn btn-primary">🔑 Acceder a mi Portal</a>
+      <a href="${portalUrl || 'https://notificaciones.gestarian.com'}" class="btn btn-primary">🔑 Acceder a mi Portal</a>
       ${appUrl ? `<a href="${appUrl}" class="btn btn-secondary">📱 Descargar la App</a>` : ''}
     </div>
     <p style="font-size:13px;color:#64748b">Utiliza tu email (<strong>${clientEmail}</strong>) y tu DNI/CIF para acceder por primera vez.</p>
   </div>
-  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · <a href="https://www.gestarian.com" style="color:#64748b">gestarian.com</a></div>
+  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · <a href="https://notificaciones.gestarian.com" style="color:#64748b">notificaciones.gestarian.com</a></div>
 </div>
 </body></html>`;
 
@@ -206,12 +206,12 @@ async function startServer() {
     <p>Le remitimos su <strong>${docLabel}</strong> con número <strong>${docNumber}</strong>:</p>
     <div class="amount">${total ? Number(total).toFixed(2) + ' €' : ''}</div>
     ${observations ? `<p style="font-size:13px;color:#64748b;background:#f8fafc;padding:10px 14px;border-radius:8px;border-left:3px solid #cbd5e1"><strong>Nota:</strong> ${observations}</p>` : ''}
-    <a href="${shortUrl || '#'}" class="link-card blue">📄 Ver ${docLabel} en PDF</a>
-    <a href="${trackingUrl || '#'}" class="link-card green">🔍 Estado en tu Área de Cliente</a>
+    <a href="${shortUrl || `https://notificaciones.gestarian.com/doc/${encodeURIComponent(docNumber || '')}`}" class="link-card blue">📄 Ver ${docLabel} en PDF</a>
+    <a href="${trackingUrl || `https://notificaciones.gestarian.com/exp/${encodeURIComponent(docNumber || '')}`}" class="link-card green">🔍 Estado en tu Área de Cliente</a>
     ${appDownloadUrl ? `<a href="${appDownloadUrl}" class="link-card slate">📱 Descargar App GESTARIAN</a>` : ''}
     <p style="margin-top:20px;font-size:13px;color:#94a3b8">Gracias por su confianza. — ${userName || ''}</p>
   </div>
-  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · <a href="https://www.gestarian.com" style="color:#64748b">gestarian.com</a></div>
+  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · <a href="https://notificaciones.gestarian.com" style="color:#64748b">notificaciones.gestarian.com</a></div>
 </div>
 </body></html>`;
 
