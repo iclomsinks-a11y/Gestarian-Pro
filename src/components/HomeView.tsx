@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Camera, Plus, Bell, Sparkles, ArrowRight, Palette } from 'lucide-react';
 import { AppUser, GestarianDocument } from '../types';
 import { CasioVintageClock } from './CasioVintageClock';
@@ -67,12 +68,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div
-      className="relative w-screen h-[100dvh] max-h-[100dvh] bg-[#0F172A] overflow-hidden flex flex-col items-center justify-between snap-start shrink-0"
+      className="relative w-screen h-[100dvh] max-h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-between snap-start shrink-0"
       id="page-inicio"
     >
       {/* Background Image - Sin capa de oscurecimiento */}
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-700 opacity-100"
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fade-in-bg"
         style={{
           backgroundImage: `url(${
             window.innerHeight > window.innerWidth
@@ -85,7 +86,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       />
 
       {/* Botones de acceso y personalización top left */}
-      <div className="absolute top-3 left-3 z-50 flex items-center gap-2">
+      <div className="absolute top-3 left-3 z-50 flex items-center gap-2 stagger-left" style={{ animationDelay: "0.2s" }}>
         {onOpenAccessSelector && (
           <button
             onClick={onOpenAccessSelector}
@@ -110,7 +111,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Barra superior para notificaciones de METIS */}
-      <div className="absolute top-3 right-16 z-50">
+      <div className="absolute top-3 right-16 z-50 stagger-right" style={{ animationDelay: "0.4s" }}>
         {unreadNotificationsCount > 0 && (
           <button
             onClick={onOpenNotifications}
@@ -126,7 +127,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
       
       {/* Header: Reloj Digital Casio Vintage centrado arriba a 10px del borde superior */}
-      <div className="relative z-10 w-full pt-[10px] px-3 sm:px-6">
+      <div className="relative z-10 w-full pt-[10px] px-3 sm:px-6 stagger-top" style={{ animationDelay: "0.6s" }}>
         <CasioVintageClock 
           isLightBackground={false} 
           fiscalAddress={currentUser.fiscalAddress} 
@@ -135,7 +136,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Notificación de METIS en la pantalla de inicio si hay presupuestos pendientes de valorar precios por el jefe */}
       {pendingBudgetReviews.length > 0 && (
-        <div className="relative z-20 w-full max-w-lg mx-auto px-4 my-auto space-y-3">
+        <div className="relative z-20 w-full max-w-lg mx-auto px-4 my-auto space-y-3 stagger-left" style={{ animationDelay: "0.8s" }}>
           {pendingBudgetReviews.map((budget) => (
             <div
               key={budget.id}
@@ -170,7 +171,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* FOOTER: Botonera con aros de 1px sólido blanco con glow de color y dibujos en trazo blanco */}
-      <div className="relative z-10 w-full pb-8 px-4 sm:px-8 flex justify-center items-center">
+      <div className="relative z-10 w-full pb-8 px-4 sm:px-8 flex justify-center items-center stagger-bottom" style={{ animationDelay: "1.0s" }}>
         <div className="flex items-center justify-between sm:justify-center gap-6 sm:gap-12 w-full max-w-xs sm:max-w-md mx-auto flex-nowrap">
           {/* 1. Icono Cámara (si automoción): ARO LÍNEA 1PX BLANCA, GLOW VERDE, DIBUJO EN LÍNEA BLANCA */}
           {isAutomocion && (

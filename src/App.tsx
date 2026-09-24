@@ -34,7 +34,7 @@ import { ImageCustomizerModal } from './components/ImageCustomizerModal';
 import { ClientAppLandingModal } from './components/ClientAppLandingModal';
 import { AccessSelectorModal } from './components/AccessSelectorModal';
 import { ClientPortalModal } from './components/ClientPortalModal';
-import { LandingPage } from './components/LandingPagePublica';
+import { IntroAnimation } from './components/IntroAnimation';
 import {
   AppUser,
   Client,
@@ -94,7 +94,7 @@ export default function App() {
 
   // Landing pública — visible cuando el usuario no ha configurado la app
   const isUserConfigured = Boolean(user.fullName && user.fullName.trim().length > 2);
-  const [showLanding, setShowLanding] = useState<boolean>(() => {
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
     // Si hay ?view= param en URL o rutas específicas, no mostrar landing (enlace directo)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -103,7 +103,7 @@ export default function App() {
       if (params.get('view') || params.get('exp') || params.get('doc')) return false;
       if (pathname.includes('/doc/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
     }
-    // Siempre mostrar la landing page pública con las 4 tarjetas por defecto
+    // Siempre mostrar la animación de inicio por defecto
     return true;
   });
 
@@ -812,13 +812,12 @@ export default function App() {
     }
   };
 
-  // Mostrar landing si el usuario no ha configurado la app
-  if (showLanding) {
+  // Mostrar animación de inicio
+  if (showIntro) {
     return (
-      <LandingPage
-        onEnterApp={() => {
-          localStorage.setItem('gestarian_user_configured', 'true');
-          setShowLanding(false);
+      <IntroAnimation
+        onComplete={() => {
+          setShowIntro(false);
           // Si no tiene usuario configurado, abrir el modal de configuración
           if (!isUserConfigured) {
             setTimeout(() => setIsNewUserOpen(true), 500);
