@@ -910,7 +910,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                       </button>
 
                       <button
-                        onClick={onClose}
+                        onClick={onEnterApp}
                         className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-extrabold text-sm sm:text-base transition-all shadow-xl shadow-indigo-500/25 hover:scale-105 active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/30"
                       >
                         <span>Acceder a Pro</span>

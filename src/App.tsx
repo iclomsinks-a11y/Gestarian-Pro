@@ -99,9 +99,11 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const pathname = window.location.pathname;
+      const hostname = window.location.hostname;
       
       if (params.get('view') || params.get('exp') || params.get('doc')) return false;
       if (pathname.includes('/doc/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
+      if (hostname.includes('clientes-gestarian')) return false;
     }
     // Siempre mostrar la animación de inicio por defecto
     return true;
@@ -130,7 +132,6 @@ export default function App() {
   const [isPlateScannerOpen, setIsPlateScannerOpen] = useState(false);
   const [isMetisChatOpen, setIsMetisChatOpen] = useState(false);
   const [isMetisVoiceOpen, setIsMetisVoiceOpen] = useState(false);
-  const [isClientLandingOpen, setIsClientLandingOpen] = useState(false);
   const [isAccessSelectorOpen, setIsAccessSelectorOpen] = useState(false);
   const [loggedClientSession, setLoggedClientSession] = useState<Client | null>(null);
   const [loggedEmployeeSession, setLoggedEmployeeSession] = useState<Employee | null>(null);
@@ -180,6 +181,8 @@ export default function App() {
 
     // Soporte para enlaces cortos gestairan.com (/doc/P26001, /exp/E26001, /app)
     const pathname = window.location.pathname;
+    const hostname = window.location.hostname;
+    
     if (!viewParam && pathname) {
       if (pathname.includes('/doc/')) {
         viewParam = 'doc';
@@ -192,6 +195,8 @@ export default function App() {
         idParam = pathname.split('/exp/')[1].split('/')[0].split('?')[0];
       } else if (pathname.includes('/app')) {
         viewParam = 'app-clientes';
+      } else if (hostname.includes('clientes-gestarian')) {
+        viewParam = 'login-clientes';
       }
     }
 
@@ -440,8 +445,9 @@ export default function App() {
       setLoggedClientSession(clientSession);
       setIsClientPortalOpen(true);
     } else if (viewParam === 'app-clientes' || viewParam === 'app') {
-      setIsClientLandingOpen(true);
-      setIsClientPortalOpen(true);
+      window.location.href = 'https://clientes-gestarian.web.app';
+    } else if (viewParam === 'login-clientes') {
+      setIsAccessSelectorOpen(true);
     }
   }, [documents, user]);
 
@@ -859,7 +865,6 @@ export default function App() {
         }}
         bgBentoMenuUrl={user.bgBentoMenuUrl}
         onOpenImageCustomizer={() => setIsImageCustomizerOpen(true)}
-        onOpenClientLanding={() => setIsClientLandingOpen(true)}
       />
 
       {/* Contenedor Principal con Scroll Horizontal Snap */}
@@ -880,7 +885,6 @@ export default function App() {
           pendingBudgetReviews={pendingBudgetReviews}
           onOpenBudgetReview={handleOpenBudgetPricingReview}
           onOpenImageCustomizer={() => setIsImageCustomizerOpen(true)}
-          onOpenClientLanding={() => setIsClientLandingOpen(true)}
           onOpenAccessSelector={() => setIsAccessSelectorOpen(true)}
         />
 
@@ -1631,11 +1635,6 @@ export default function App() {
           showToast('Fondos personalizados aplicados y guardados');
         }}
         onSelectImage={handleApplyCustomizedImageFromApp}
-      />
-
-      <ClientAppLandingModal
-        isOpen={isClientLandingOpen}
-        onClose={() => setIsClientLandingOpen(false)}
       />
 
       <AccessSelectorModal

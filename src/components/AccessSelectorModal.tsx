@@ -29,7 +29,8 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
   onNavigateToTaller,
   onOpenNewUserModal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'cliente' | 'autorizado' | 'usuario' | 'desarrollador'>('cliente');
+  const isClientPortal = typeof window !== 'undefined' && window.location.hostname.includes('clientes-gestarian');
+  const [activeTab, setActiveTab] = useState<'cliente' | 'autorizado' | 'usuario' | 'desarrollador'>(isClientPortal ? 'cliente' : 'autorizado');
 
   // Estado tab Desarrollador
   const [devPin, setDevPin] = useState('');
@@ -162,7 +163,8 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
         </div>
 
         {/* Pestañas de Selección */}
-        <div className="grid grid-cols-4 border-b border-[#E2E0D8] bg-white text-center">
+        <div className={`grid ${isClientPortal ? 'grid-cols-1' : 'grid-cols-3'} border-b border-[#E2E0D8] bg-white text-center`}>
+          {isClientPortal ? (
           <button
             type="button"
             onClick={() => setActiveTab('cliente')}
@@ -175,7 +177,8 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
             <Smartphone className="w-4 h-4 text-[#1E3A8A] shrink-0" />
             <span className="truncate">Clientes</span>
           </button>
-
+          ) : (
+            <>
           <button
             type="button"
             onClick={() => setActiveTab('autorizado')}
@@ -217,6 +220,8 @@ export const AccessSelectorModal: React.FC<AccessSelectorModalProps> = ({
             <Code2 className="w-4 h-4 text-orange-500 shrink-0" />
             <span className="truncate">Dev</span>
           </button>
+            </>
+          )}
         </div>
 
         {/* Cuerpo */}

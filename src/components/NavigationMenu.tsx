@@ -188,21 +188,6 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
                     <span className="sm:hidden">Fondos</span>
                   </button>
                 )}
-
-                {onOpenClientLanding && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenClientLanding();
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#38BDF8]/20 hover:bg-[#38BDF8]/30 text-[#38BDF8] rounded-full text-xs font-bold backdrop-blur-md border border-[#38BDF8]/40 transition-all hover:scale-105 shadow-md cursor-pointer"
-                    title="Ver Portal de Clientes"
-                  >
-                    <Users className="w-3.5 h-3.5 text-[#38BDF8]" />
-                    <span className="hidden sm:inline">Portal Clientes</span>
-                  </button>
-                )}
               </div>
 
               {/* Lado derecho: Botón VOLVER icono de flecha a la izquierda sin texto */}

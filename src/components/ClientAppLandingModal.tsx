@@ -10,16 +10,23 @@ interface ClientAppLandingModalProps {
   isOpen: boolean;
   onClose: () => void;
   sampleExpediente?: string;
+  documents?: any[]; // Allow optional documents array to search real data
 }
 
 export const ClientAppLandingModal: React.FC<ClientAppLandingModalProps> = ({
   isOpen,
   onClose,
   sampleExpediente = 'E260001',
+  documents = [],
 }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'previewWeb'>('info');
   const [expedienteInput, setExpedienteInput] = useState(sampleExpediente);
   const [testedExpediente, setTestedExpediente] = useState<string | null>(null);
+
+  // Search for real document if it exists
+  const realDoc = testedExpediente 
+    ? documents.find(d => d.expediente === testedExpediente || d.vehiclePlate === testedExpediente)
+    : null;
 
   if (!isOpen) return null;
 
@@ -172,7 +179,13 @@ export const ClientAppLandingModal: React.FC<ClientAppLandingModalProps> = ({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] block mb-1.5">
                   Probar consulta de expediente como cliente final:
                 </label>
-                <div className="flex gap-2">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setTestedExpediente(expedienteInput.trim() || 'E260001');
+                  }} 
+                  className="flex gap-2"
+                >
                   <div className="relative flex-1">
                     <Search className="w-4 h-4 absolute left-3 top-2.5 text-white/40" />
                     <input
@@ -184,13 +197,12 @@ export const ClientAppLandingModal: React.FC<ClientAppLandingModalProps> = ({
                     />
                   </div>
                   <button
-                    type="button"
-                    onClick={() => setTestedExpediente(expedienteInput.trim() || 'E260001')}
+                    type="submit"
                     className="px-4 py-2 bg-[#38BDF8] text-[#0F172A] font-bold rounded-lg hover:bg-[#0284C7] hover:text-white transition-colors cursor-pointer text-xs"
                   >
                     Consultar
                   </button>
-                </div>
+                </form>
               </div>
 
               {testedExpediente && (
@@ -202,14 +214,18 @@ export const ClientAppLandingModal: React.FC<ClientAppLandingModalProps> = ({
                     </div>
                     <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full text-[10px] font-bold border border-emerald-500/40 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      En Proceso de Reparación
+                      {realDoc?.tallerStatus === 'reparacion_finalizada' ? 'Reparación Finalizada' : 
+                       realDoc?.tallerStatus === 'en_reparacion' ? 'En Proceso de Reparación' : 
+                       'En Proceso de Reparación'}
                     </span>
                   </div>
 
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center justify-between text-white/80">
                       <span>Vehículo asignado:</span>
-                      <span className="font-bold text-white">Turismo SEAT León (1234-BBB)</span>
+                      <span className="font-bold text-white">
+                        {realDoc ? `${realDoc.vehicleBrand} ${realDoc.vehicleModel} (${realDoc.vehiclePlate})` : 'Turismo SEAT León (1234-BBB)'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-white/80">
                       <span>Taller asignado:</span>
@@ -217,7 +233,11 @@ export const ClientAppLandingModal: React.FC<ClientAppLandingModalProps> = ({
                     </div>
                     <div className="flex items-center justify-between text-white/80">
                       <span>Estado de la reparación:</span>
-                      <span className="text-[#38BDF8] font-bold">Chapa finalizada • En Cabina de Pintura</span>
+                      <span className="text-[#38BDF8] font-bold">
+                        {realDoc?.tallerStatus === 'reparacion_finalizada' ? 'Finalizada • Listo para entrega' :
+                         realDoc?.tallerStatus === 'en_reparacion' ? 'Vehículo en taller • Trabajando' :
+                         'Chapa finalizada • En Cabina de Pintura'}
+                      </span>
                     </div>
                   </div>
 
