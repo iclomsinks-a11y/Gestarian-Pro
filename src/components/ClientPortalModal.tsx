@@ -85,7 +85,14 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
   if (!isOpen || !loggedClient) return null;
 
   // Filtrar documentos del cliente
-  const clientDocs = documents.filter((d) => d.clientId === loggedClient.id || d.clientCif === loggedClient.cif);
+  const clientDocs = documents.filter((d) => {
+    if (d.clientId && d.clientId === loggedClient.id) return true;
+    if (d.clientCif && loggedClient.cif && d.clientCif.trim().toUpperCase() === loggedClient.cif.trim().toUpperCase()) return true;
+    if (d.clientEmail && loggedClient.email && d.clientEmail.trim().toLowerCase() === loggedClient.email.trim().toLowerCase()) return true;
+    if (d.vehiclePlate && loggedClient.plates && loggedClient.plates.some(p => p.trim().toUpperCase() === d.vehiclePlate?.trim().toUpperCase())) return true;
+    if (d.vehiclePlate && loggedClient.vehicles && loggedClient.vehicles.some(v => v.plate.trim().toUpperCase() === d.vehiclePlate?.trim().toUpperCase())) return true;
+    return false;
+  });
   const clientBudgets = clientDocs.filter((d) => d.type === 'presupuesto');
   const clientInvoices = clientDocs.filter((d) => d.type === 'factura');
 

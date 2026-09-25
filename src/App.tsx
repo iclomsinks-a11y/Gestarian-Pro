@@ -34,6 +34,7 @@ import { MetisVoiceAssistantModal } from './components/MetisVoiceAssistantModal'
 import { ImageCustomizerModal } from './components/ImageCustomizerModal';
 import { ClientAppLandingModal } from './components/ClientAppLandingModal';
 import { ClientPortalModal } from './components/ClientPortalModal';
+import { ClientPortalLoginView } from './components/ClientPortalLoginView';
 import { IntroAnimation } from './components/IntroAnimation';
 import {
   AppUser,
@@ -132,7 +133,18 @@ export default function App() {
   const [isPlateScannerOpen, setIsPlateScannerOpen] = useState(false);
   const [isMetisChatOpen, setIsMetisChatOpen] = useState(false);
   const [isMetisVoiceOpen, setIsMetisVoiceOpen] = useState(false);
-  const [loggedClientSession, setLoggedClientSession] = useState<Client | null>(null);
+  const [loggedClientSession, setLoggedClientSession] = useState<Client | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const saved = localStorage.getItem('gestarian_logged_client');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [loggedEmployeeSession, setLoggedEmployeeSession] = useState<Employee | null>(null);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
 
@@ -470,9 +482,13 @@ export default function App() {
       setLoggedClientSession(clientSession);
       setIsClientPortalOpen(true);
     } else if (viewParam === 'app-clientes' || viewParam === 'app') {
-      window.location.href = 'https://clientes-gestarian.web.app';
+      if (typeof window !== 'undefined' && !window.location.hostname.includes('clientes-gestarian')) {
+        window.location.href = 'https://clientes-gestarian.web.app';
+      } else {
+        setIsClientPortalOpen(true);
+      }
     } else if (viewParam === 'login-clientes') {
-      setIsAccessSelectorOpen(true);
+      setIsClientPortalOpen(true);
     }
   }, [documents, user]);
 
@@ -496,6 +512,14 @@ export default function App() {
   useEffect(() => {
     saveStoredNotifications(notifications);
   }, [notifications]);
+
+  useEffect(() => {
+    if (loggedClientSession) {
+      localStorage.setItem('gestarian_logged_client', JSON.stringify(loggedClientSession));
+    } else {
+      localStorage.removeItem('gestarian_logged_client');
+    }
+  }, [loggedClientSession]);
 
   // Manejador nuevo usuario guardado tras verificación de código
   const handleUserSaved = (newUser: AppUser) => {
@@ -850,7 +874,120 @@ export default function App() {
     }
   };
 
-  // Mostrar animación de inicio
+  // Detección de si estamos en el portal de clientes (clientes-gestarian.web.app o ?view=app-clientes)
+  const isClientPortalDomain = typeof window !== 'undefined' && (
+    window.location.hostname.includes('clientes-gestarian') ||
+    new URLSearchParams(window.location.search).get('view') === 'app-clientes' ||
+    new URLSearchParams(window.location.search).get('view') === 'login-clientes' ||
+    window.location.pathname.startsWith('/app')
+  );
+
+  // Si estamos en el portal de clientes (clientes-gestarian.web.app o ?view=app-clientes)
+  if (isClientPortalDomain) {
+    return (
+      <div className="relative w-full min-h-[100dvh] bg-[#090D16] text-[#F8FAFC] font-sans selection:bg-[#38BDF8] selection:text-[#090D16]">
+        {/* Botón Flotante Pantalla Completa */}
+        <button
+          onClick={toggleFullscreen}
+          className="fixed top-4 right-4 z-[100] p-2 text-white mix-blend-difference hover:scale-110 transition-transform cursor-pointer flex items-center justify-center"
+          title={isFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+        </button>
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-[200] bg-[#0F2942] text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold tracking-wide border border-[#1E3A8A] flex items-center gap-2 select-none animate-none transition-none">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        {/* Si no hay sesión de cliente activa, mostrar la pantalla de acceso de cliente */}
+        {!loggedClientSession ? (
+          <ClientPortalLoginView
+            workshopUser={user}
+            clients={clients}
+            documents={documents}
+            onClientLogin={(client) => {
+              setLoggedClientSession(client);
+              setIsClientPortalOpen(true);
+              showToast(`Sesión iniciada como ${client.name}`);
+            }}
+          />
+        ) : (
+          <div className="relative w-full min-h-[100dvh]">
+            <ClientPortalModal
+              isOpen={true}
+              onClose={() => {
+                setLoggedClientSession(null);
+                setIsClientPortalOpen(false);
+                showToast('Sesión de cliente cerrada');
+              }}
+              loggedClient={loggedClientSession}
+              user={user}
+              documents={documents}
+              onUpdateDocumentStatus={(docId, newStatus, newDeliveryDate, updatedDocPartial) => {
+                setDocuments((prev) =>
+                  prev.map((d) =>
+                    d.id === docId
+                      ? {
+                          ...d,
+                          status: newStatus,
+                          ...(newDeliveryDate ? { vehicleDeliveryDate: newDeliveryDate } : {}),
+                          ...updatedDocPartial,
+                        }
+                      : d
+                  )
+                );
+                showToast(`Documento actualizado`);
+              }}
+              onSendNotificationToWorkshop={(notif) => {
+                setNotifications((prev) => [notif, ...prev]);
+                playGentleChime();
+                showToast(`Notificación enviada a ${user.fullName}: ${notif.title}`);
+              }}
+              onViewDoc={(doc) => {
+                setSelectedDoc(doc);
+                setIsClientDocViewMode(true);
+                setIsViewDocOpen(true);
+              }}
+              onLogoutClient={() => {
+                setLoggedClientSession(null);
+                setIsClientPortalOpen(false);
+                showToast('Sesión de cliente cerrada');
+              }}
+            />
+
+            {/* Visor Oficial de Documentos / Facturas / Presupuestos para el cliente */}
+            <DocumentViewerModal
+              isOpen={isViewDocOpen}
+              document={selectedDoc}
+              onClose={() => {
+                setIsViewDocOpen(false);
+                setIsClientDocViewMode(false);
+              }}
+              isClientView={true}
+              userLogoUrl={user.logoUrl}
+              onConfirmInvoice={handleConfirmInvoice}
+              onSendInvoice={handleSendInvoice}
+              onAcceptBudget={handleAcceptBudget}
+              onConvertToInvoice={handleConvertToInvoice}
+              onEditDocument={() => {}}
+              onOpenAgendaForBudget={() => {}}
+              onNavigateToExpediente={(expNum) => {
+                setIsViewDocOpen(false);
+                setTargetExpedienteId(expNum);
+              }}
+              onShowToast={showToast}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Mostrar animación de inicio en el taller
   if (showIntro) {
     return (
       <IntroAnimation
