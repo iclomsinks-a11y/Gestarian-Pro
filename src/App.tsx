@@ -33,7 +33,6 @@ import { MetisChatModal } from './components/MetisChatModal';
 import { MetisVoiceAssistantModal } from './components/MetisVoiceAssistantModal';
 import { ImageCustomizerModal } from './components/ImageCustomizerModal';
 import { ClientAppLandingModal } from './components/ClientAppLandingModal';
-import { AccessSelectorModal } from './components/AccessSelectorModal';
 import { ClientPortalModal } from './components/ClientPortalModal';
 import { IntroAnimation } from './components/IntroAnimation';
 import {
@@ -133,10 +132,35 @@ export default function App() {
   const [isPlateScannerOpen, setIsPlateScannerOpen] = useState(false);
   const [isMetisChatOpen, setIsMetisChatOpen] = useState(false);
   const [isMetisVoiceOpen, setIsMetisVoiceOpen] = useState(false);
-  const [isAccessSelectorOpen, setIsAccessSelectorOpen] = useState(false);
   const [loggedClientSession, setLoggedClientSession] = useState<Client | null>(null);
   const [loggedEmployeeSession, setLoggedEmployeeSession] = useState<Employee | null>(null);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
+
+  // Autenticación unificada de acceso (Email + Contraseña)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const hasPassword = Boolean(localStorage.getItem('gestarian_auth_password'));
+    const sessionActive = localStorage.getItem('gestarian_auth_session') === 'true';
+    return sessionActive && hasPassword;
+  });
+
+  const handleLoginSuccess = (email: string) => {
+    setIsAuthenticated(true);
+    showToast(`Acceso concedido para ${email}`);
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('gestarian_auth_session');
+    }
+    setIsAuthenticated(false);
+    showToast('Sesión cerrada y acceso bloqueado');
+    const el = document.getElementById('page-inicio');
+    if (el && scrollContainerRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    setScreenHistory(['page-inicio']);
+  };
 
   // Envío oficial (WhatsApp / Correo) con URL corta de Supabase
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -681,6 +705,9 @@ export default function App() {
   const isScrollingRef = useRef(false);
 
   const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Si no está autenticado, bloquear scroll hacia otras pantallas
+    if (!isAuthenticated) return;
+
     e.preventDefault();
     if (isScrollingRef.current) return;
 
@@ -723,6 +750,10 @@ export default function App() {
   const [screenHistory, setScreenHistory] = useState<string[]>(['page-inicio']);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigateToSection = (sectionId: string) => {
+    if (!isAuthenticated && sectionId !== 'page-inicio') {
+      showToast('Introduce tu email y contraseña en la tarjeta de inicio para acceder.');
+      return;
+    }
     setScreenHistory((prev) => {
       if (prev[prev.length - 1] === sectionId) return prev;
       return [...prev, sectionId];
@@ -876,7 +907,10 @@ export default function App() {
       >
         {/* 1. Inicio */}
         <HomeView 
-          currentUser={user} 
+          currentUser={user}
+          isAuthenticated={isAuthenticated}
+          onLoginSuccess={handleLoginSuccess}
+          onLogout={handleLogout}
           onOpenScanner={() => setIsPlateScannerOpen(true)}
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
@@ -886,7 +920,6 @@ export default function App() {
           pendingBudgetReviews={pendingBudgetReviews}
           onOpenBudgetReview={handleOpenBudgetPricingReview}
           onOpenImageCustomizer={() => setIsImageCustomizerOpen(true)}
-          onOpenAccessSelector={() => setIsAccessSelectorOpen(true)}
         />
 
         {/* 2. Expedientes */}
@@ -1243,6 +1276,12 @@ export default function App() {
           id="page-configuracion" 
           logoUrl={user.logoUrl} 
           userFullName={user.fullName} 
+          currentUser={user}
+          onUpdateUser={(updatedFields) => {
+            setUser((prev) => ({ ...prev, ...updatedFields }));
+            showToast('Personalización actualizada correctamente');
+          }}
+          onOpenCustomizer={() => setIsImageCustomizerOpen(true)}
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
           onOpenMenu={() => setIsMenuOpen(true)}
@@ -1616,32 +1655,6 @@ export default function App() {
           showToast('Fondos personalizados aplicados y guardados');
         }}
         onSelectImage={handleApplyCustomizedImageFromApp}
-      />
-
-      <AccessSelectorModal
-        isOpen={isAccessSelectorOpen}
-        onClose={() => setIsAccessSelectorOpen(false)}
-        clients={clients}
-        user={user}
-        documents={documents}
-        activeEmployeeSession={loggedEmployeeSession}
-        onSelectClientSession={(client) => {
-          setLoggedClientSession(client);
-          setIsClientPortalOpen(true);
-          showToast(`Sesión iniciada como cliente ${client.name}`);
-        }}
-        onSelectEmployeeSession={(emp) => {
-          setLoggedEmployeeSession(emp);
-          showToast(`Sesión iniciada como Autorizado: ${emp.name} (${emp.profession || 'Oficial'})`, 5000);
-        }}
-        onLogoutEmployeeSession={() => {
-          setLoggedEmployeeSession(null);
-          showToast('Sesión de Autorizado cerrada');
-        }}
-        onNavigateToTaller={() => {
-          navigateToSection('page-taller');
-        }}
-        onOpenNewUserModal={() => setIsNewUserOpen(true)}
       />
 
       {loggedClientSession && (

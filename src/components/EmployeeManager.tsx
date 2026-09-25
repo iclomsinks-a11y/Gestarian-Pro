@@ -257,20 +257,20 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
       {/* Cabecera de la sección de empleados */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-[#E2E0D8]">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#0F2942] flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#0F2942]" />
+          <h3 className="text-[21px] font-bold uppercase tracking-wider text-[#0F2942] flex items-center gap-2">
+            <Users className="w-6 h-6 text-[#0F2942]" />
             Plantilla y Empleados Autorizados
           </h3>
-          <p className="text-xs text-[#64748B]">
+          <p className="text-[18px] text-[#64748B] mt-0.5">
             Gestión de trabajadores, epígrafes de Seguridad Social para futuras nóminas y control de permisos por puesto.
           </p>
         </div>
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-[18px] font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Añadir Empleado
         </button>
       </div>
@@ -278,9 +278,9 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
       {/* Grid de Tarjetas de Empleados */}
       {employees.length === 0 ? (
         <div className="p-8 text-center bg-white border border-[#CBD5E1] rounded-xl text-[#64748B]">
-          <Users className="w-10 h-10 mx-auto text-[#94A3B8] mb-2" />
-          <p className="text-sm font-medium">No hay empleados registrados todavía.</p>
-          <p className="text-xs mt-1">Haz clic en "Añadir Empleado" para registrar al primer trabajador.</p>
+          <Users className="w-12 h-12 mx-auto text-[#94A3B8] mb-2" />
+          <p className="text-[21px] font-medium">No hay empleados registrados todavía.</p>
+          <p className="text-[18px] mt-1">Haz clic en "Añadir Empleado" para registrar al primer trabajador.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -301,19 +301,19 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                   {/* Encabezado tarjeta: Avatar, Nombre y Acciones */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-[#0F2942] text-white flex items-center justify-center font-bold text-sm tracking-wider shrink-0 shadow-2xs">
+                      <div className="w-14 h-14 rounded-xl bg-[#0F2942] text-white flex items-center justify-center font-bold text-[21px] tracking-wider shrink-0 shadow-2xs">
                         {initials || 'EM'}
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-[#0F172A] leading-tight">
+                        <h4 className="text-[21px] font-bold text-[#0F172A] leading-tight">
                           {emp.name}
                         </h4>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm bg-blue-50 text-blue-700 border border-blue-200">
+                          <span className="text-[15px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-sm bg-blue-50 text-blue-700 border border-blue-200">
                             {emp.role}
                           </span>
                           {emp.dni && (
-                            <span className="text-[11px] font-mono text-[#475569] bg-[#F1F5F9] px-2 py-0.5 rounded-sm">
+                            <span className="text-[16.5px] font-mono text-[#475569] bg-[#F1F5F9] px-2.5 py-0.5 rounded-sm">
                               DNI: {emp.dni}
                             </span>
                           )}
@@ -325,49 +325,49 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(emp)}
-                        className="p-1.5 text-[#64748B] hover:text-[#0F2942] hover:bg-[#F1F5F9] rounded-md transition-colors"
+                        className="p-2 text-[#64748B] hover:text-[#0F2942] hover:bg-[#F1F5F9] rounded-md transition-colors cursor-pointer"
                         title="Editar datos del empleado"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-5 h-5" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteEmployee(emp.id)}
-                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                         title="Eliminar empleado"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
 
                   {/* Datos de contacto */}
-                  <div className="text-xs text-[#64748B] space-y-1 mb-3 bg-[#F8FAFC] p-2.5 rounded-lg border border-[#E2E8F0]">
+                  <div className="text-[18px] text-[#64748B] space-y-1.5 mb-3 bg-[#F8FAFC] p-3.5 rounded-lg border border-[#E2E8F0]">
                     {emp.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-[#64748B]" />
+                      <div className="flex items-center gap-2.5">
+                        <Phone className="w-4.5 h-4.5 text-[#64748B] shrink-0" />
                         <span>{emp.phone}</span>
                       </div>
                     )}
                     {emp.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5 text-[#64748B]" />
+                      <div className="flex items-center gap-2.5">
+                        <Mail className="w-4.5 h-4.5 text-[#64748B] shrink-0" />
                         <span className="font-mono">{emp.email}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 font-medium text-[#1E293B]">
-                      <Briefcase className="w-3.5 h-3.5 text-[#0F2942]" />
+                    <div className="flex items-center gap-2.5 font-medium text-[#1E293B]">
+                      <Briefcase className="w-4.5 h-4.5 text-[#0F2942] shrink-0" />
                       <span>{emp.profession || 'Especialista en automoción'}</span>
                     </div>
                   </div>
 
                   {/* Ficha Oficial de Seguridad Social & Nómina */}
-                  <div className="space-y-1.5 pt-2 border-t border-[#F1F5F9] text-[11px]">
+                  <div className="space-y-2 pt-2.5 border-t border-[#F1F5F9] text-[16.5px]">
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-[#64748B] font-semibold">Epígrafe Oficial CNO-11:</span>
                       <span className="text-right font-medium text-[#0F172A]">
                         {emp.cnoCode ? (
-                          <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-xs font-mono font-bold">
+                          <span className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-xs font-mono font-bold text-[16.5px]">
                             {emp.cnoCode} - {emp.cnoDescription}
                           </span>
                         ) : (
@@ -392,21 +392,21 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                   </div>
 
                   {/* Resumen de permisos */}
-                  <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
-                    <div className="text-[10px] uppercase font-bold tracking-wider text-[#64748B] mb-1.5 flex items-center justify-between">
+                  <div className="mt-3.5 pt-3.5 border-t border-[#F1F5F9]">
+                    <div className="text-[15px] uppercase font-bold tracking-wider text-[#64748B] mb-2 flex items-center justify-between">
                       <span>Partes con acceso:</span>
                       {emp.permissions?.canSetPrices ? (
-                        <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-xs font-bold text-[10px]">
+                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-xs font-bold text-[15px]">
                           Precios: Habilitado
                         </span>
                       ) : (
-                        <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-xs font-bold text-[10px]">
+                        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-xs font-bold text-[15px]">
                           Precios: Solo Jefe
                         </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
                       {APP_MODULES.map((mod) => {
                         const hasAccess = emp.permissions ? (emp.permissions[mod.key] ?? false) : false;
                         if (!hasAccess) return null;
@@ -414,24 +414,24 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                         return (
                           <span
                             key={mod.key}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#F1F5F9] text-[#0F2942] rounded-xs text-[10px] font-semibold border border-[#E2E8F0]"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#F1F5F9] text-[#0F2942] rounded-xs text-[15px] font-semibold border border-[#E2E8F0]"
                           >
-                            <Icon className="w-2.5 h-2.5 text-[#0F2942]" />
+                            <Icon className="w-3.5 h-3.5 text-[#0F2942]" />
                             <span>{mod.label}</span>
                           </span>
                         );
                       })}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border ${emp.permissions?.scanPlates ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                        <Camera className="w-3.5 h-3.5" />
+                    <div className="grid grid-cols-2 gap-2 text-[16.5px]">
+                      <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border ${emp.permissions?.scanPlates ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                        <Camera className="w-4.5 h-4.5" />
                         <span className="truncate">Cámara OCR</span>
                         <span className="ml-auto font-bold">{emp.permissions?.scanPlates ? '✓' : '✗'}</span>
                       </div>
 
-                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border ${emp.permissions?.manageWorkOrders ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                        <Wrench className="w-3.5 h-3.5" />
+                      <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border ${emp.permissions?.manageWorkOrders ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                        <Wrench className="w-4.5 h-4.5" />
                         <span className="truncate">Órdenes Taller</span>
                         <span className="ml-auto font-bold">{emp.permissions?.manageWorkOrders ? '✓' : '✗'}</span>
                       </div>
@@ -440,13 +440,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                 </div>
 
                 {/* Botón Ver / Gestionar Permisos */}
-                <div className="mt-4 pt-3 border-t border-[#E2E0D8]">
+                <div className="mt-4 pt-3.5 border-t border-[#E2E0D8]">
                   <button
                     type="button"
                     onClick={() => setManagingPermissionsEmp(emp)}
-                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F2942] rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-2.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F2942] rounded-lg text-[18px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                   >
-                    <Shield className="w-4 h-4 text-[#0F2942]" />
+                    <Shield className="w-5 h-5 text-[#0F2942]" />
                     Gestionar Permisos de Acceso
                   </button>
                 </div>

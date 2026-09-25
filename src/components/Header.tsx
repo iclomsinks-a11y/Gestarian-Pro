@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserCheck, FileText, Github, Car, Bell, Smartphone } from 'lucide-react';
+import { UserCheck, FileText, Github, Car, Bell } from 'lucide-react';
 import { AppUser } from '../types';
 
 interface HeaderProps {
@@ -9,7 +9,6 @@ interface HeaderProps {
   onOpenSpec: () => void;
   onOpenPlateScanner: () => void;
   onOpenNotifications: () => void;
-  onOpenAccessSelector?: () => void;
   unreadNotificationsCount?: number;
   githubRepoUrl?: string;
   hasPlateRecognizerKey?: boolean;
@@ -22,7 +21,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSpec,
   onOpenPlateScanner,
   onOpenNotifications,
-  onOpenAccessSelector,
   unreadNotificationsCount = 0,
   githubRepoUrl = 'https://github.com/gestarian/gestarian-core',
   hasPlateRecognizerKey = false,
@@ -30,20 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full border-b border-[#E2E0D8] bg-[#F8F7F3] sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Lado izquierdo: Acceso Portales, Gestión Emisores & Escáner Matrículas */}
+        {/* Lado izquierdo: Gestión Emisores & Escáner Matrículas */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {onOpenAccessSelector && (
-            <button
-              id="btn-header-acceso-portales"
-              onClick={onOpenAccessSelector}
-              title="Acceso diferenciado para Usuarios / Talleres y Clientes"
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#1E3A8A] hover:bg-[#0F2942] text-white text-xs font-bold uppercase tracking-wider transition-colors rounded-sm shadow-xs cursor-pointer"
-            >
-              <Smartphone className="w-3.5 h-3.5 text-[#38BDF8]" />
-              <span className="hidden lg:inline">Acceso Clientes / Usuarios</span>
-              <span className="lg:hidden">Acceso Portales</span>
-            </button>
-          )}
 
           <button
             id="btn-nuevo-usuario-dev"
