@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Eye, FolderOpen } from 'lucide-react';
 
 export interface StandardCardProps {
   id?: string;
@@ -89,13 +90,55 @@ export const StandardCard: React.FC<StandardCardProps> = ({
           {title || 'Cliente Desconocido'}
         </div>
 
-        {/* Línea 4: Código de Referencia y Expediente */}
-        <div className="flex items-center gap-4 text-xs font-bold text-[#64748B] font-mono">
-          {refCode && <span>{refCode}</span>}
-          {expediente && (
-            <span className="flex items-center gap-1 before:content-['•'] before:mr-2">
-              {expediente}
-            </span>
+        {/* Línea 4: Código de Referencia y Expediente con Iconos de acceso directo */}
+        <div className="flex items-center justify-between gap-3 text-xs font-bold text-[#64748B] font-mono pt-1 border-t border-slate-100">
+          <div className="flex items-center gap-3 flex-wrap">
+            {refCode && (
+              <span className="flex items-center gap-1.5 bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded-sm">
+                {refCode}
+              </span>
+            )}
+            {expediente && (
+              <span className="flex items-center gap-1 text-[#1E3A8A] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-sm">
+                {expediente}
+              </span>
+            )}
+          </div>
+
+          {/* Iconos de acceso directo: Ver Presupuesto y Ver Expediente (Roadmap) */}
+          {(onViewDoc || onViewExpediente) && (
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              {onViewDoc && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewDoc();
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-[#0F2942] border border-slate-300 rounded-md text-[11px] font-bold transition-all shadow-2xs cursor-pointer hover:border-slate-400"
+                  title={viewDocLabel || 'Ver presupuesto'}
+                  aria-label={viewDocLabel || 'Ver presupuesto'}
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#0F2942]" />
+                  <span>Ver</span>
+                </button>
+              )}
+              {onViewExpediente && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewExpediente();
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] border border-blue-300 rounded-md text-[11px] font-bold transition-all shadow-2xs cursor-pointer hover:border-blue-400"
+                  title={viewExpedienteLabel || 'Ver expediente (Roadmap)'}
+                  aria-label={viewExpedienteLabel || 'Ver expediente (Roadmap)'}
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-[#1E3A8A]" />
+                  <span>Expediente</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

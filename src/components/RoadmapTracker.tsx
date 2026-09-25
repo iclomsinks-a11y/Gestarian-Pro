@@ -1210,9 +1210,15 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   <Calendar className="w-5 h-5 text-amber-600 animate-bounce" />
                   <span>NUEVA FECHA DE ENTREGA PROPUESTA POR EL CLIENTE DESDE EL ÃREA DE CLIENTE</span>
                 </div>
-                <div className="text-3xl sm:text-5xl font-black text-amber-700 font-mono tracking-tight my-3">
-                  {doc.proposedDeliveryDate || doc.vehicleDeliveryDate}
-                </div>
+                <div className="text-3xl sm:text-5xl font-black text-amber-700 font-mono tracking-tight my-3 flex items-center justify-center gap-3 flex-wrap">
+                    <span>{doc.proposedDeliveryDate || doc.vehicleDeliveryDate}</span>
+                    {(doc.proposedDeliveryTime || doc.vehicleDeliveryTime) && (
+                      <span className="text-2xl sm:text-4xl text-amber-800 font-bold inline-flex items-center gap-1.5 bg-amber-100/80 px-3 py-1 rounded-xl border border-amber-300">
+                        <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
+                        {doc.proposedDeliveryTime || doc.vehicleDeliveryTime}
+                      </span>
+                    )}
+                  </div>
                 <p className="text-xs text-amber-900 mb-4 font-medium max-w-xl mx-auto">
                   El cliente ha solicitado esta fecha de entrega. Si pulsa Aceptar, la cita quedarÃ¡ confirmada y la parada Cita del roadmap pasarÃ¡ a Azul. Si pulsa Denegar, se abrirÃ¡ el calendario para proponer una nueva fecha de entrega al cliente.
                 </p>
@@ -1388,9 +1394,15 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   <Calendar className="w-5 h-5 text-amber-600 animate-bounce" />
                   <span>NUEVA FECHA DE ENTREGA PROPUESTA POR EL CLIENTE</span>
                 </div>
-                <div className="text-3xl sm:text-5xl font-black text-amber-700 font-mono tracking-tight my-3">
-                  {doc.proposedDeliveryDate || doc.vehicleDeliveryDate}
-                </div>
+                <div className="text-3xl sm:text-5xl font-black text-amber-700 font-mono tracking-tight my-3 flex items-center justify-center gap-3 flex-wrap">
+                    <span>{doc.proposedDeliveryDate || doc.vehicleDeliveryDate}</span>
+                    {(doc.proposedDeliveryTime || doc.vehicleDeliveryTime) && (
+                      <span className="text-2xl sm:text-4xl text-amber-800 font-bold inline-flex items-center gap-1.5 bg-amber-100/80 px-3 py-1 rounded-xl border border-amber-300">
+                        <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
+                        {doc.proposedDeliveryTime || doc.vehicleDeliveryTime}
+                      </span>
+                    )}
+                  </div>
                 <p className="text-xs text-amber-900 mb-4 font-medium max-w-xl mx-auto">
                   El cliente propone esta fecha. Pulse Aceptar para activar la cita en el Roadmap (pasa a Azul) o Denegar para proponer otra fecha.
                 </p>

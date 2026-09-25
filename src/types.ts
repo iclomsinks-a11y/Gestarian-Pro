@@ -23,6 +23,7 @@ export interface DocumentPayment {
 export interface CitaProposal {
   id: string;
   date: string;
+  time?: string;
   proposedBy: 'client' | 'workshop';
   proposedByName: string;
   timestamp: string;
@@ -76,7 +77,9 @@ export interface GestarianDocument {
   vehicleType?: string; // Tipo de vehículo reconocido (Sedan, SUV, Camión, etc.)
   vehicleBrand?: string; // Marca del vehículo (ej: SEAT, Renault, Mercedes)
   vehicleModel?: string; // Modelo del vehículo (ej: León, Megane, Clase A)
-  vehicleDeliveryDate?: string; // Fecha propuesta de entrega del vehículo
+  vehicleDeliveryDate?: string;
+  vehicleDeliveryTime?: string; // Hora propuesta de entrega del vehículo
+  proposedDeliveryTime?: string; // Nueva hora de entrega propuesta por el cliente/taller // Fecha propuesta de entrega del vehículo
   proposedDeliveryDate?: string; // Nueva fecha de entrega propuesta durante la negociación
   deliveryDateProposedBy?: 'client' | 'workshop'; // Quién propone la fecha ('client' o 'workshop')
   deliveryDateStatus?: 'pending_acceptance' | 'accepted' | 'rejected'; // Estado de aceptación de la fecha propuesta

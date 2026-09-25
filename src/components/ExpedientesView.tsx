@@ -101,8 +101,36 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
   const openCount = expedientesWithStatus.filter((e) => !e.isCerrado).length;
   const closedCount = expedientesWithStatus.filter((e) => e.isCerrado).length;
 
-  if (selectedExpediente) {
-    const data = expedientesMap.get(selectedExpediente);
+    if (selectedExpediente) {
+    let data = expedientesMap.get(selectedExpediente);
+    if (!data) {
+      const cleanTarget = selectedExpediente.replace(/\D/g, '');
+      for (const [expKey, item] of expedientesMap.entries()) {
+        const cleanKey = expKey.replace(/\D/g, '');
+        if (
+          item.doc.id === selectedExpediente ||
+          item.doc.number === selectedExpediente ||
+          item.doc.expediente === selectedExpediente ||
+          (cleanTarget && cleanKey && cleanTarget === cleanKey) ||
+          expKey.toLowerCase() === selectedExpediente.toLowerCase()
+        ) {
+          data = item;
+          break;
+        }
+      }
+    }
+    if (!data) {
+      const fallbackDoc = documents.find(
+        (d) =>
+          d.expediente === selectedExpediente ||
+          d.number === selectedExpediente ||
+          d.id === selectedExpediente
+      );
+      if (fallbackDoc) {
+        const client = clients.find((c) => c.id === fallbackDoc.clientId);
+        data = { doc: fallbackDoc, client };
+      }
+    }
     if (!data) return null;
     
     const { doc, client } = data;

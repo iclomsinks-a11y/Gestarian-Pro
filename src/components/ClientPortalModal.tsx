@@ -106,13 +106,17 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
   const [proposingDateDocId, setProposingDateDocId] = useState<string | null>(null);
   const [customProposedDate, setCustomProposedDate] = useState<string>('');
 
-  // Acciones sobre presupuestos y negociación de fecha de entrega
+  // Acciones sobre presupuestos y negociación de fecha y hora de entrega
   const handleAcceptBudget = (doc: GestarianDocument) => {
     const now = new Date().toISOString();
-    const effectiveDeliveryDate = doc.vehicleDeliveryDate || doc.proposedDeliveryDate || doc.date || now.split('T')[0];
+    const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
 
-    onUpdateDocumentStatus(doc.id, 'aceptado', effectiveDeliveryDate, {
+    onUpdateDocumentStatus(doc.id, 'aceptado', workshopDate, {
       acceptedByClient: true,
+      vehicleDeliveryDate: workshopDate,
+      vehicleDeliveryTime: workshopTime,
+      proposedDeliveryDate: workshopDate,
+      proposedDeliveryTime: workshopTime,
       deliveryDateStatus: 'accepted',
       deliveryDateProposedBy: 'workshop',
       citaAcceptedBy: 'client',
@@ -123,7 +127,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,
       title: 'Presupuesto y Fecha de Entrega Aceptados',
-      message: `El cliente ${loggedClient.name} ha ACEPTADO el presupuesto ${doc.number} y la fecha propuesta de entrega (${effectiveDeliveryDate}).`,
+      message: `El cliente ${loggedClient.name} ha ACEPTADO el presupuesto ${doc.number} y la fecha/hora propuesta de entrega (${workshopDate} a las ${workshopTime}).`,
       timestamp: now,
       read: false,
       type: 'general',
@@ -133,21 +137,38 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
     onSendNotificationToWorkshop(notif);
   };
 
-  const handleProposeAlternativeDate = (doc: GestarianDocument, newDate: string) => {
-    if (!newDate) return;
+  const handleProposeAlternativeDate = (
+    doc: GestarianDocument,
+    newDate: string,
+    newTime: string,
+    workshopDate: string,
+    workshopTime: string
+  ) => {
+    const check = validateAlternativeDateTime(newDate, newTime, workshopDate, workshopTime);
+    if (!check.isValid) {
+      setDateTimeError(check.error);
+      return;
+    }
+
     const now = new Date().toISOString();
 
     onUpdateDocumentStatus(doc.id, 'aceptado', newDate, {
       acceptedByClient: true,
+      vehicleDeliveryDate: newDate,
+      vehicleDeliveryTime: newTime,
       proposedDeliveryDate: newDate,
+      proposedDeliveryTime: newTime,
       deliveryDateProposedBy: 'client',
       deliveryDateStatus: 'pending_acceptance',
+      citaAcceptedBy: 'client',
+      citaAcceptedByName: loggedClient.name,
+      citaAcceptedAt: now,
     });
 
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,
-      title: 'Presupuesto Aceptado - Nueva Fecha Propuesta por Cliente',
-      message: `El cliente ${loggedClient.name} ha aceptado el presupuesto ${doc.number}, proponiendo una nueva fecha de entrega: ${newDate}. El taller puede aceptarla en el Roadmap.`,
+      title: 'Presupuesto Aceptado - Nueva Fecha/Hora de Entrega Propuesta',
+      message: `El cliente ${loggedClient.name} ha aceptado el presupuesto ${doc.number}, proponiendo una nueva entrega para el ${newDate} a las ${newTime}. El taller puede revisarla en el Roadmap.`,
       timestamp: now,
       read: false,
       type: 'general',
@@ -157,6 +178,8 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
     onSendNotificationToWorkshop(notif);
     setProposingDateDocId(null);
     setCustomProposedDate('');
+    setCustomProposedTime('');
+    setDateTimeError(null);
   };
 
   const handleRejectBudget = (doc: GestarianDocument) => {
@@ -389,18 +412,26 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                       key={doc.id}
                       className="p-5 bg-white rounded-xl shadow-xs space-y-4 border border-[#E2E0D8]"
                     >
-                      {/* Fecha estimada fijada por el taller (Informativa, solo lectura) */}
-                      {(doc.vehicleDeliveryDate || doc.proposedDeliveryDate) && (
-                        <div className="p-3 bg-[#F8F7F3] border border-[#E2E0D8] rounded-lg flex items-center justify-between gap-3 text-[18px]">
-                          <div className="flex items-center gap-2 text-[#0F2942]">
-                            <Calendar className="w-5 h-5 text-[#1E3A8A]" />
-                            <span className="font-semibold">Fecha estimada fijada por el taller:</span>
+                      {/* Fecha y Hora estimadas fijadas por el taller (Informativa, solo lectura) */}
+                      {(() => {
+                        const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
+                        return (
+                          <div className="p-3 bg-[#F8F7F3] border border-[#CBD5E1] rounded-lg flex flex-wrap items-center justify-between gap-3 text-[17px]">
+                            <div className="flex items-center gap-2 text-[#0F2942]">
+                              <Calendar className="w-5 h-5 text-[#1E3A8A]" />
+                              <span className="font-semibold">Fecha y hora propuesta de entrega por el taller:</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-[#0F2942] bg-white px-3 py-1 rounded border border-[#CBD5E1] shadow-2xs">
+                                📅 {workshopDate}
+                              </span>
+                              <span className="font-mono font-bold text-[#0F2942] bg-white px-3 py-1 rounded border border-[#CBD5E1] shadow-2xs inline-flex items-center gap-1">
+                                <Clock className="w-4 h-4 text-[#1E3A8A]" /> {workshopTime}
+                              </span>
+                            </div>
                           </div>
-                          <span className="font-mono font-bold text-[#0F2942] bg-white px-3 py-1 rounded border border-[#CBD5E1]">
-                            {doc.vehicleDeliveryDate || doc.proposedDeliveryDate}
-                          </span>
-                        </div>
-                      )}
+                        );
+                      })()}
                       {/* Fila Cabecera Expediente */}
                       <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-[#F1F0EB]">
                         <div>
@@ -457,62 +488,122 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Fecha propuesta de entrega y estado de negociación */}
+                      {/* Fecha y Hora propuesta de entrega y estado de negociación */}
                       {(() => {
-                        const proposedDate = doc.vehicleDeliveryDate || doc.proposedDeliveryDate || doc.date || '';
+                        const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
+                        const isClientPending = doc.deliveryDateProposedBy === 'client' && doc.deliveryDateStatus === 'pending_acceptance';
+                        const effectiveDate = doc.proposedDeliveryDate || doc.vehicleDeliveryDate || workshopDate;
+                        const effectiveTime = doc.proposedDeliveryTime || doc.vehicleDeliveryTime || workshopTime;
+
                         return (
-                          <div className="p-3.5 bg-[#FAF9F5] border border-[#E2E0D8] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[18px]">
-                            <div className="flex items-center gap-2 text-[#475569]">
-                              <Calendar className="w-5 h-5 text-[#1E3A8A] shrink-0" />
-                              <span className="font-semibold text-[#0F2942]">
-                                {doc.deliveryDateProposedBy === 'client' && doc.deliveryDateStatus === 'pending_acceptance'
-                                  ? 'Fecha propuesta por ti (pendiente confirmación taller):'
-                                  : 'Fecha propuesta de entrega fijada por el taller:'}
-                              </span>
+                          <div className="p-3.5 bg-[#FAF9F5] border border-[#E2E0D8] rounded-lg space-y-2 text-[18px]">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                              <div className="flex items-center gap-2 text-[#475569]">
+                                <Calendar className="w-5 h-5 text-[#1E3A8A] shrink-0" />
+                                <span className="font-semibold text-[#0F2942]">
+                                  {isClientPending
+                                    ? 'Fecha y hora propuestas por ti (pendiente confirmación taller):'
+                                    : 'Fecha y hora propuesta de entrega del vehículo:'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                                <span className="font-mono font-bold text-[#0F172A] bg-white px-3 py-1 rounded border border-[#CBD5E1] inline-flex items-center gap-1.5">
+                                  <span>📅</span> {effectiveDate}
+                                </span>
+                                <span className="font-mono font-bold text-[#0F172A] bg-white px-3 py-1 rounded border border-[#CBD5E1] inline-flex items-center gap-1.5">
+                                  <Clock className="w-4 h-4 text-[#1E3A8A]" /> {effectiveTime}
+                                </span>
+                              </div>
                             </div>
-                            <span className="font-mono font-bold text-[#0F172A] bg-white px-3 py-1 rounded border border-[#CBD5E1] inline-flex items-center gap-2 self-start sm:self-auto">
-                              <span>📅</span> {proposedDate || 'Por determinar'}
-                            </span>
+                            {isClientPending && (
+                              <div className="text-xs text-amber-800 bg-amber-50 p-2 rounded border border-amber-200">
+                                Has propuesto una nueva fecha/hora posterior. El taller revisará la propuesta para confirmar la cita en el Roadmap.
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
 
                       {/* Selector inline para proponer otra fecha de entrega si el cliente no acepta la fecha inicial */}
-                      {isPending && proposingDateDocId === doc.id && (
-                        <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-lg space-y-2 text-[18px] animate-in fade-in">
-                          <div className="flex items-center gap-2 font-bold text-[#0F2942]">
-                            <Calendar className="w-5 h-5 text-[#1E3A8A]" />
-                            <span>Proponer una fecha de entrega alternativa al taller:</span>
+                      {isPending && proposingDateDocId === doc.id && (() => {
+                        const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
+                        const check = validateAlternativeDateTime(customProposedDate, customProposedTime, workshopDate, workshopTime);
+
+                        return (
+                          <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-xl space-y-3 text-[17px] animate-in fade-in">
+                            <div className="flex items-center gap-2 font-bold text-[#0F2942]">
+                              <Calendar className="w-5 h-5 text-[#1E3A8A]" />
+                              <span>Proponer nueva fecha y hora de entrega al taller</span>
+                            </div>
+                            <p className="text-xs text-blue-900 leading-relaxed">
+                              Indica cuándo deseas entregar el vehículo. <strong>Regla obligatoria:</strong> Siempre tiene que ser el <strong>mismo día más tarde</strong> de las <strong>{workshopTime}</strong> o en <strong>días posteriores</strong>, nunca antes de la fecha propuesta por el taller.
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-bold text-[#0F2942] uppercase tracking-wide mb-1">
+                                  Fecha de Entrega:
+                                </label>
+                                <input
+                                  type="date"
+                                  min={workshopDate}
+                                  value={customProposedDate}
+                                  onChange={(e) => {
+                                    setCustomProposedDate(e.target.value);
+                                    setDateTimeError(null);
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-[#94A3B8] rounded text-base font-mono font-semibold text-[#0F172A] focus:outline-hidden focus:ring-2 focus:ring-[#1E3A8A]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-[#0F2942] uppercase tracking-wide mb-1">
+                                  Hora de Entrega:
+                                </label>
+                                <input
+                                  type="time"
+                                  value={customProposedTime}
+                                  onChange={(e) => {
+                                    setCustomProposedTime(e.target.value);
+                                    setDateTimeError(null);
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-[#94A3B8] rounded text-base font-mono font-semibold text-[#0F172A] focus:outline-hidden focus:ring-2 focus:ring-[#1E3A8A]"
+                                />
+                              </div>
+                            </div>
+
+                            {(dateTimeError || (!check.isValid && (customProposedDate || customProposedTime))) && (
+                              <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs font-medium">
+                                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                                <span>{dateTimeError || check.error}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                              <button
+                                type="button"
+                                disabled={!check.isValid}
+                                onClick={() => handleProposeAlternativeDate(doc, customProposedDate, customProposedTime, workshopDate, workshopTime)}
+                                className="px-4 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-[16px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                              >
+                                Aceptar con esta Fecha y Hora
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProposingDateDocId(null);
+                                  setCustomProposedDate('');
+                                  setCustomProposedTime('');
+                                  setDateTimeError(null);
+                                }}
+                                className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded text-[16px] font-semibold cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2.5">
-                            <input
-                              type="date"
-                              min={new Date().toISOString().split('T')[0]}
-                              value={customProposedDate}
-                              onChange={(e) => setCustomProposedDate(e.target.value)}
-                              className="px-3 py-2 bg-white border border-[#94A3B8] rounded text-[18px] font-mono font-semibold text-[#0F172A] focus:outline-hidden focus:ring-2 focus:ring-[#1E3A8A]"
-                            />
-                            <button
-                              type="button"
-                              disabled={!customProposedDate}
-                              onClick={() => handleProposeAlternativeDate(doc, customProposedDate)}
-                              className="px-3.5 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] disabled:opacity-50 text-white rounded text-[18px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                            >
-                              Aceptar con esta Fecha
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setProposingDateDocId(null);
-                                setCustomProposedDate('');
-                              }}
-                              className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded text-[18px] font-semibold cursor-pointer"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Conceptos resumen */}
                       <div className="space-y-1.5">
@@ -561,9 +652,15 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setProposingDateDocId(doc.id);
-                                    setCustomProposedDate(doc.vehicleDeliveryDate || doc.proposedDeliveryDate || '');
-                                  }}
+                                  const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
+                                  setProposingDateDocId(doc.id);
+                                  setCustomProposedDate(workshopDate);
+                                  const [h, m] = workshopTime.split(':').map(Number);
+                                  const nextHour = String(Math.min(20, (h || 10) + 1)).padStart(2, '0');
+                                  const nextTime = `${nextHour}:${String(m || 0).padStart(2, '0')}`;
+                                  setCustomProposedTime(nextTime);
+                                  setDateTimeError(null);
+                                }}
                                   className="px-3.5 py-2 bg-[#1E3A8A] hover:bg-[#0F2942] text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                                   title="Proponer otra fecha de entrega si no puedes en la propuesta"
                                 >

@@ -928,20 +928,25 @@ export default function App() {
               user={user}
               documents={documents}
               onUpdateDocumentStatus={(docId, newStatus, newDeliveryDate, updatedDocPartial) => {
-                setDocuments((prev) =>
-                  prev.map((d) =>
-                    d.id === docId
-                      ? {
-                          ...d,
-                          status: newStatus,
-                          ...(newDeliveryDate ? { vehicleDeliveryDate: newDeliveryDate } : {}),
-                          ...updatedDocPartial,
-                        }
-                      : d
-                  )
+              setDocuments((prev) => {
+                const nextDocs = prev.map((d) =>
+                  d.id === docId
+                    ? {
+                        ...d,
+                        status: newStatus,
+                        ...(newDeliveryDate ? { vehicleDeliveryDate: newDeliveryDate } : {}),
+                        ...updatedDocPartial,
+                      }
+                    : d
                 );
-                showToast(`Documento actualizado`);
-              }}
+                saveStoredDocuments(nextDocs);
+                try {
+                  window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+                } catch (e) {}
+                return nextDocs;
+              });
+              showToast(`Presupuesto ${newStatus === 'aceptado' ? 'aceptado' : 'actualizado'} con éxito`);
+            }}
               onSendNotificationToWorkshop={(notif) => {
                 setNotifications((prev) => [notif, ...prev]);
                 playGentleChime();
@@ -1228,7 +1233,11 @@ export default function App() {
             onConvertToInvoice={handleConvertToInvoice}
             onEditBudgetPricing={(doc) => handleOpenBudgetPricingReview(doc.id)}
             onDispatchDoc={handleOpenDocumentDispatch}
-          />
+            onNavigateToExpediente={(expId) => {
+                setTargetExpedienteId(expId);
+                navigateToSection('page-expedientes');
+              }}
+            />
         </PlaceholderView>
 
         {/* 6. Citas */}
@@ -1802,20 +1811,25 @@ export default function App() {
           user={user}
           documents={documents}
           onUpdateDocumentStatus={(docId, newStatus, newDeliveryDate, updatedDocPartial) => {
-            setDocuments((prev) =>
-              prev.map((d) =>
-                d.id === docId
-                  ? {
-                      ...d,
-                      status: newStatus,
-                      ...(newDeliveryDate ? { vehicleDeliveryDate: newDeliveryDate } : {}),
-                      ...updatedDocPartial,
-                    }
-                  : d
-              )
-            );
-            showToast(`Documento actualizado`);
-          }}
+              setDocuments((prev) => {
+                const nextDocs = prev.map((d) =>
+                  d.id === docId
+                    ? {
+                        ...d,
+                        status: newStatus,
+                        ...(newDeliveryDate ? { vehicleDeliveryDate: newDeliveryDate } : {}),
+                        ...updatedDocPartial,
+                      }
+                    : d
+                );
+                saveStoredDocuments(nextDocs);
+                try {
+                  window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+                } catch (e) {}
+                return nextDocs;
+              });
+              showToast(`Presupuesto ${newStatus === 'aceptado' ? 'aceptado' : 'actualizado'} con éxito`);
+            }}
           onSendNotificationToWorkshop={(notif) => {
             setNotifications((prev) => [notif, ...prev]);
             playGentleChime();

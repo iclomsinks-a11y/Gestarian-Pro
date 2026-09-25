@@ -185,31 +185,76 @@ export const DocumentList: React.FC<DocumentListProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filtered.map((doc) => {
                 const isBudget = doc.type === 'presupuesto';
+                const isInvoice = doc.type === 'factura';
                 const subtitle = [doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico';
+
+                const isAccepted = doc.acceptedByClient || doc.status === 'aceptado';
+                const isRejected = doc.status === 'rechazado';
+                const isPaid = doc.status === 'pagado' || doc.status === 'PAGADO' || doc.status === 'confirmada';
+
+                let cardStatus = 'PENDIENTE';
+                let statusColor = 'border-[3px] border-orange-500';
+                let statusTextColor = 'text-orange-500';
+
+                if (isAccepted) {
+                  cardStatus = 'ACEPTADO';
+                  statusColor = 'border-[3px] border-emerald-500';
+                  statusTextColor = 'text-emerald-600';
+                } else if (isRejected) {
+                  cardStatus = 'RECHAZADO';
+                  statusColor = 'border-[3px] border-red-500';
+                  statusTextColor = 'text-red-500';
+                } else if (isPaid) {
+                  cardStatus = 'PAGADO';
+                  statusColor = 'border-[3px] border-blue-600';
+                  statusTextColor = 'text-blue-600';
+                } else if (doc.status === 'enviado' || doc.status === 'enviada') {
+                  cardStatus = 'ENVIADO';
+                  statusColor = 'border-[3px] border-amber-500';
+                  statusTextColor = 'text-amber-600';
+                }
+
+                const targetExp = doc.expediente || (doc.number ? `E${doc.number.replace(/\D/g, '')}` : undefined);
                 
                 return (
                   <StandardCard
                     key={doc.id}
-                    status="PENDIENTE"
-                    statusColor="border-orange-500"
-                    statusTextColor="text-orange-500"
+                    status={cardStatus}
+                    statusColor={statusColor}
+                    statusTextColor={statusTextColor}
                     vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
                     subtitle={subtitle}
                     title={doc.clientName}
                     refCode={doc.number}
-                    expediente={doc.expediente}
+                    expediente={targetExp}
                     isExpandable={true}
+                    onViewDoc={() => onViewDoc(doc)}
+                    onViewExpediente={targetExp && onNavigateToExpediente ? () => onNavigateToExpediente(targetExp) : undefined}
+                    viewDocLabel={isBudget ? 'Ver presupuesto' : 'Ver factura'}
+                    viewExpedienteLabel="Ver expediente (Roadmap)"
                     actions={
                       <div className="flex items-center justify-around gap-1 flex-wrap">
                         <button
                           type="button"
                           onClick={() => onViewDoc(doc)}
                           className="inline-flex items-center gap-1 text-xs font-bold text-[#0F2942] hover:text-[#38BDF8] transition-colors p-2 cursor-pointer"
-                          title="Ver documento"
+                          title={isBudget ? 'Ver presupuesto' : 'Ver documento'}
                         >
                           <Eye className="w-4 h-4" />
                           <span>Ver</span>
                         </button>
+
+                        {targetExp && onNavigateToExpediente && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToExpediente(targetExp)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[#1E3A8A] hover:text-[#0F2942] transition-colors p-2 cursor-pointer"
+                            title="Ver Roadmap del expediente vinculado"
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                            <span>Expediente</span>
+                          </button>
+                        )}
 
                         {onDispatchDoc && (
                           <button
@@ -237,7 +282,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                               </button>
                             )}
 
-                            {!doc.acceptedByClient && doc.status !== 'aceptado' && !doc.needsBossPricing && (
+                            {!isAccepted && !doc.needsBossPricing && (
                               <span
                                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded"
                                 title="El presupuesto debe ser aceptado por el cliente en su área de cliente"
@@ -247,7 +292,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                               </span>
                             )}
 
-                            {(doc.acceptedByClient || doc.status === 'aceptado') && (
+                            {isAccepted && (
                               <button
                                 type="button"
                                 onClick={() => onConvertToInvoice(doc)}
@@ -403,61 +448,32 @@ export const DocumentList: React.FC<DocumentListProps> = ({
 
                     {/* Acciones */}
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5">
-                        {/* Si necesita precios del jefe, botón directo para valorar */}
-                        {doc.needsBossPricing ? (
-                          <button
-                            onClick={() => onEditBudgetPricing && onEditBudgetPricing(doc)}
-                            title="Asignar precios a este presupuesto enviado por empleado"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase rounded-lg shadow-2xs transition-colors"
-                          >
-                            <Sparkles className="w-3 h-3" />
-                            <span>Fijar Precios</span>
-                          </button>
-                        ) : (
-                          <>
-                            {/* Botón Envío Oficial WhatsApp / Email (Supabase short URL + Logo) */}
-                            {onDispatchDoc && (
-                              <button
-                                onClick={() => onDispatchDoc(doc)}
-                                title="Enviar al cliente por WhatsApp (particular) o Email (empresa)"
-                                className="p-1.5 text-emerald-700 hover:bg-emerald-50 border border-emerald-300 rounded-lg transition-colors"
-                              >
-                                <Send className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Convertir a factura si es presupuesto aceptado/completo */}
-                            {isBudget && (
-                              <button
-                                onClick={() => onConvertToInvoice(doc)}
-                                title="Convertir este presupuesto en factura"
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-white hover:bg-[#F8F7F3] border border-[#0F2942] text-[#0F2942] text-[10px] font-bold uppercase rounded-lg"
-                              >
-                                <ArrowRight className="w-3 h-3" />
-                                <span>Facturar</span>
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        {/* Botón Compartir Nativo */}
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => onShareDoc(doc)}
-                          title="Compartir mediante el dispositivo"
-                          className="p-1.5 text-[#0F2942] hover:bg-[#EFECE6] border border-[#CBD5E1] rounded-lg transition-colors"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Ver / Inspeccionar */}
-                        <button
+                          type="button"
                           onClick={() => onViewDoc(doc)}
-                          title="Ver detalle del documento"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[10px] font-bold uppercase rounded-lg transition-colors"
+                          className="p-1.5 text-[#0F2942] hover:bg-[#FAF9F5] rounded transition-colors"
+                          title="Ver documento"
                         >
-                          <Eye className="w-3 h-3" />
-                          <span>Ver</span>
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {targetExp && onNavigateToExpediente && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToExpediente(targetExp)}
+                            className="p-1.5 text-[#1E3A8A] hover:bg-blue-50 rounded transition-colors"
+                            title="Ver expediente en Roadmap"
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onShareDoc(doc)}
+                          className="p-1.5 text-[#64748B] hover:bg-[#FAF9F5] rounded transition-colors"
+                          title="Compartir"
+                        >
+                          <Share2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
