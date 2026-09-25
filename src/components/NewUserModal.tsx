@@ -4,8 +4,6 @@ import {
   KeyRound, Briefcase, Palette, Users, Save, Check, Sparkles, Upload, Image as ImageIcon,
   Sun, Moon, Eye, Inbox
 } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../firebase';
 import { AppUser, Employee, HighContrastThemeId } from '../types';
 import { sendRegistrationVerificationCode } from '../services/emailService';
 import { EmployeeManager } from './EmployeeManager';
@@ -250,25 +248,6 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
 
     setSaveSuccessMsg(true);
     setTimeout(() => setSaveSuccessMsg(false), 3500);
-  };
-
-  const handleGoogleSync = () => {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-    provider.addScope('https://www.googleapis.com/auth/gmail.send');
-
-    signInWithPopup(auth, provider)
-      .then((result) => {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const accessToken = credential?.accessToken;
-        const user = result.user;
-        console.log("Usuario sincronizado:", user.email);
-        console.log("Token capturado:", accessToken);
-        alert("¡Cuenta de Gmail conectada! La sincronización automática de facturas está activa.");
-      }).catch((error) => {
-        console.error("Error de sincronización OAuth:", error);
-        alert("Hubo un error al conectar la cuenta.");
-      });
   };
 
   return (
@@ -799,33 +778,7 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                     </label>
                   </div>
 
-                  {/* Automatización de Facturas e IA (Integración Gmail) */}
-                  <div className="pt-3 border-t border-[#E2E0D8]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 rounded-full bg-[#0F2942] border border-purple-500 flex items-center justify-center text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]">
-                        <Inbox className="w-3 h-3" />
-                      </div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#0F2942]">
-                        Automatización de Facturas e IA
-                      </h4>
-                    </div>
-                    <div className="flex flex-col items-start gap-3 p-4 bg-white border border-[#CBD5E1] rounded-lg">
-                      <span className="text-xs font-bold text-[#0F172A] block">
-                        Integración con Google Workspace / Gmail
-                      </span>
-                      <span className="text-[11px] text-[#64748B] block mt-0.5">
-                        Conecta tu cuenta de Gmail de forma segura para que nuestra IA escanee, extraiga y procese tus facturas adjuntas automáticamente en segundo plano.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleGoogleSync}
-                        className="mt-2 px-4 py-2 bg-[#0F2942] text-white hover:bg-[#1e4a7a] active:bg-[#0a1b2d] font-semibold text-xs rounded-lg transition-colors flex items-center gap-2 border border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]"
-                      >
-                        <Mail className="w-4 h-4 text-purple-400" />
-                        Conectar cuenta de Google
-                      </button>
-                    </div>
-                  </div>
+
                 </div>
               </div>
 

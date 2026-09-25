@@ -25,6 +25,7 @@ import { CitasView } from './components/CitasView';
 import { TallerCardsView } from './components/TallerCardsView';
 import { ProveedoresView } from './components/ProveedoresView';
 import { IncidenciasView } from './components/IncidenciasView';
+import { ConfiguracionView } from './components/ConfiguracionView';
 import { FullScreenClientForm } from './components/FullScreenClientForm';
 import { WorkOrdersModal } from './components/WorkOrdersModal';
 import { NotificationsModal } from './components/NotificationsModal';
@@ -1238,36 +1239,16 @@ export default function App() {
         />
 
         {/* 12. Configuración */}
-        <PlaceholderView 
+        <ConfiguracionView 
           id="page-configuracion" 
-          title="Configuración" 
           logoUrl={user.logoUrl} 
           userFullName={user.fullName} 
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
           onOpenMenu={() => setIsMenuOpen(true)}
-        >
-          <div className="bg-white p-6 rounded-xl border border-[#CBD5E1] shadow-xs flex flex-col items-center justify-center text-center gap-4 py-12">
-            <h3 className="text-xl font-bold text-[#0F2942]">Configuración de la Empresa</h3>
-            <p className="text-sm text-[#64748B] max-w-md">
-              Gestiona tus datos fiscales, plantilla de empleados con epígrafes de Seguridad Social y personalización visual (logotipo y fondos de inicio).
-            </p>
-            <div className="flex gap-4 mt-4">
-              <button 
-                onClick={() => setIsNewUserOpen(true)}
-                className="px-6 py-3 bg-[#0F2942] text-white rounded-lg shadow-md font-semibold text-sm hover:bg-[#1E3A8A] transition-colors"
-              >
-                Abrir Configuración (Fiscal, Empleados, Personalización)
-              </button>
-              <button 
-                onClick={() => setIsSpecOpen(true)}
-                className="px-4 py-2 text-[#64748B] hover:text-[#0F172A] text-xs font-semibold underline transition-colors"
-              >
-                Especificación Técnica
-              </button>
-            </div>
-          </div>
-        </PlaceholderView>
+          onOpenCompanyConfig={() => setIsNewUserOpen(true)}
+          onOpenSpec={() => setIsSpecOpen(true)}
+        />
       </div>
 
       {/* Modales del Sistema */}
