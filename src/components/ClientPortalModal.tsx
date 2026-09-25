@@ -259,17 +259,17 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#38BDF8]">
+                <span className="text-[15px] font-bold uppercase tracking-widest text-[#38BDF8]">
                   Portal del Cliente • {user.fullName}
                 </span>
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-bold rounded border border-emerald-500/40">
+                <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 text-[13.5px] font-mono font-bold rounded border border-emerald-500/40">
                   ID #{loggedClient.clientNumber || 1}
                 </span>
               </div>
               <h2 className="text-base font-bold text-white uppercase tracking-wider">
                 {loggedClient.name}
               </h2>
-              <p className="text-xs text-slate-300">
+              <p className="text-[18px] text-slate-300">
                 CIF: <strong className="font-mono text-white">{loggedClient.cif}</strong> • {loggedClient.email}
               </p>
             </div>
@@ -279,17 +279,17 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
             <button
               type="button"
               onClick={onLogoutClient}
-              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[18px] font-bold uppercase transition-colors flex items-center gap-2 cursor-pointer"
               title="Cerrar sesión cliente"
             >
-              <LogOut className="w-3.5 h-3.5 text-amber-400" />
+              <LogOut className="w-4 h-4 text-amber-400" />
               <span>Cambiar Cliente</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -301,42 +301,42 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('expedientes')}
-            className={`py-3 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+            className={`py-3.5 px-3 text-[18px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'expedientes'
                 ? 'border-[#0F2942] text-[#0F2942] bg-[#F8F7F3]'
                 : 'border-transparent text-[#64748B] hover:text-[#0F2942]'
             }`}
           >
-            <FileText className="w-4 h-4 text-[#1E3A8A]" />
+            <FileText className="w-5 h-5 text-[#1E3A8A]" />
             <span>Mis Expedientes</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('deudas')}
-            className={`py-3 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+            className={`py-3.5 px-3 text-[18px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'deudas'
                 ? 'border-[#0F2942] text-[#0F2942] bg-[#F8F7F3]'
                 : 'border-transparent text-[#64748B] hover:text-[#0F2942]'
             }`}
           >
-            <CreditCard className="w-4 h-4 text-emerald-600" />
+            <CreditCard className="w-5 h-5 text-emerald-600" />
             <span>Control de Deudas</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('solicitud')}
-            className={`py-3 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+            className={`py-3.5 px-3 text-[18px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'solicitud'
                 ? 'border-[#0F2942] text-[#0F2942] bg-[#F8F7F3]'
                 : 'border-transparent text-[#64748B] hover:text-[#0F2942]'
             }`}
           >
-            <Clock className="w-4 h-4 text-purple-600" />
+            <Clock className="w-5 h-5 text-purple-600" />
             <span>Mis Solicitudes y Seguimiento</span>
             {clientSolicitudes.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-purple-100 text-purple-700">
+              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[15px] font-black bg-purple-100 text-purple-700">
                 {clientSolicitudes.length}
               </span>
             )}
@@ -345,13 +345,13 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('notificaciones')}
-            className={`py-3 px-3 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+            className={`py-3.5 px-3 text-[18px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'notificaciones'
                 ? 'border-[#0F2942] text-[#0F2942] bg-[#F8F7F3]'
                 : 'border-transparent text-[#64748B] hover:text-[#0F2942]'
             }`}
           >
-            <MessageSquare className="w-4 h-4 text-amber-600" />
+            <MessageSquare className="w-5 h-5 text-amber-600" />
             <span>Avisos Taller</span>
           </button>
         </div>
@@ -362,19 +362,19 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
           {activeTab === 'expedientes' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-[#E2E0D8]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#0F172A]">
+                <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F172A]">
                   Seguimiento de Expedientes y Presupuestos Oficiales
                 </h3>
-                <span className="text-xs font-mono text-[#64748B]">
+                <span className="text-[18px] font-mono text-[#64748B]">
                   {clientBudgets.length} registros
                 </span>
               </div>
 
               {clientBudgets.length === 0 ? (
-                <div className="text-center py-12 bg-white border border-[#E2E0D8] rounded-xl text-xs text-[#64748B]">
-                  <FileText className="w-8 h-8 mx-auto text-[#CBD5E1] mb-2" />
+                <div className="text-center py-12 bg-white border border-[#E2E0D8] rounded-xl text-[18px] text-[#64748B]">
+                  <FileText className="w-10 h-10 mx-auto text-[#CBD5E1] mb-2" />
                   <p className="font-bold text-[#0F172A]">No hay presupuestos activos registrados</p>
-                  <p className="text-[11px] mt-1">
+                  <p className="text-[16.5px] mt-1">
                     Puede solicitar un nuevo presupuesto online con fotos desde la pestaña superior.
                   </p>
                 </div>
@@ -391,12 +391,12 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                     >
                       {/* Fecha estimada fijada por el taller (Informativa, solo lectura) */}
                       {(doc.vehicleDeliveryDate || doc.proposedDeliveryDate) && (
-                        <div className="p-3 bg-[#F8F7F3] border border-[#E2E0D8] rounded-lg flex items-center justify-between gap-3 text-xs">
+                        <div className="p-3 bg-[#F8F7F3] border border-[#E2E0D8] rounded-lg flex items-center justify-between gap-3 text-[18px]">
                           <div className="flex items-center gap-2 text-[#0F2942]">
-                            <Calendar className="w-4 h-4 text-[#1E3A8A]" />
+                            <Calendar className="w-5 h-5 text-[#1E3A8A]" />
                             <span className="font-semibold">Fecha estimada fijada por el taller:</span>
                           </div>
-                          <span className="font-mono font-bold text-[#0F2942] bg-white px-2.5 py-1 rounded border border-[#CBD5E1]">
+                          <span className="font-mono font-bold text-[#0F2942] bg-white px-3 py-1 rounded border border-[#CBD5E1]">
                             {doc.vehicleDeliveryDate || doc.proposedDeliveryDate}
                           </span>
                         </div>
@@ -405,26 +405,26 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                       <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-[#F1F0EB]">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-[#0F2942] text-white font-mono font-bold text-xs rounded">
+                            <span className="px-2.5 py-1 bg-[#0F2942] text-white font-mono font-bold text-[18px] rounded">
                               {doc.number}
                             </span>
                             {doc.expediente && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-900 font-mono font-bold text-xs rounded border border-blue-200">
+                              <span className="px-2.5 py-1 bg-blue-100 text-blue-900 font-mono font-bold text-[18px] rounded border border-blue-200">
                                 Expediente {doc.expediente}
                               </span>
                             )}
-                            <span className="text-xs text-[#64748B]">
+                            <span className="text-[18px] text-[#64748B]">
                               Fecha: {doc.date}
                             </span>
                           </div>
 
                           <div className="mt-2 flex items-center gap-2">
-                            <Car className="w-4 h-4 text-[#1E3A8A]" />
-                            <span className="text-sm font-bold text-[#0F172A]">
+                            <Car className="w-5 h-5 text-[#1E3A8A]" />
+                            <span className="text-[21px] font-bold text-[#0F172A]">
                               {doc.vehicleBrand} {doc.vehicleModel}
                             </span>
                             {doc.vehiclePlate && (
-                              <span className="font-mono text-xs font-bold bg-[#FAF9F5] border border-[#CBD5E1] px-2 py-0.5 rounded text-[#0F172A]">
+                              <span className="font-mono text-[18px] font-bold bg-[#FAF9F5] border border-[#CBD5E1] px-2.5 py-0.5 rounded text-[#0F172A]">
                                 🇪🇸 {doc.vehiclePlate}
                               </span>
                             )}
@@ -433,23 +433,23 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
                         {/* Estado y Total */}
                         <div className="text-right">
-                          <div className="text-lg font-black font-mono text-[#0F172A]">
+                          <div className="text-[27px] font-black font-mono text-[#0F172A]">
                             {doc.total.toFixed(2)} €
                           </div>
                           <div className="mt-1">
                             {isAccepted ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase rounded-full border border-emerald-300">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-100 text-emerald-800 font-bold text-[15px] uppercase rounded-full border border-emerald-300">
+                                <CheckCircle2 className="w-4 h-4" />
                                 Presupuesto Aceptado
                               </span>
                             ) : isRejected ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 font-bold text-[10px] uppercase rounded-full border border-red-300">
-                                <XCircle className="w-3.5 h-3.5" />
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 font-bold text-[15px] uppercase rounded-full border border-red-300">
+                                <XCircle className="w-4 h-4" />
                                 Presupuesto Rechazado
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] uppercase rounded-full border border-amber-300">
-                                <Clock className="w-3.5 h-3.5" />
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-800 font-bold text-[15px] uppercase rounded-full border border-amber-300">
+                                <Clock className="w-4 h-4" />
                                 Pendiente de Aprobación
                               </span>
                             )}
@@ -461,16 +461,16 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                       {(() => {
                         const proposedDate = doc.vehicleDeliveryDate || doc.proposedDeliveryDate || doc.date || '';
                         return (
-                          <div className="p-3 bg-[#FAF9F5] border border-[#E2E0D8] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <div className="p-3.5 bg-[#FAF9F5] border border-[#E2E0D8] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[18px]">
                             <div className="flex items-center gap-2 text-[#475569]">
-                              <Calendar className="w-4 h-4 text-[#1E3A8A] shrink-0" />
+                              <Calendar className="w-5 h-5 text-[#1E3A8A] shrink-0" />
                               <span className="font-semibold text-[#0F2942]">
                                 {doc.deliveryDateProposedBy === 'client' && doc.deliveryDateStatus === 'pending_acceptance'
                                   ? 'Fecha propuesta por ti (pendiente confirmación taller):'
                                   : 'Fecha propuesta de entrega fijada por el taller:'}
                               </span>
                             </div>
-                            <span className="font-mono font-bold text-[#0F172A] bg-white px-2.5 py-1 rounded border border-[#CBD5E1] inline-flex items-center gap-1.5 self-start sm:self-auto">
+                            <span className="font-mono font-bold text-[#0F172A] bg-white px-3 py-1 rounded border border-[#CBD5E1] inline-flex items-center gap-2 self-start sm:self-auto">
                               <span>📅</span> {proposedDate || 'Por determinar'}
                             </span>
                           </div>
@@ -479,24 +479,24 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
                       {/* Selector inline para proponer otra fecha de entrega si el cliente no acepta la fecha inicial */}
                       {isPending && proposingDateDocId === doc.id && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 text-xs animate-in fade-in">
-                          <div className="flex items-center gap-1.5 font-bold text-[#0F2942]">
-                            <Calendar className="w-4 h-4 text-[#1E3A8A]" />
+                        <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-lg space-y-2 text-[18px] animate-in fade-in">
+                          <div className="flex items-center gap-2 font-bold text-[#0F2942]">
+                            <Calendar className="w-5 h-5 text-[#1E3A8A]" />
                             <span>Proponer una fecha de entrega alternativa al taller:</span>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2.5">
                             <input
                               type="date"
                               min={new Date().toISOString().split('T')[0]}
                               value={customProposedDate}
                               onChange={(e) => setCustomProposedDate(e.target.value)}
-                              className="px-2.5 py-1.5 bg-white border border-[#94A3B8] rounded text-xs font-mono font-semibold text-[#0F172A] focus:outline-hidden focus:ring-2 focus:ring-[#1E3A8A]"
+                              className="px-3 py-2 bg-white border border-[#94A3B8] rounded text-[18px] font-mono font-semibold text-[#0F172A] focus:outline-hidden focus:ring-2 focus:ring-[#1E3A8A]"
                             />
                             <button
                               type="button"
                               disabled={!customProposedDate}
                               onClick={() => handleProposeAlternativeDate(doc, customProposedDate)}
-                              className="px-3 py-1.5 bg-[#0F2942] hover:bg-[#1E3A8A] disabled:opacity-50 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                              className="px-3.5 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] disabled:opacity-50 text-white rounded text-[18px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                             >
                               Aceptar con esta Fecha
                             </button>
@@ -506,7 +506,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                 setProposingDateDocId(null);
                                 setCustomProposedDate('');
                               }}
-                              className="px-2.5 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded text-xs font-semibold cursor-pointer"
+                              className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded text-[18px] font-semibold cursor-pointer"
                             >
                               Cancelar
                             </button>
@@ -516,12 +516,12 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
                       {/* Conceptos resumen */}
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase text-[#64748B]">
+                        <span className="text-[15px] font-bold uppercase text-[#64748B]">
                           Trabajos e Insumos Incluidos:
                         </span>
                         <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg bg-gray-50/50 overflow-hidden">
                           {doc.items.map((it, idx) => (
-                            <div key={idx} className="p-2 text-xs flex items-center justify-between">
+                            <div key={idx} className="p-2.5 text-[18px] flex items-center justify-between">
                               <span className="text-[#334155]">{it.description}</span>
                               <span className="font-mono font-semibold text-[#0F172A]">
                                 {it.amount.toFixed(2)} €
@@ -537,10 +537,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                           id="btn-ver-descargar-pdf-a4"
                           type="button"
                           onClick={() => onViewDoc(doc)}
-                          className="px-3.5 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+                          className="px-4 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-[18px] font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
                           title="Abrir y visualizar el presupuesto completo oficial para guardar en PDF o imprimir"
                         >
-                          <Download className="w-4 h-4 text-[#38BDF8]" />
+                          <Download className="w-5 h-5 text-[#38BDF8]" />
                           <span>Ver / Descargar PDF A4</span>
                         </button>
 
@@ -550,10 +550,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleAcceptBudget(doc)}
-                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                                 title="Aceptar el presupuesto y la fecha propuesta de entrega"
                               >
-                                <CheckCircle2 className="w-4 h-4" />
+                                <CheckCircle2 className="w-5 h-5" />
                                 <span>Aceptar Presupuesto y Fecha Propuesta</span>
                               </button>
 
@@ -564,10 +564,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                     setProposingDateDocId(doc.id);
                                     setCustomProposedDate(doc.vehicleDeliveryDate || doc.proposedDeliveryDate || '');
                                   }}
-                                  className="px-3 py-1.5 bg-[#1E3A8A] hover:bg-[#0F2942] text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                                  className="px-3.5 py-2 bg-[#1E3A8A] hover:bg-[#0F2942] text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                                   title="Proponer otra fecha de entrega si no puedes en la propuesta"
                                 >
-                                  <Calendar className="w-4 h-4" />
+                                  <Calendar className="w-5 h-5" />
                                   <span>Proponer otra fecha</span>
                                 </button>
                               )}
@@ -575,10 +575,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleRejectBudget(doc)}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-[18px] font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                                 title="Rechazar este presupuesto"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <XCircle className="w-5 h-5" />
                                 <span>Rechazar</span>
                               </button>
                             </>
@@ -597,22 +597,22 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 bg-white border border-[#E2E0D8] rounded-xl shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase text-[#64748B]">Total Facturado</span>
-                  <div className="text-xl font-black font-mono text-[#0F172A] mt-1">
+                  <span className="text-[15px] font-bold uppercase text-[#64748B]">Total Facturado</span>
+                  <div className="text-[30px] font-black font-mono text-[#0F172A] mt-1">
                     {totalBilled.toFixed(2)} €
                   </div>
                 </div>
 
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase text-emerald-800">Total Liquidado</span>
-                  <div className="text-xl font-black font-mono text-emerald-700 mt-1">
+                  <span className="text-[15px] font-bold uppercase text-emerald-800">Total Liquidado</span>
+                  <div className="text-[30px] font-black font-mono text-emerald-700 mt-1">
                     {totalPaid.toFixed(2)} €
                   </div>
                 </div>
 
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase text-amber-800">Estado de Deuda Activa</span>
-                  <div className={`text-xl font-black font-mono mt-1 ${totalPendingDebt > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                  <span className="text-[15px] font-bold uppercase text-amber-800">Estado de Deuda Activa</span>
+                  <div className={`text-[30px] font-black font-mono mt-1 ${totalPendingDebt > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
                     {totalPendingDebt.toFixed(2)} €
                   </div>
                 </div>
@@ -620,14 +620,14 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
               <div className="bg-white border border-[#E2E0D8] rounded-xl overflow-hidden shadow-xs">
                 <div className="px-5 py-3.5 bg-[#FAF9F5] border-b border-[#E2E0D8] flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase text-[#0F172A] tracking-wider">
+                  <h4 className="text-[18px] font-bold uppercase text-[#0F172A] tracking-wider">
                     Histórico de Facturas Emitidas
                   </h4>
-                  <span className="text-xs text-[#64748B]">{clientInvoices.length} facturas</span>
+                  <span className="text-[18px] text-[#64748B]">{clientInvoices.length} facturas</span>
                 </div>
 
                 {clientInvoices.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-[#64748B]">
+                  <div className="p-8 text-center text-[18px] text-[#64748B]">
                     No se han registrado facturas ni deudas pendientes a su nombre.
                   </div>
                 ) : (
@@ -635,28 +635,28 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                     {clientInvoices.map((inv) => {
                       const isPaid = inv.status === 'confirmada';
                       return (
-                        <div key={inv.id} className="p-4 flex items-center justify-between text-xs">
+                        <div key={inv.id} className="p-4 flex items-center justify-between text-[18px]">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-[#0F172A]">{inv.number}</span>
-                              <span className="text-[11px] text-[#64748B]">{inv.date}</span>
+                              <span className="text-[16.5px] text-[#64748B]">{inv.date}</span>
                             </div>
-                            <span className="text-[11px] text-[#475569] mt-0.5 block">
+                            <span className="text-[16.5px] text-[#475569] mt-0.5 block">
                               Concepto: Servicio de reparación / mantenimiento taller
                             </span>
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <span className="font-mono font-bold text-sm text-[#0F172A]">
+                            <span className="font-mono font-bold text-[21px] text-[#0F172A]">
                               {inv.total.toFixed(2)} €
                             </span>
 
                             {isPaid ? (
-                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase rounded-full border border-emerald-300">
+                              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-[15px] uppercase rounded-full border border-emerald-300">
                                 Pagada
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold text-[10px] uppercase rounded-full border border-amber-300">
+                              <span className="px-3 py-1 bg-amber-100 text-amber-800 font-bold text-[15px] uppercase rounded-full border border-amber-300">
                                 Pendiente de Cobro
                               </span>
                             )}
@@ -664,10 +664,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                             <button
                               type="button"
                               onClick={() => onViewDoc(inv)}
-                              className="p-1.5 bg-gray-100 hover:bg-gray-200 text-[#0F2942] rounded transition-colors"
+                              className="p-2 bg-gray-100 hover:bg-gray-200 text-[#0F2942] rounded-lg transition-colors cursor-pointer"
                               title="Ver Factura PDF"
                             >
-                              <Download className="w-4 h-4" />
+                              <Download className="w-5 h-5" />
                             </button>
                           </div>
                         </div>
@@ -685,11 +685,11 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
               {/* Encabezado y Acción para Nueva Solicitud */}
               <div className="bg-white border border-[#E2E0D8] rounded-xl p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-purple-600" />
+                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F172A] flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-purple-600" />
                     <span>Mis Solicitudes de Presupuesto y Seguimiento</span>
                   </h3>
-                  <p className="text-xs text-[#64748B] mt-1">
+                  <p className="text-[18px] text-[#64748B] mt-1">
                     Consulte el estado de valoración en tiempo real (Aprobada, Rechazada o Presupuestada por el taller DM CAR).
                   </p>
                 </div>
@@ -697,7 +697,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowNewRequestForm(!showNewRequestForm)}
-                  className="px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold uppercase rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold uppercase rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   {showNewRequestForm ? (
                     <>
@@ -714,7 +714,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
               </div>
 
               {reqSuccess && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-3 shadow-xs">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[18px] rounded-xl flex items-center gap-3 shadow-xs">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
                     <span className="font-bold block">¡Solicitud registrada y guardada con éxito!</span>
@@ -732,14 +732,14 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#0F172A]">
                       Nueva Solicitud de Presupuesto con Fotos
                     </h4>
-                    <p className="text-xs text-[#64748B] mt-1">
+                    <p className="text-[18px] text-[#64748B] mt-1">
                       Describa los trabajos o avería de su vehículo y adjunte fotos de los daños para recibir su presupuesto oficial.
                     </p>
                   </div>
 
                   <form onSubmit={handleSubmitOnlineRequest} className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
+                      <label className="block text-[15px] font-bold uppercase text-[#64748B] mb-1">
                         Matrícula del Vehículo
                       </label>
                       <input
@@ -747,12 +747,12 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                         value={reqPlate}
                         onChange={(e) => setReqPlate(e.target.value.toUpperCase())}
                         placeholder="Ej: 4512LKT"
-                        className="w-full max-w-xs px-3 py-2 text-xs font-mono font-bold uppercase bg-[#F8F7F3] border border-[#CBD5E1] rounded-lg"
+                        className="w-full max-w-xs px-3 py-2 text-[18px] font-mono font-bold uppercase bg-[#F8F7F3] border border-[#CBD5E1] rounded-lg"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
+                      <label className="block text-[15px] font-bold uppercase text-[#64748B] mb-1">
                         Descripción de la Reparación / Daños *
                       </label>
                       <textarea
@@ -761,16 +761,16 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                         value={reqDescription}
                         onChange={(e) => setReqDescription(e.target.value)}
                         placeholder="Escriba aquí los detalles de la reparación necesaria, ruidos, chapa/pintura o mantenimiento..."
-                        className="w-full p-3 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-lg focus:outline-hidden focus:border-[#0F2942]"
+                        className="w-full p-3 text-[18px] bg-[#F8F7F3] border border-[#CBD5E1] rounded-lg focus:outline-hidden focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
+                      <label className="block text-[15px] font-bold uppercase text-[#64748B] mb-1">
                         Adjuntar Fotografías del Vehículo / Daños (Opcional)
                       </label>
                       <div className="flex items-center gap-3">
-                        <label className="px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5">
+                        <label className="px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold uppercase rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5">
                           <Upload className="w-4 h-4" />
                           <span>Subir Fotos</span>
                           <input
@@ -781,7 +781,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                             className="hidden"
                           />
                         </label>
-                        <span className="text-xs text-[#64748B]">
+                        <span className="text-[18px] text-[#64748B]">
                           {reqImages.length} fotos adjuntas
                         </span>
                       </div>
@@ -800,7 +800,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                     <div className="pt-2 flex items-center gap-3">
                       <button
                         type="submit"
-                        className="px-5 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                        className="px-5 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-md transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         <Send className="w-4 h-4" />
                         <span>Enviar Solicitud a DM CAR</span>
@@ -810,7 +810,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowNewRequestForm(false)}
-                          className="px-4 py-2.5 border border-gray-300 text-[#475569] hover:bg-gray-100 text-xs font-bold uppercase rounded-lg transition-colors cursor-pointer"
+                          className="px-4 py-2.5 border border-gray-300 text-[#475569] hover:bg-gray-100 text-[18px] font-bold uppercase rounded-lg transition-colors cursor-pointer"
                         >
                           Cancelar
                         </button>
@@ -826,13 +826,13 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
                     Historial de Solicitudes Registradas ({clientSolicitudes.length})
                   </h4>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[16.5px] text-[#64748B]">
                     Actualización en tiempo real
                   </span>
                 </div>
 
                 {clientSolicitudes.length === 0 ? (
-                  <div className="bg-white border border-[#E2E0D8] rounded-xl p-8 text-center text-xs text-[#64748B]">
+                  <div className="bg-white border border-[#E2E0D8] rounded-xl p-8 text-center text-[18px] text-[#64748B]">
                     No tiene ninguna solicitud de presupuesto guardada aún. Pulse en "+ Nueva Solicitud" para enviar una consulta al taller.
                   </div>
                 ) : (
@@ -868,16 +868,16 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                           {/* Cabecera de la Solicitud */}
                           <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-gray-100">
                             <div className="flex items-center gap-3">
-                              <span className="font-mono font-black text-xs text-[#0F2942]">
+                              <span className="font-mono font-black text-[18px] text-[#0F2942]">
                                 {sol.number}
                               </span>
-                              <span className="text-xs text-[#64748B] font-mono">
+                              <span className="text-[18px] text-[#64748B] font-mono">
                                 Exp: {sol.expediente}
                               </span>
-                              <span className="text-xs text-[#94A3B8]">
+                              <span className="text-[18px] text-[#94A3B8]">
                                 {sol.date}
                               </span>
-                              <span className="px-2 py-0.5 bg-[#0F2942] text-white font-mono text-xs font-bold rounded-md uppercase">
+                              <span className="px-2 py-0.5 bg-[#0F2942] text-white font-mono text-[18px] font-bold rounded-md uppercase">
                                 {sol.vehiclePlate || 'SIN MATRÍCULA'}
                               </span>
                             </div>
@@ -885,25 +885,25 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                             {/* Badge de Estado */}
                             <div>
                               {isApproved && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-extrabold shadow-2xs">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-[18px] font-extrabold shadow-2xs">
                                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                   <span>APROBADA POR EL TALLER</span>
                                 </span>
                               )}
                               {isRejected && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-full text-xs font-extrabold shadow-2xs">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-full text-[18px] font-extrabold shadow-2xs">
                                   <XCircle className="w-4 h-4 text-rose-600" />
                                   <span>RECHAZADA POR EL TALLER</span>
                                 </span>
                               )}
                               {isBudgeted && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded-full text-xs font-extrabold shadow-2xs">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded-full text-[18px] font-extrabold shadow-2xs">
                                   <FileText className="w-4 h-4 text-blue-600" />
                                   <span>PRESUPUESTO EMITIDO</span>
                                 </span>
                               )}
                               {isPending && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-full text-xs font-extrabold shadow-2xs animate-pulse">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-full text-[18px] font-extrabold shadow-2xs animate-pulse">
                                   <Clock className="w-4 h-4 text-amber-600" />
                                   <span>EN REVISIÓN TÉCNICA</span>
                                 </span>
@@ -913,10 +913,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
                           {/* Línea de Seguimiento / Workflow Tracker */}
                           <div className="bg-[#F8FAFC] p-3.5 rounded-lg border border-[#E2E8F0]">
-                            <div className="flex items-center justify-between text-[11px] font-bold">
+                            <div className="flex items-center justify-between text-[16.5px] font-bold">
                               {/* Paso 1 */}
                               <div className="flex items-center gap-1.5 text-emerald-700">
-                                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">
+                                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[15px] font-black">
                                   ✓
                                 </span>
                                 <span>1. Solicitud enviada</span>
@@ -933,7 +933,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                 }`}
                               >
                                 <span
-                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white ${
+                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[15px] font-black text-white ${
                                     isPending ? 'bg-amber-500' : 'bg-emerald-600'
                                   }`}
                                 >
@@ -965,7 +965,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                 }`}
                               >
                                 <span
-                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white ${
+                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[15px] font-black text-white ${
                                     isApproved
                                       ? 'bg-emerald-600'
                                       : isRejected
@@ -995,7 +995,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                           </div>
 
                           {/* Descripción y Detalles */}
-                          <div className="bg-[#FAF9F5] p-3 rounded-lg border border-[#EBE8DE] text-xs text-[#334155]">
+                          <div className="bg-[#FAF9F5] p-3 rounded-lg border border-[#EBE8DE] text-[18px] text-[#334155]">
                             <span className="font-bold text-[#0F2942] block mb-1">
                               Trabajos / Daños comunicados:
                             </span>
@@ -1005,7 +1005,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                           {/* Galería de Fotos */}
                           {sol.images && sol.images.length > 0 && (
                             <div>
-                              <span className="text-[10px] font-bold text-[#64748B] uppercase block mb-1">
+                              <span className="text-[15px] font-bold text-[#64748B] uppercase block mb-1">
                                 Fotos de los daños adjuntas ({sol.images.length})
                               </span>
                               <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -1022,7 +1022,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                           )}
 
                           {/* Mensaje de resolución según estado */}
-                          <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs border-t border-gray-100">
+                          <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-[18px] border-t border-gray-100">
                             <div className="text-[#64748B]">
                               {isApproved && (
                                 <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
@@ -1066,7 +1066,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                                   setActiveTab('expedientes');
                                   onViewDoc(matchingBudget);
                                 }}
-                                className="px-3 py-1.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                className="px-3 py-1.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                               >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span>Ver Presupuesto #{matchingBudget.number}</span>
@@ -1089,7 +1089,7 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                 Avisos y Cambios de Estado de Reparaciones
               </h3>
 
-              <div className="p-4 bg-white border border-[#E2E0D8] rounded-xl shadow-xs space-y-3 text-xs">
+              <div className="p-4 bg-white border border-[#E2E0D8] rounded-xl shadow-xs space-y-3 text-[18px]">
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-blue-100 text-[#1E3A8A] rounded-lg">
                     <Wrench className="w-4 h-4" />
@@ -1098,10 +1098,10 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                     <span className="font-bold text-[#0F172A] block">
                       Vehículo en Proceso de Reparación
                     </span>
-                    <p className="text-[#475569] text-[11px] mt-0.5">
+                    <p className="text-[#475569] text-[16.5px] mt-0.5">
                       Su expediente activo ha sido asignado a los operarios del taller DM CAR. Puede realizar el seguimiento de las fases en este portal.
                     </p>
-                    <span className="text-[10px] text-[#94A3B8] block mt-1">Hoy a las 10:30</span>
+                    <span className="text-[15px] text-[#94A3B8] block mt-1">Hoy a las 10:30</span>
                   </div>
                 </div>
               </div>
@@ -1111,13 +1111,13 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 bg-[#FAF9F5] border-t border-[#E2E0D8] flex items-center justify-between shrink-0">
-          <span className="text-xs text-[#64748B]">
-            Portal del Cliente • Vincualdo a DM CAR
+          <span className="text-[18px] text-[#64748B]">
+            Portal del Cliente • Vinculado a DM CAR
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white hover:bg-gray-100 text-[#0F172A] border border-[#CBD5E1] rounded-lg text-xs font-bold uppercase transition-colors cursor-pointer"
+            className="px-4 py-2 bg-white hover:bg-gray-100 text-[#0F172A] border border-[#CBD5E1] rounded-lg text-[18px] font-bold uppercase transition-colors cursor-pointer"
           >
             Cerrar Portal
           </button>

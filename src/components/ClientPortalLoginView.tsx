@@ -185,11 +185,11 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#38BDF8] bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+              <span className="text-[15px] font-bold uppercase tracking-widest text-[#38BDF8] bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
                 Portal Oficial del Cliente
               </span>
-              <span className="hidden sm:inline text-xs text-slate-400">·</span>
-              <span className="hidden sm:inline text-xs text-slate-300 font-medium">Gestarian Connected</span>
+              <span className="hidden sm:inline text-[18px] text-slate-400">·</span>
+              <span className="hidden sm:inline text-[18px] text-slate-300 font-medium">Gestarian Connected</span>
             </div>
             <h1 className="text-base sm:text-lg font-black tracking-tight text-white">
               {workshopUser.fullName || 'Taller de Automoción'}
@@ -202,11 +202,11 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
           href="https://pro-gestarian.web.app"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-xs font-semibold text-slate-300 hover:text-white transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-[18px] font-semibold text-slate-300 hover:text-white transition-all cursor-pointer"
           title="Acceso exclusivo para administradores y empleados del taller"
         >
           <span className="hidden md:inline">Acceso Taller</span>
-          <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+          <ExternalLink className="w-4 h-4 text-cyan-400" />
         </a>
       </header>
 
@@ -216,8 +216,8 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
           
           {/* Columna Izquierda: Presentación y Beneficios del Portal */}
           <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-wide">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[18px] font-bold tracking-wide">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
               <span>Conexión Directa con tu Taller</span>
             </div>
 
@@ -225,34 +225,34 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
               Tu vehículo, bajo control en <span className="bg-gradient-to-r from-[#38BDF8] via-[#818CF8] to-[#C084FC] bg-clip-text text-transparent">tiempo real</span>.
             </h2>
 
-            <p className="text-sm sm:text-base text-slate-300 max-w-lg leading-relaxed">
+            <p className="text-[21px] sm:text-[24px] text-slate-300 max-w-lg leading-relaxed">
               Consulta en cualquier momento el estado de la reparación de tu vehículo, revisa presupuestos y facturas, acepta fechas de entrega y solicita nuevos presupuestos online.
             </p>
 
             {/* Micro-tarjetas de características */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-[#38BDF8] flex items-center justify-center mb-2">
-                  <Car className="w-4 h-4" />
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/20 text-[#38BDF8] flex items-center justify-center mb-2">
+                  <Car className="w-5 h-5" />
                 </div>
-                <h3 className="text-xs font-bold text-white">Mis Expedientes</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Seguimiento de orden y fotos de daños.</p>
+                <h3 className="text-[18px] font-bold text-white">Mis Expedientes</h3>
+                <p className="text-[16.5px] text-slate-400 mt-1 leading-snug">Seguimiento de orden y fotos de daños.</p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
-                  <FileText className="w-4 h-4" />
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
+                  <FileText className="w-5 h-5" />
                 </div>
-                <h3 className="text-xs font-bold text-white">Presupuestos y Pagos</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Aceptación online y facturas PDF.</p>
+                <h3 className="text-[18px] font-bold text-white">Presupuestos y Pagos</h3>
+                <p className="text-[16.5px] text-slate-400 mt-1 leading-snug">Aceptación online y facturas PDF.</p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
-                  <Clock className="w-4 h-4" />
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-sm flex flex-col items-center lg:items-start text-center lg:text-left">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2">
+                  <Clock className="w-5 h-5" />
                 </div>
-                <h3 className="text-xs font-bold text-white">Solicitudes Online</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Pide presupuesto subiendo tus fotos.</p>
+                <h3 className="text-[18px] font-bold text-white">Solicitudes Online</h3>
+                <p className="text-[16.5px] text-slate-400 mt-1 leading-snug">Pide presupuesto subiendo tus fotos.</p>
               </div>
             </div>
           </div>
@@ -272,24 +272,24 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
                     <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                       Acceso al Área de Cliente
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-[18px] text-slate-400 mt-0.5">
                       Introduce tus datos para acceder a tu expediente
                     </p>
                   </div>
                 </div>
 
                 {error && (
-                  <div className="mb-5 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                  <div className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-[18px] flex items-start gap-2.5">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-400" />
                     <div className="flex-1">
                       <p className="font-semibold">{error}</p>
                       {showGuestPrompt && (
                         <button
                           type="button"
                           onClick={handleEnterAsGuest}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[18px] font-bold transition-all cursor-pointer"
                         >
-                          <UserCheck className="w-3.5 h-3.5" />
+                          <UserCheck className="w-4 h-4" />
                           <span>Entrar como Nuevo Cliente</span>
                         </button>
                       )}
@@ -300,77 +300,77 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   {/* Email */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    <label className="block text-[18px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                       Correo Electrónico
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Mail className="w-4 h-4" />
+                        <Mail className="w-5 h-5" />
                       </div>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="tu-email@ejemplo.com"
-                        className="w-full pl-10 pr-3.5 py-3 bg-white/5 border border-white/15 focus:border-cyan-400 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all font-sans"
+                        className="w-full pl-11 pr-3.5 py-3 bg-white/5 border border-white/15 focus:border-cyan-400 rounded-xl text-[21px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all font-sans"
                       />
                     </div>
                   </div>
 
                   {/* DNI / CIF o Matrícula */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    <label className="block text-[18px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                       DNI / CIF o Matrícula
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Car className="w-4 h-4" />
+                        <Car className="w-5 h-5" />
                       </div>
                       <input
                         type="text"
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
                         placeholder="Ej: 12345678Z o 1234BBB"
-                        className="w-full pl-10 pr-3.5 py-3 bg-white/5 border border-white/15 focus:border-cyan-400 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all uppercase font-mono tracking-wider"
+                        className="w-full pl-11 pr-3.5 py-3 bg-white/5 border border-white/15 focus:border-cyan-400 rounded-xl text-[21px] text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all uppercase font-mono tracking-wider"
                       />
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full mt-2 py-3.5 px-4 bg-gradient-to-r from-[#0284C7] via-[#0EA5E9] to-[#38BDF8] hover:from-[#0369A1] hover:to-[#0284C7] text-white font-bold rounded-xl shadow-[0_0_25px_rgba(14,165,233,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer group text-sm uppercase tracking-wider"
+                    className="w-full mt-2 py-4 px-4 bg-gradient-to-r from-[#0284C7] via-[#0EA5E9] to-[#38BDF8] hover:from-[#0369A1] hover:to-[#0284C7] text-white font-bold rounded-xl shadow-[0_0_25px_rgba(14,165,233,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer group text-[21px] uppercase tracking-wider"
                   >
                     <span>Entrar a mi Área</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </form>
 
                 {/* Acceso Rápido Demo / Pruebas */}
                 <div className="mt-6 pt-5 border-t border-white/10">
                   <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[16.5px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
                       <span>Acceso Rápido de Prueba (1 Clic)</span>
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {sampleClients.map((sample) => (
                       <button
                         key={sample.id}
                         type="button"
                         onClick={() => onClientLogin(sample)}
-                        className="w-full px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-cyan-400/40 text-left transition-all cursor-pointer flex items-center justify-between group"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-cyan-400/40 text-left transition-all cursor-pointer flex items-center justify-between group"
                       >
                         <div className="truncate">
-                          <p className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors truncate">
+                          <p className="text-[18px] font-bold text-slate-200 group-hover:text-cyan-300 transition-colors truncate">
                             {sample.name}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-mono">
+                          <p className="text-[15px] text-slate-400 font-mono mt-0.5">
                             {sample.plates?.[0] ? `Vehículo: ${sample.plates[0]}` : sample.cif} · {sample.email || 'Cliente Registrado'}
                           </p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                        <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                       </button>
                     ))}
                   </div>
@@ -384,7 +384,7 @@ export const ClientPortalLoginView: React.FC<ClientPortalLoginViewProps> = ({
       </main>
 
       {/* Pie de Página */}
-      <footer className="relative z-10 w-full px-4 py-4 text-center border-t border-white/10 text-xs text-slate-500 backdrop-blur-md bg-white/[0.01]">
+      <footer className="relative z-10 w-full px-4 py-4 text-center border-t border-white/10 text-[18px] text-slate-400 backdrop-blur-md bg-white/[0.01]">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
           <span>GESTARIAN CLIENTES · Portal de Comunicación y Seguimiento Automotriz</span>
           <span className="hidden sm:inline">·</span>

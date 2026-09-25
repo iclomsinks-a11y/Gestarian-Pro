@@ -897,8 +897,8 @@ export default function App() {
 
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-[200] bg-[#0F2942] text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold tracking-wide border border-[#1E3A8A] flex items-center gap-2 select-none animate-none transition-none">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="fixed bottom-6 right-6 z-[200] bg-[#0F2942] text-white px-5 py-3 rounded-lg shadow-xl text-[18px] font-semibold tracking-wide border border-[#1E3A8A] flex items-center gap-2 select-none animate-none transition-none">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
