@@ -103,7 +103,7 @@ export default function App() {
       const hostname = window.location.hostname;
       
       if (params.get('view') || params.get('exp') || params.get('doc')) return false;
-      if (pathname.includes('/doc/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
+      if (pathname.includes('/doc/') || pathname.includes('/d/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
       if (hostname.includes('clientes-gestarian')) return false;
     }
     // Siempre mostrar la animación de inicio por defecto
@@ -224,6 +224,9 @@ export default function App() {
       if (pathname.includes('/doc/')) {
         viewParam = 'doc';
         idParam = pathname.split('/doc/')[1].split('/')[0].split('?')[0];
+      } else if (pathname.includes('/d/')) {
+        viewParam = 'doc';
+        idParam = pathname.split('/d/')[1].split('/')[0].split('?')[0];
       } else if (pathname.includes('/p/')) {
         viewParam = 'doc';
         idParam = pathname.split('/p/')[1].split('/')[0].split('?')[0];
@@ -629,7 +632,7 @@ export default function App() {
             isLocked: true,
             sentAt: new Date().toISOString(),
             facturaSentAt: new Date().toISOString(),
-            facturacionStatus: 'factura_enviada',
+            facturacionStatus: 'factura_enviada' as any,
           };
         }
         if (
@@ -640,7 +643,7 @@ export default function App() {
             ...d,
             isLocked: true,
             facturaSentAt: new Date().toISOString(),
-            facturacionStatus: 'factura_enviada',
+            facturacionStatus: 'factura_enviada' as any,
           };
         }
         return d;
@@ -1478,37 +1481,40 @@ export default function App() {
         document={dispatchModalDoc}
         client={matchedDispatchClient}
         currentUser={user}
+        onShowToast={showToast}
         onSentConfirmed={() => {
           if (dispatchModalDoc) {
-            setDocuments((prev) =>
-              prev.map((d) => {
-                if (d.id === dispatchModalDoc.id) {
-                  return {
-                    ...d,
-                    status: d.type === 'factura' ? 'enviada' : 'confirmada',
-                    isLocked: d.type === 'factura',
-                    sentAt: new Date().toISOString(),
-                    facturaSentAt: d.type === 'factura' ? new Date().toISOString() : d.facturaSentAt,
-                    facturacionStatus: d.type === 'factura' ? 'factura_enviada' : d.facturacionStatus,
-                  };
-                }
-                if (
-                  dispatchModalDoc.type === 'factura' &&
-                  d.type === 'presupuesto' &&
-                  ((dispatchModalDoc.relatedBudgetId && d.id === dispatchModalDoc.relatedBudgetId) ||
-                    (dispatchModalDoc.expediente && d.expediente === dispatchModalDoc.expediente))
-                ) {
-                  return {
-                    ...d,
-                    isLocked: true,
-                    sentAt: new Date().toISOString(),
-                    facturaSentAt: new Date().toISOString(),
-                    facturacionStatus: 'factura_enviada',
-                  };
-                }
-                return d;
-              })
-            );
+            const nowIso = new Date().toISOString();
+            const nextDocs = documents.map((d) => {
+              if (d.id === dispatchModalDoc.id) {
+                return {
+                  ...d,
+                  status: (d.type === 'factura' ? 'enviada' : 'enviado') as any,
+                  isLocked: d.type === 'factura',
+                  sentAt: nowIso,
+                  facturaSentAt: d.type === 'factura' ? nowIso : d.facturaSentAt,
+                  facturacionStatus: (d.type === 'factura' ? 'factura_enviada' : d.facturacionStatus) as any,
+                };
+              }
+              if (
+                dispatchModalDoc.type === 'factura' &&
+                d.type === 'presupuesto' &&
+                ((dispatchModalDoc.relatedBudgetId && d.id === dispatchModalDoc.relatedBudgetId) ||
+                  (dispatchModalDoc.expediente && d.expediente === dispatchModalDoc.expediente))
+              ) {
+                return {
+                  ...d,
+                  isLocked: true,
+                  sentAt: nowIso,
+                  facturaSentAt: nowIso,
+                  facturacionStatus: 'factura_enviada' as any,
+                };
+              }
+              return d;
+            });
+            setDocuments(nextDocs);
+            saveStoredDocuments(nextDocs);
+            window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
           }
         }}
       />

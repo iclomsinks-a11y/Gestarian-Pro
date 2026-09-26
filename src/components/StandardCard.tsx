@@ -15,6 +15,10 @@ export interface StandardCardProps {
   isExpandable?: boolean;
   actions?: React.ReactNode;
   children?: React.ReactNode;
+  onViewDoc?: () => void;
+  onViewExpediente?: () => void;
+  viewDocLabel?: string;
+  viewExpedienteLabel?: string;
 }
 
 export const StandardCard: React.FC<StandardCardProps> = ({
@@ -31,6 +35,10 @@ export const StandardCard: React.FC<StandardCardProps> = ({
   isExpandable = true,
   actions,
   children,
+  onViewDoc,
+  onViewExpediente,
+  viewDocLabel,
+  viewExpedienteLabel,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 

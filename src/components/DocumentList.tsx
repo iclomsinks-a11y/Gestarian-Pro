@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   FileText, FileCheck, Search, Filter, Plus, Eye, Share2, 
   ArrowRight, Lock, CheckCircle, Car, Sparkles, Send, MessageSquare, Mail,
-  LayoutGrid, List, Clock
+  LayoutGrid, List, Clock, FolderOpen
 } from 'lucide-react';
 import { DocumentType, GestarianDocument } from '../types';
 import { StandardCard } from './StandardCard';
@@ -18,6 +18,7 @@ interface DocumentListProps {
   onConvertToInvoice: (budget: GestarianDocument) => void;
   onEditBudgetPricing?: (budget: GestarianDocument) => void;
   onDispatchDoc?: (doc: GestarianDocument) => void;
+  onNavigateToExpediente?: (expId: string) => void;
   initialSearch?: string;
 }
 
@@ -31,6 +32,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   onConvertToInvoice,
   onEditBudgetPricing,
   onDispatchDoc,
+  onNavigateToExpediente,
   initialSearch = '',
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'presupuesto' | 'factura'>('all');
@@ -244,10 +246,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                           <span>Ver</span>
                         </button>
 
-                        {targetExp && onNavigateToExpediente && (
+                        {(doc.expediente || doc.number) && onNavigateToExpediente && (
                           <button
                             type="button"
-                            onClick={() => onNavigateToExpediente(targetExp)}
+                            onClick={() => onNavigateToExpediente(doc.expediente || `E${doc.number.replace(/\D/g, '')}`)}
                             className="inline-flex items-center gap-1 text-xs font-bold text-[#1E3A8A] hover:text-[#0F2942] transition-colors p-2 cursor-pointer"
                             title="Ver Roadmap del expediente vinculado"
                           >
@@ -457,10 +459,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {targetExp && onNavigateToExpediente && (
+                        {(doc.expediente || doc.number) && onNavigateToExpediente && (
                           <button
                             type="button"
-                            onClick={() => onNavigateToExpediente(targetExp)}
+                            onClick={() => onNavigateToExpediente(doc.expediente || ('E' + doc.number.replace(/\D/g, '')))}
                             className="p-1.5 text-[#1E3A8A] hover:bg-blue-50 rounded transition-colors"
                             title="Ver expediente en Roadmap"
                           >

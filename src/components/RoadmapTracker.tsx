@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Check, ArrowRight, PlusCircle, MinusCircle, User, Car, Phone, Mail, 
+  Check, ArrowRight, Loader2, PlusCircle, MinusCircle, User, Car, Phone, Mail, 
   Calendar, Wrench, Camera, MessageCircle, Printer, Download, Share2, 
   FileText, Clock, Users, Image as ImageIcon, Send, FileCheck2, CheckCircle2, XCircle, 
   ClipboardList, Eye, FolderArchive, DollarSign, CreditCard, Trash2, X, Plus, Minus, History, AlertCircle, Receipt
 } from 'lucide-react';
 import { GestarianDocument, AppUser, Client, CitaProposal } from '../types';
-import { generateDocumentPdfUrl } from '../services/documentDispatchService';
+import { generateDocumentPdfUrl, buildDocumentDispatchPayload, sendDocumentViaApi, getShortDocumentUrl } from '../services/documentDispatchService';
 import { getNextDocumentNumber, getStoredDocuments, saveStoredDocuments } from '../services/storage';
 import { DocumentViewerModal } from './DocumentViewerModal';
 import { ExpedienteImagesModal } from './ExpedienteImagesModal';
@@ -57,6 +57,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
   } | null>(null);
 
   const [showAssignEmployeeModal, setShowAssignEmployeeModal] = useState(false);
+  const [isSendingBudgetEmail, setIsSendingBudgetEmail] = useState(false);
 
   const [confirmToast, setConfirmToast] = useState<{
     stepName: string;
@@ -444,6 +445,64 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     onGenerateInvoiceFromBudget(doc);
     if (onShowToast) {
       onShowToast('Factura generada y guardada con exito. Recuerde enviarla al cliente por WhatsApp o Email para activar el Cobro.', 6000);
+    }
+  };
+
+  const handleSendBudgetViaEmail = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const targetEmail = client?.email || doc.clientEmail;
+    if (!targetEmail) {
+      if (onShowToast) onShowToast('No se encontró el email del cliente para este presupuesto.', 4000);
+      return;
+    }
+
+    setIsSendingBudgetEmail(true);
+    try {
+      const effectiveBudget = budgetDoc || doc;
+      const dispatchPayload = buildDocumentDispatchPayload(
+        effectiveBudget,
+        client || {
+          id: doc.clientId || 'cli_1',
+          name: doc.clientName,
+          cif: doc.clientCif,
+          email: targetEmail,
+          phone: doc.clientPhone,
+          address: doc.clientAddress,
+        },
+        currentUser,
+        'email'
+      );
+
+      const result = await sendDocumentViaApi(dispatchPayload, effectiveBudget, currentUser);
+
+      const nowIso = new Date().toISOString();
+      const updatedBudget: GestarianDocument = {
+        ...effectiveBudget,
+        status: 'enviado',
+        sentAt: nowIso,
+      };
+      onUpdateDocument(updatedBudget);
+
+      // Persistir inmediatamente
+      const currentStored = getStoredDocuments();
+      const nextDocs = currentStored.map((d) => (d.id === updatedBudget.id ? updatedBudget : d));
+      saveStoredDocuments(nextDocs);
+      window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+
+      const confirmMsg = `Presupuesto ${budgetNumberOnly} enviado por email a ${targetEmail} con el documento adjunto correctamente.`;
+      if (onShowToast) {
+        onShowToast(confirmMsg, 5000);
+      }
+      setConfirmToast({
+        stepName: 'Presupuesto',
+        message: confirmMsg,
+        isLocked: false,
+      });
+    } catch (err: any) {
+      console.error('Error enviando presupuesto por email:', err);
+      if (onShowToast) onShowToast('Error al enviar el email del presupuesto.', 4000);
+    } finally {
+      setIsSendingBudgetEmail(false);
     }
   };
 
@@ -1310,30 +1369,56 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   <span>Ver Hoja A4 Completa</span>
                 </button>
 
-                {/* WhatsApp */}
+                {/* WhatsApp con enlace ultra corto notificaciones.gestrian */}
                 {phoneClean ? (
                   <a
                     href={`https://wa.me/${phoneClean.startsWith('34') ? phoneClean : '34' + phoneClean}?text=${encodeURIComponent(
-                      `Hola ${client?.name || doc.clientName}, le adjuntamos la informaciÃ³n de su presupuesto. Puede consultarlo y hacer el seguimiento en el siguiente enlace: ${generateDocumentPdfUrl(budgetDoc || doc)}`
+                      `*${currentUser.fullName || 'Taller'}*\n\n` +
+                      `Estimado/a ${client?.name || doc.clientName},\n` +
+                      `Le remitimos su Presupuesto *${budgetNumberOnly}* por importe de *${(budgetDoc?.total || doc.total || 0).toFixed(2)} €*.\n\n` +
+                      `📄 *Visualizar, descargar o compartir:*\n` +
+                      `https://notificaciones.gestrian.com/d/${encodeURIComponent(budgetNumberOnly)}\n\n` +
+                      `Gracias por su confianza.`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => {
+                      if ((budgetDoc?.status || doc.status) === 'borrador') {
+                        const updatedBudget: GestarianDocument = {
+                          ...(budgetDoc || doc),
+                          status: 'enviado',
+                          sentAt: new Date().toISOString(),
+                        };
+                        onUpdateDocument(updatedBudget);
+                        const currentStored = getStoredDocuments();
+                        const nextDocs = currentStored.map((d) => (d.id === updatedBudget.id ? updatedBudget : d));
+                        saveStoredDocuments(nextDocs);
+                        window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+                      }
+                      if (onShowToast) onShowToast(`Presupuesto ${budgetNumberOnly} preparado para WhatsApp con enlace ultra corto.`, 4000);
+                    }}
                     className="p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
-                    title="Enviar por WhatsApp"
+                    title="Enviar por WhatsApp (Enlace Ultra Corto)"
                   >
                     <MessageCircle className="w-5 h-5" />
                   </a>
                 ) : null}
 
-                {/* Email */}
+                {/* Email Directo con Documento Adjunto (Sin abrir Gmail) */}
                 {(client?.email || doc.clientEmail) ? (
-                  <a
-                    href={`mailto:${client?.email || doc.clientEmail}?subject=Presupuesto%20${encodeURIComponent(budgetNumberOnly)}&body=${encodeURIComponent(`Estimado cliente,\n\nLe enviamos el presupuesto ${budgetNumberOnly} por importe de ${(doc.total || 0).toFixed(2)} €.\n\nPuede consultar y aceptar su presupuesto en el siguiente enlace:\n${generateDocumentPdfUrl(budgetDoc || doc)}\n\nGracias por su confianza.`)}`}
-                    className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
-                    title="Enviar por Email"
+                  <button
+                    type="button"
+                    disabled={isSendingBudgetEmail}
+                    onClick={handleSendBudgetViaEmail}
+                    className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-transform hover:scale-105 flex items-center justify-center cursor-pointer disabled:opacity-50"
+                    title="Enviar por Email Directo con Documento Adjunto (sin abrir Gmail)"
                   >
-                    <Mail className="w-5 h-5" />
-                  </a>
+                    {isSendingBudgetEmail ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Mail className="w-5 h-5" />
+                    )}
+                  </button>
                 ) : null}
 
                 {/* Imprimir */}

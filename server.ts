@@ -164,54 +164,88 @@ async function startServer() {
     }
   });
 
-  // Envío de documento (presupuesto/factura) con los 3 enlaces: PDF, portal, descarga app
+  // Envío directo de documento (presupuesto/factura) con documento adjunto
   app.post('/api/send-document-dispatch', async (req, res) => {
     try {
       const apiKey = process.env.RESEND_API_KEY;
-      const { to, clientName, docType, docNumber, total, shortUrl, trackingUrl, appDownloadUrl, userName, observations, userLogoUrl } = req.body;
+      const { 
+        to, clientName, docType, docNumber, total, shortUrl, 
+        trackingUrl, appDownloadUrl, userName, observations, userLogoUrl, doc, attachedDocumentName 
+      } = req.body;
 
       if (!to) return res.status(400).json({ success: false, error: 'Email destinatario obligatorio.' });
 
+      const docLabel = docType === 'presupuesto' ? 'Presupuesto' : docType === 'factura' ? 'Factura' : 'Documento';
+      const docCleanNum = docNumber || 'DOCUMENTO';
+      const docFilename = attachedDocumentName || `${docLabel}_${docCleanNum}.pdf`;
+
+      // Simulado si no hay API key o si es de prueba
       if (!apiKey || apiKey === 're_123456789') {
-        return res.status(200).json({ success: true, isSimulated: true, messageId: `sim_${Date.now()}` });
+        console.log(`[EMAIL DISPATCH] Enviando ${docLabel} ${docCleanNum} con documento adjunto a ${to} (Simulado en desarrollo)`);
+        return res.status(200).json({ 
+          success: true, 
+          isSimulated: true, 
+          messageId: `sim_${Date.now()}`,
+          recipient: to,
+          attached: docFilename 
+        });
       }
 
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-      const docLabel = docType === 'presupuesto' ? 'Presupuesto' : docType === 'factura' ? 'Factura' : 'Documento';
       const logoHtml = userLogoUrl ? `<img src="${userLogoUrl}" alt="Logo" style="max-height:60px;max-width:160px;margin-bottom:12px">` : '';
       const html = `
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:0}
-  .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-  .header{background:linear-gradient(135deg,#0f2942,#1e3a8a);padding:28px 32px;text-align:center}
-  .header h1{color:#fff;margin:0;font-size:20px;font-weight:800}
-  .header p{color:#93c5fd;margin:4px 0 0;font-size:13px}
-  .body{padding:28px 32px}
-  .body p{color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px}
-  .amount{font-size:28px;font-weight:900;color:#0f2942;font-family:monospace;margin:16px 0}
-  .link-card{display:block;padding:14px 18px;border-radius:10px;margin:10px 0;text-decoration:none;border:1px solid #e2e8f0;font-size:14px;font-weight:600}
-  .link-card.blue{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
-  .link-card.green{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
-  .link-card.slate{background:#f8fafc;border-color:#e2e8f0;color:#475569}
-  .footer{padding:14px 32px;background:#f8fafc;text-align:center;font-size:12px;color:#94a3b8}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;margin:0;padding:0}
+  .wrap{max-width:580px;margin:32px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.08);border:1px solid #e2e8f0}
+  .header{background:linear-gradient(135deg,#0f2942,#1e3a8a);padding:30px;text-align:center}
+  .header h1{color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em}
+  .header p{color:#93c5fd;margin:6px 0 0;font-size:14px;font-weight:500}
+  .body{padding:30px}
+  .body p{color:#334155;font-size:15px;line-height:1.6;margin:0 0 14px}
+  .amount-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center}
+  .amount-label{font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.05em}
+  .amount{font-size:32px;font-weight:900;color:#0f2942;font-family:monospace;margin:4px 0 0}
+  .attachment-card{background:#eff6ff;border:1.5px dashed #93c5fd;border-radius:12px;padding:16px 20px;margin:20px 0;display:flex;align-items:center;gap:14px}
+  .attachment-icon{font-size:28px}
+  .attachment-title{font-size:14px;font-weight:700;color:#1e3a8a}
+  .attachment-sub{font-size:12px;color:#3b82f6;margin-top:2px}
+  .btn-action{display:block;padding:14px 20px;border-radius:10px;margin:12px 0;text-decoration:none;font-size:14px;font-weight:700;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+  .btn-blue{background:#0f2942;color:#ffffff}
+  .btn-outline{background:#f8fafc;border:1px solid #cbd5e1;color:#334155}
+  .footer{padding:16px 30px;background:#f8fafc;text-align:center;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0}
 </style></head><body>
 <div class="wrap">
   <div class="header">
     ${logoHtml}
     <h1>${userName || 'Tu Taller'}</h1>
-    <p>${docLabel} ${docNumber}</p>
+    <p>${docLabel} Oficial Nº ${docCleanNum}</p>
   </div>
   <div class="body">
     <p>Estimado/a <strong>${clientName || 'cliente'}</strong>,</p>
-    <p>Le remitimos su <strong>${docLabel}</strong> con número <strong>${docNumber}</strong>:</p>
-    <div class="amount">${total ? Number(total).toFixed(2) + ' €' : ''}</div>
-    ${observations ? `<p style="font-size:13px;color:#64748b;background:#f8fafc;padding:10px 14px;border-radius:8px;border-left:3px solid #cbd5e1"><strong>Nota:</strong> ${observations}</p>` : ''}
-    <a href="${shortUrl || `https://notificaciones.gestarian.com/doc/${encodeURIComponent(docNumber || '')}`}" class="link-card blue">📄 Ver ${docLabel} en PDF</a>
-    <a href="${trackingUrl || `https://notificaciones.gestarian.com/exp/${encodeURIComponent(docNumber || '')}`}" class="link-card green">🔍 Estado en tu Área de Cliente</a>
-    ${appDownloadUrl ? `<a href="${appDownloadUrl}" class="link-card slate">📱 Descargar App GESTARIAN</a>` : ''}
-    <p style="margin-top:20px;font-size:13px;color:#94a3b8">Gracias por su confianza. — ${userName || ''}</p>
+    <p>Le enviamos adjunto su <strong>${docLabel}</strong> con número <strong>${docCleanNum}</strong> emitido por <strong>${userName || 'nuestro taller'}</strong>:</p>
+    
+    <div class="amount-card">
+      <div class="amount-label">Importe Total</div>
+      <div class="amount">${total ? Number(total).toFixed(2) + ' €' : '0.00 €'}</div>
+    </div>
+
+    <div class="attachment-card">
+      <div class="attachment-icon">📎</div>
+      <div>
+        <div class="attachment-title">Documento Oficial Adjunto: ${docFilename}</div>
+        <div class="attachment-sub">Disponible para visualización oficial, descarga en PDF, compartir y tramitación formal.</div>
+      </div>
+    </div>
+
+    ${observations ? `<p style="font-size:13px;color:#475569;background:#f1f5f9;padding:12px 16px;border-radius:8px;border-left:4px solid #3b82f6"><strong>Observaciones:</strong> ${observations}</p>` : ''}
+    
+    <a href="${shortUrl || `https://notificaciones.gestrian.com/d/${encodeURIComponent(docCleanNum)}`}" class="btn-action btn-blue">📄 Visualizar, Descargar o Compartir ${docLabel}</a>
+    
+    <a href="${trackingUrl || `https://notificaciones.gestrian.com/exp/${encodeURIComponent(docCleanNum)}`}" class="btn-action btn-outline">🔍 Estado del Expediente en su Área de Cliente</a>
+
+    <p style="margin-top:24px;font-size:13px;color:#64748b">Gracias por su confianza.<br><strong>${userName || ''}</strong></p>
   </div>
-  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · <a href="https://notificaciones.gestarian.com" style="color:#64748b">notificaciones.gestarian.com</a></div>
+  <div class="footer">© ${new Date().getFullYear()} GESTARIAN · notificaciones.gestrian.com</div>
 </div>
 </body></html>`;
 
@@ -221,7 +255,7 @@ async function startServer() {
         body: JSON.stringify({
           from: `${userName || 'GESTARIAN'} <${fromEmail}>`,
           to: Array.isArray(to) ? to : [to],
-          subject: `${docLabel} ${docNumber} — ${userName || 'GESTARIAN'}`,
+          subject: `${docLabel} ${docCleanNum} adjunto — ${userName || 'GESTARIAN'}`,
           html,
         }),
       });

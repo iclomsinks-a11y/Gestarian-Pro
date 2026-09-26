@@ -25,6 +25,39 @@ interface ClientPortalModalProps {
   onLogoutClient: () => void;
 }
 
+function extractDateAndTime(doc: GestarianDocument): { date: string; time: string } {
+  const date = doc.proposedDeliveryDate || doc.vehicleDeliveryDate || new Date().toISOString().split('T')[0];
+  const time = doc.proposedDeliveryTime || doc.vehicleDeliveryTime || '10:00';
+  return { date, time };
+}
+
+function validateAlternativeDateTime(
+  clientDate: string,
+  clientTime: string,
+  workshopDate: string,
+  workshopTime: string
+): { isValid: boolean; error: string | null } {
+  if (!clientDate) {
+    return { isValid: false, error: 'Debe indicar la fecha de entrega.' };
+  }
+  if (!clientTime) {
+    return { isValid: false, error: 'Debe indicar la hora de entrega.' };
+  }
+  if (clientDate < workshopDate) {
+    return {
+      isValid: false,
+      error: `La fecha de entrega (${clientDate}) no puede ser anterior a la propuesta por el taller (${workshopDate}).`,
+    };
+  }
+  if (clientDate === workshopDate && clientTime <= workshopTime) {
+    return {
+      isValid: false,
+      error: `Para el mismo día (${workshopDate}), la hora debe ser posterior a la propuesta por el taller (${workshopTime}).`,
+    };
+  }
+  return { isValid: true, error: null };
+}
+
 export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
   isOpen,
   onClose,
@@ -105,6 +138,8 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
   const [proposingDateDocId, setProposingDateDocId] = useState<string | null>(null);
   const [customProposedDate, setCustomProposedDate] = useState<string>('');
+  const [customProposedTime, setCustomProposedTime] = useState<string>('10:00');
+  const [dateTimeError, setDateTimeError] = useState<string | null>(null);
 
   // Acciones sobre presupuestos y negociación de fecha y hora de entrega
   const handleAcceptBudget = (doc: GestarianDocument) => {

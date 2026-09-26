@@ -17,60 +17,52 @@ export interface DispatchResult {
 }
 
 export const GESTARIAN_OFFICIAL_DOMAIN = 'https://www.gestarian.com';
-export const GESTARIAN_NOTIFICACIONES_DOMAIN = 'https://notificaciones.gestarian.com';
+export const NOTIFICACIONES_GESTRIAN_DOMAIN = 'https://notificaciones.gestrian.com';
+export const GESTRIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTRIAN_DOMAIN;
+export const GESTARIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTRIAN_DOMAIN;
 
 /**
- * Dominio base oficial para el despacho y generación de enlaces cortos a presupuestos,
- * expedientes y documentos públicos de clientes.
+ * Dominio base para la generación de enlaces de notificaciones y documentos
  */
 export function getAppBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('gestarian_notificaciones_domain');
     if (custom && custom.trim()) return custom.trim().replace(/\/$/, '');
 
-    // En entorno de desarrollo local (localhost o red local), usar el origen local
-    // para permitir que las pruebas en WhatsApp Web abran el documento en la máquina actual
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.startsWith('192.168.')) {
       return window.location.origin;
     }
   }
-  return GESTARIAN_NOTIFICACIONES_DOMAIN;
-}
-
-export function encodeDocData(doc: GestarianDocument): string {
-  try {
-    const payload = { n: doc.number || doc.id, t: doc.type, e: doc.expediente, cn: doc.clientName, cc: doc.clientCif, cp: doc.clientPhone, ce: doc.clientEmail, ca: doc.clientAddress, tot: doc.total, sub: doc.subtotal, iva: doc.ivaAmount, vp: doc.vehiclePlate, vb: doc.vehicleBrand, vm: doc.vehicleModel, vd: doc.vehicleDeliveryDate, dt: doc.date, notes: doc.notes, items: (doc.items || []).map((i) => ({ d: i.description, q: i.quantity, u: i.unitPrice, a: i.amount })) };
-    return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
-  } catch (e) { console.error('Error encoding doc data payload:', e); return ''; }
+  return NOTIFICACIONES_GESTRIAN_DOMAIN;
 }
 
 /**
- * Genera el enlace corto directo al documento / presupuesto alojado en notificaciones.gestarian.com
- * Incluye el payload codificado para garantizar que el documento se pueda visualizar inmediatamente
- * en cualquier dispositivo aunque no esté en el almacenamiento local del cliente.
+ * Genera el enlace ultra corto directo al documento para WhatsApp y notificaciones oficiales.
+ * Formato: https://notificaciones.gestrian.com/d/NUMERO
+ * Cumple estrictamente con el requerimiento del usuario: 'usa notificaciones.gestrian para whatsap'
+ */
+export function getShortDocumentUrl(doc: GestarianDocument | string): string {
+  const docNum = typeof doc === 'object' ? (doc.number || doc.id) : doc;
+  const cleanDoc = (docNum || '').trim().toUpperCase();
+  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/d/${encodeURIComponent(cleanDoc)}`;
+}
+
+/**
+ * Genera el enlace corto directo al documento / presupuesto.
+ * Retorna la URL ultra corta limpia sin parámetros extensos ni sobrecarga de datos.
  */
 export function generateDocumentPdfUrl(doc: GestarianDocument | string): string {
-  const baseUrl = getAppBaseUrl();
-  const docNum = typeof doc === 'object' ? (doc.number || doc.id) : doc;
-  const cleanDoc = encodeURIComponent(docNum.trim().toUpperCase());
-  if (typeof doc === 'object') {
-    const encoded = encodeDocData(doc);
-    if (encoded) {
-      return `${baseUrl}/doc/${cleanDoc}?data=${encoded}`;
-    }
-  }
-  return `${baseUrl}/doc/${cleanDoc}`;
+  return getShortDocumentUrl(doc);
 }
 
 export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: GestarianDocument): string {
-  const baseUrl = getAppBaseUrl();
   const cleanExp = (expedienteNum || (doc?.expediente) || '').trim().toUpperCase();
-  return `${baseUrl}/exp/${encodeURIComponent(cleanExp)}`;
+  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/exp/${encodeURIComponent(cleanExp)}`;
 }
 
 export function generateClientPortalAppUrl(): string {
-  return `${getAppBaseUrl()}/?view=app`;
+  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/?view=app`;
 }
 
 export const CLIENT_PORTAL_DOWNLOAD_URL = generateClientPortalAppUrl();
@@ -84,7 +76,12 @@ export function isCompanyClient(client?: Client | null): boolean {
   return false;
 }
 
-export function buildDocumentDispatchPayload(doc: GestarianDocument, client: Client, user: AppUser, targetChannel?: 'whatsapp' | 'email'): DispatchResult {
+export function buildDocumentDispatchPayload(
+  doc: GestarianDocument,
+  client: Client,
+  user: AppUser,
+  targetChannel?: 'whatsapp' | 'email'
+): DispatchResult {
   let docTitle = 'Documento';
   switch (doc.type as string) {
     case 'presupuesto': docTitle = 'Presupuesto'; break;
@@ -99,37 +96,105 @@ export function buildDocumentDispatchPayload(doc: GestarianDocument, client: Cli
   const docNum = doc.number || 'P260001';
   const expedienteNum = doc.expediente || getExpedienteFromDocNumber(docNum);
   const cleanPlate = sanitizePlate(doc.vehiclePlate || (client.vehicles && client.vehicles[0]?.plate) || (client.plates && client.plates[0]) || '');
-  const docPdfUrl = generateDocumentPdfUrl(doc);
+  
+  // Enlace ultra corto usando notificaciones.gestrian
+  const shortDocUrl = getShortDocumentUrl(doc);
   const trackingUrl = generateExpedienteTrackingUrl(expedienteNum, doc);
   const appDownloadUrl = generateClientPortalAppUrl();
-  syncShortLinkToSupabase(`doc_${docNum}`, docPdfUrl, docNum, expedienteNum, doc).catch(() => {});
+
+  // Sincronizar en segundo plano para acceso universal sin payload en URL
+  syncShortLinkToSupabase(`doc_${docNum}`, shortDocUrl, docNum, expedienteNum, doc).catch(() => {});
+  syncShortLinkToSupabase(`d_${docNum}`, shortDocUrl, docNum, expedienteNum, doc).catch(() => {});
   syncShortLinkToSupabase(`exp_${expedienteNum}`, trackingUrl, docNum, expedienteNum, doc).catch(() => {});
+
   const effectiveLogoUrl = user.logoUrl && (user.logoUrl.startsWith('http://') || user.logoUrl.startsWith('https://')) ? user.logoUrl : '';
-  const vehiclePart = cleanPlate ? ` (Vehiculo: ${cleanPlate})` : '';
+  const vehiclePart = cleanPlate ? ` (Vehículo: ${cleanPlate})` : '';
   const observationsText = doc.notes ? `\n\n*Nota:* ${doc.notes.trim()}` : '';
+
   if (activeChannel === 'whatsapp') {
-    const whatsappText = `*${user.fullName}*\n\nEstimado/a ${client.name},\nLe adjuntamos su ${docTitle} *${docNum}*${vehiclePart} por importe de *${doc.total.toFixed(2)} EUR*.${observationsText}\n\n*Ver Documento PDF:*\n${docPdfUrl}\n\n*Estado en su Area de Cliente:*\n${trackingUrl}\n\n*Descargar App GESTARIAN:*\n${appDownloadUrl}\n\nGracias por su confianza.`;
+    // Mensaje ultra optimizado y conciso para WhatsApp con enlace lo más corto posible
+    const whatsappText = `*${user.fullName || 'Taller'}*\n\n` +
+      `Estimado/a ${client.name},\n` +
+      `Le remitimos su ${docTitle} *${docNum}*${vehiclePart} por importe de *${(doc.total || 0).toFixed(2)} €*.${observationsText}\n\n` +
+      `📄 *Visualizar, descargar o compartir:*\n` +
+      `${shortDocUrl}\n\n` +
+      `Gracias por su confianza.`;
+
     let cleanPhone = (client.phone || '').replace(/[^\d+]/g, '');
     if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.replace('+', '');
     else if (cleanPhone.length === 9) cleanPhone = `34${cleanPhone}`;
-    return { channel: 'whatsapp', recipient: client.phone || 'Telefono no asignado', message: whatsappText, shortUrl: docPdfUrl, expedienteNumber: expedienteNum, trackingUrl, clientPortalDownloadUrl: trackingUrl, appDownloadUrl, actionUrl: `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(whatsappText)}`, userLogoUrl: effectiveLogoUrl };
+
+    return {
+      channel: 'whatsapp',
+      recipient: client.phone || 'Teléfono no asignado',
+      message: whatsappText,
+      shortUrl: shortDocUrl,
+      expedienteNumber: expedienteNum,
+      trackingUrl,
+      clientPortalDownloadUrl: trackingUrl,
+      appDownloadUrl,
+      actionUrl: `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(whatsappText)}`,
+      userLogoUrl: effectiveLogoUrl
+    };
   } else {
+    // Envío directo por email (NUNCA se usa mailto para no abrir Gmail)
     const emailSubject = `${docTitle} ${docNum} [Expediente ${expedienteNum}] - ${user.fullName}`;
-    const emailBody = `*${user.fullName}*\n\nEstimado/a ${client.name},\nLe enviamos el ${docTitle} *${docNum}* [Expediente: *${expedienteNum}*]${vehiclePart} por importe total de *${doc.total.toFixed(2)} EUR*.${observationsText}\n\nVer Documento PDF:\n${docPdfUrl}\n\nEstado en su Area de Cliente:\n${trackingUrl}\n\nDescargar App GESTARIAN:\n${appDownloadUrl}\n\nGracias por su confianza.\nAtentamente,\n${user.fullName}\n${user.phone || ''}\n${user.email || ''}`;
-    return { channel: 'email', recipient: client.email || 'correo@empresa.com', subject: emailSubject, message: emailBody, shortUrl: docPdfUrl, expedienteNumber: expedienteNum, trackingUrl, clientPortalDownloadUrl: trackingUrl, appDownloadUrl, actionUrl: `mailto:${client.email || ''}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`, userLogoUrl: effectiveLogoUrl };
+    const emailBody = `Estimado/a ${client.name},\n\n` +
+      `Le remitimos su ${docTitle} ${docNum} [Expediente: ${expedienteNum}]${vehiclePart} por importe total de ${(doc.total || 0).toFixed(2)} €.${observationsText}\n\n` +
+      `Le adjuntamos el documento oficial emitido por nuestro taller para su consulta, descarga o aceptación formal.\n\n` +
+      `Visualizar, descargar o compartir:\n${shortDocUrl}\n\n` +
+      `Seguimiento del expediente en su Área de Cliente:\n${trackingUrl}\n\n` +
+      `Gracias por su confianza.\n\n` +
+      `Atentamente,\n` +
+      `${user.fullName}\n` +
+      `${user.phone || ''}\n` +
+      `${user.email || ''}`;
+
+    return {
+      channel: 'email',
+      recipient: client.email || 'correo@empresa.com',
+      subject: emailSubject,
+      message: emailBody,
+      shortUrl: shortDocUrl,
+      expedienteNumber: expedienteNum,
+      trackingUrl,
+      clientPortalDownloadUrl: trackingUrl,
+      appDownloadUrl,
+      actionUrl: '', // NUNCA mailto: para evitar que se abra Gmail
+      userLogoUrl: effectiveLogoUrl
+    };
   }
 }
 
-export async function sendDocumentViaApi(payload: DispatchResult, doc: GestarianDocument, user: AppUser): Promise<{ success: boolean; messageId?: string; isSimulated?: boolean; error?: string }> {
+export async function sendDocumentViaApi(
+  payload: DispatchResult,
+  doc: GestarianDocument,
+  user: AppUser
+): Promise<{ success: boolean; messageId?: string; isSimulated?: boolean; error?: string }> {
   try {
+    const docLabel = doc.type === 'presupuesto' ? 'Presupuesto' : doc.type === 'factura' ? 'Factura' : 'Documento';
     const response = await fetch('/api/send-document-dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: payload.recipient, clientName: doc.clientName, docType: doc.type, docNumber: doc.number, total: doc.total, shortUrl: payload.shortUrl, trackingUrl: payload.trackingUrl, appDownloadUrl: payload.appDownloadUrl, userName: user.fullName, observations: doc.notes || '', userLogoUrl: payload.userLogoUrl || '' }),
+      body: JSON.stringify({
+        to: payload.recipient,
+        clientName: doc.clientName,
+        docType: doc.type,
+        docNumber: doc.number,
+        total: doc.total,
+        shortUrl: payload.shortUrl,
+        trackingUrl: payload.trackingUrl,
+        appDownloadUrl: payload.appDownloadUrl,
+        userName: user.fullName,
+        observations: doc.notes || '',
+        userLogoUrl: payload.userLogoUrl || '',
+        doc,
+        attachedDocumentName: `${docLabel}_${doc.number || 'doc'}.pdf`,
+      }),
     });
     return await response.json();
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Error de conexion';
+    const message = err instanceof Error ? err.message : 'Error de conexión';
     return { success: false, error: message };
   }
 }
