@@ -9,6 +9,7 @@ import {
 import { motion } from 'framer-motion';
 import { AppUser } from '../types';
 import { ReplaceImageModal, ReplaceTargetInfo } from './ReplaceImageModal';
+import { scanGmailForInvoices } from '../services/gmailScannerService';
 
 interface ConfiguracionViewProps {
   id: string;
@@ -22,6 +23,7 @@ interface ConfiguracionViewProps {
   onOpenMenu?: () => void;
   onOpenCompanyConfig: () => void;
   onOpenSpec: () => void;
+  onLogout?: () => void;
 }
 
 export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
@@ -35,11 +37,13 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   onNavigateHome,
   onOpenMenu,
   onOpenCompanyConfig,
-  onOpenSpec
+  onOpenSpec,
+  onLogout
 }) => {
   const [rastreoActivo, setRastreoActivo] = useState(false);
   const [offlineActivo, setOfflineActivo] = useState(true);
   const [replaceTarget, setReplaceTarget] = useState<ReplaceTargetInfo | null>(null);
+  const [isScanningGmail, setIsScanningGmail] = useState(false);
 
   const currentLogo = currentUser?.logoUrl || logoUrl || '';
   const currentPortrait = currentUser?.bgPortraitUrl || '';
@@ -67,16 +71,31 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   const handleGoogleSync = () => {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-    provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
     signInWithPopup(auth, provider)
-      .then((result) => {
+      .then(async (result) => {
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const accessToken = credential?.accessToken;
         const user = result.user;
+        
+        if (!accessToken) {
+           alert("No se pudo obtener el token de acceso de Google.");
+           return;
+        }
+
         console.log("Usuario sincronizado:", user.email);
-        console.log("Token capturado:", accessToken);
-        alert("¡Cuenta de Gmail conectada! La sincronización automática de facturas está activa.");
+        setIsScanningGmail(true);
+        
+        try {
+           const nuevasFacturas = await scanGmailForInvoices(accessToken);
+           setRastreoActivo(true);
+           alert(`¡Sincronización completada!\n\nSe han escaneado y extraído datos de ${nuevasFacturas.length} facturas recientes de proveedores desde tu Gmail.`);
+        } catch (err) {
+           console.error("Error escaneando correos:", err);
+           alert("Hubo un error descargando o procesando las facturas de la bandeja de entrada.");
+        } finally {
+           setIsScanningGmail(false);
+        }
       }).catch((error) => {
         console.error("Error de sincronización OAuth:", error);
         alert("Hubo un error al conectar la cuenta.");
@@ -339,9 +358,10 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
             </div>
             <button
               onClick={handleGoogleSync}
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-[18px] rounded-lg transition-all shadow-[0_0_15px_rgba(147,51,234,0.4)] hover:shadow-[0_0_25px_rgba(147,51,234,0.6)] flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              disabled={isScanningGmail}
+              className={`w-full sm:w-auto px-6 py-3 font-bold text-[18px] rounded-lg transition-all shadow-[0_0_15px_rgba(147,51,234,0.4)] flex items-center justify-center gap-2 shrink-0 cursor-pointer ${isScanningGmail ? 'bg-slate-600 text-slate-300' : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white hover:shadow-[0_0_25px_rgba(147,51,234,0.6)]'}`}
             >
-              Conectar cuenta
+              {isScanningGmail ? 'Escaneando inbox...' : 'Conectar y escanear'}
             </button>
           </div>
 
@@ -385,6 +405,18 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
             </button>
           </div>
         </motion.div>
+
+        {/* Botón de Cerrar Sesión al final de la vista */}
+        {onLogout && (
+          <div className="mt-8 pt-8 border-t border-white/10 flex justify-center pb-8">
+            <button
+              onClick={onLogout}
+              className="px-8 py-3 bg-rose-900/30 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 rounded-lg font-bold text-[18px] transition-all cursor-pointer shadow-[0_0_15px_rgba(225,29,72,0.1)] hover:shadow-[0_0_20px_rgba(225,29,72,0.4)]"
+            >
+              CERRAR SESIÓN
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal para reemplazar imágenes de personalización */}

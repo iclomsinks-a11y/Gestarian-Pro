@@ -1,5 +1,6 @@
 import React from 'react';
-import { Camera, Plus, Bell, Palette, ArrowRight, Lock, LogOut } from 'lucide-react';
+import { Camera, Plus, Bell, Palette, ArrowRight, Lock, LogOut, FileText, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CasioVintageClock } from './CasioVintageClock';
 import { AppUser, GestarianDocument } from '../types';
 import { LoginCard } from './LoginCard';
@@ -39,6 +40,9 @@ interface HomeViewProps {
   onOpenBudgetReview?: (budgetId: string) => void;
   onOpenImageCustomizer?: () => void;
   onOpenClientLanding?: () => void;
+  pendingInvoices?: GestarianDocument[];
+  onOpenInvoice?: (invoiceId: string) => void;
+  onDismissInvoice?: (invoiceId: string) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -56,6 +60,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenBudgetReview,
   onOpenImageCustomizer,
   onOpenClientLanding,
+  pendingInvoices = [],
+  onOpenInvoice,
+  onDismissInvoice,
 }) => {
   const isAutomocion =
     currentUser.sector?.toLowerCase().includes('automoci') ||
@@ -88,17 +95,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* Botones top left cuando está autenticado */}
       {isAuthenticated && (
         <div className="absolute top-3 left-3 z-50 flex items-center gap-2 stagger-left" style={{ animationDelay: "0.2s" }}>
-          <button
-            onClick={onLogout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0F2942]/90 hover:bg-rose-950/90 text-white backdrop-blur-md rounded-xl border border-white/10 hover:border-rose-500/40 text-xs font-semibold shadow-lg transition-all cursor-pointer group"
-            title="Cerrar sesión y bloquear acceso"
-          >
-            <Lock className="w-3.5 h-3.5 text-emerald-400 group-hover:text-rose-400 transition-colors" />
-            <span className="hidden sm:inline text-slate-300 group-hover:text-white">Conectado:</span>
-            <span className="font-bold text-[#38BDF8] group-hover:text-rose-300 max-w-[130px] truncate">{currentUser.email || 'Admin'}</span>
-            <LogOut className="w-3 h-3 text-slate-400 group-hover:text-rose-400 ml-0.5" />
-          </button>
-
           {onOpenImageCustomizer && !hasCustomBg && (
             <button
               onClick={onOpenImageCustomizer}
@@ -180,15 +176,81 @@ export const HomeView: React.FC<HomeViewProps> = ({
           )}
 
           {/* Espacio libre intermedio cuando no hay alertas */}
-          {pendingBudgetReviews.length === 0 && (
+          {pendingBudgetReviews.length === 0 && pendingInvoices.length === 0 && (
             <div className="relative z-10 flex-1 w-full" />
+          )}
+
+          {/* Avisos de Facturas Recibidas (Swipeable) */}
+          {pendingInvoices.length > 0 && (
+            <div className="relative z-20 w-full max-w-lg mx-auto px-4 my-auto space-y-3 stagger-left" style={{ animationDelay: "1.0s" }}>
+              <AnimatePresence>
+                {pendingInvoices.map((invoice) => (
+                  <motion.div
+                    key={invoice.id}
+                    layout
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    drag="x"
+                    dragConstraints={{ left: -100, right: 0 }}
+                    onDragEnd={(e, { offset }) => {
+                      if (offset.x < -50 && onDismissInvoice) {
+                        onDismissInvoice(invoice.id);
+                      }
+                    }}
+                    className={`relative overflow-hidden cursor-pointer p-4 rounded-xl backdrop-blur-md flex flex-col gap-3 shadow-lg transition-colors border-2 ${
+                      invoice.status === 'confirmada' || invoice.status === 'pagada'
+                        ? 'bg-emerald-900/40 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                        : 'bg-[#0F172A]/90 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                    }`}
+                  >
+                    {/* Fondo rojo detrás para indicar eliminación por swipe */}
+                    <div className="absolute inset-y-0 right-0 w-24 bg-rose-600 flex items-center justify-end pr-6 -z-10 opacity-0 group-active:opacity-100 transition-opacity">
+                      <span className="text-white font-bold text-xs uppercase">Descartar</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${
+                        invoice.status === 'confirmada' ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400' : 'bg-purple-500/20 border-purple-400 text-purple-400'
+                      }`}>
+                        {invoice.status === 'confirmada' ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white leading-tight">
+                          {invoice.status === 'confirmada' ? 'Factura incorporada' : 'Nueva factura detectada'}
+                        </p>
+                        <p className="text-xs text-slate-300 mt-1 line-clamp-1">
+                          Proveedor: <span className="font-semibold text-white">{invoice.issuerName}</span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Total: <span className="text-[#38BDF8] font-bold">{invoice.total.toFixed(2)} €</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {invoice.status !== 'confirmada' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenInvoice) onOpenInvoice(invoice.id);
+                        }}
+                        className="w-full mt-1 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+                      >
+                        Ver Factura
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           )}
         </>
       )}
 
       {/* FOOTER: Botonera con aros de 1px sólido blanco con glow de color y dibujos en trazo blanco */}
       {isAuthenticated ? (
-        <div className="relative z-10 w-full pb-8 px-4 sm:px-8 flex justify-center items-center stagger-bottom" style={{ animationDelay: "1.0s" }}>
+        <div className="relative z-10 w-full pb-8 px-4 sm:px-8 flex flex-col justify-center items-center gap-4 stagger-bottom" style={{ animationDelay: "1.0s" }}>
           <div className="flex items-center justify-between sm:justify-center gap-6 sm:gap-12 w-full max-w-xs sm:max-w-md mx-auto flex-nowrap">
             {/* 1. Icono Cámara (si automoción): ARO LÍNEA 1PX BLANCA, GLOW VERDE, DIBUJO EN LÍNEA BLANCA */}
             {isAutomocion && (
@@ -253,6 +315,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 className="w-6 h-6 sm:w-7 sm:h-7 text-white" 
               />
             </button>
+          </div>
+          
+          <div className="text-[11px] text-gray-500 font-medium text-center">
+            {currentUser.email || currentUser.fullName || 'Admin'}
           </div>
         </div>
       ) : (

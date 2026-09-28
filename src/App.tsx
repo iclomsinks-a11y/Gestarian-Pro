@@ -842,6 +842,20 @@ export default function App() {
     (d) => d.type === 'presupuesto' && Boolean(d.needsBossPricing)
   );
 
+  // Avisos de facturas de proveedores escaneadas y pendientes de incorporar
+  const pendingInvoices = documents.filter(
+    (d) => d.type === 'factura_recibida' && !d.isLocked
+  );
+
+  const handleDismissInvoiceNotification = (invoiceId: string) => {
+    // Si la descartamos de la home sin incorporarla, la marcamos como "rechazada" o isLocked = true para ocultarla
+    const updatedDocs = documents.map(d => 
+      d.id === invoiceId ? { ...d, isLocked: true, status: 'pagada' as any } : d
+    );
+    setDocuments(updatedDocs);
+    saveStoredDocuments(updatedDocs);
+  };
+
   const matchedDispatchClient = dispatchModalDoc 
     ? (clients.find((c) => c.id === dispatchModalDoc.clientId) || {
         id: dispatchModalDoc.clientId,
@@ -1065,6 +1079,15 @@ export default function App() {
           pendingBudgetReviews={pendingBudgetReviews}
           onOpenBudgetReview={handleOpenBudgetPricingReview}
           onOpenImageCustomizer={() => setIsImageCustomizerOpen(true)}
+          pendingInvoices={pendingInvoices}
+          onOpenInvoice={(docId) => {
+             const doc = documents.find(d => d.id === docId);
+             if (doc) {
+                setSelectedDoc(doc);
+                setIsViewDocOpen(true);
+             }
+          }}
+          onDismissInvoice={handleDismissInvoiceNotification}
         />
 
         {/* 2. Expedientes */}
@@ -1436,6 +1459,7 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenCompanyConfig={() => setIsNewUserOpen(true)}
           onOpenSpec={() => setIsSpecOpen(true)}
+          onLogout={handleLogout}
         />
       </div>
 

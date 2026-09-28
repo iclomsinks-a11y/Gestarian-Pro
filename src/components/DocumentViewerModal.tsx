@@ -35,6 +35,7 @@ interface DocumentViewerModalProps {
   onOpenAgendaForBudget?: (budget: GestarianDocument) => void;
   onNavigateToExpediente?: (expNum: string) => void;
   onShowToast?: (msg: string, duration?: number) => void;
+  onDiscardInvoice?: (docId: string) => void;
 }
 
 export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
@@ -51,6 +52,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   onOpenAgendaForBudget,
   onNavigateToExpediente,
   onShowToast,
+  onDiscardInvoice,
 }) => {
   const [shareFeedback, setShareFeedback] = useState<string>('');
   const [confirmSendDialog, setConfirmSendDialog] = useState<boolean>(false);
@@ -1128,6 +1130,38 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   <Send className="w-3.5 h-3.5" />
                   <span>Enviar al Cliente</span>
                 </button>
+              )}
+
+              {/* Acciones para Factura Recibida */}
+              {doc.type === 'factura_recibida' && !doc.isLocked && (
+                <div className="flex items-center gap-2">
+                  {onConfirmInvoice && (
+                    <button
+                      onClick={() => {
+                        onConfirmInvoice(doc.id);
+                        onClose();
+                        if (onShowToast) onShowToast('Factura de proveedor incorporada con éxito al sistema.');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase rounded-xs transition-colors shadow-xs cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Incorporar Factura</span>
+                    </button>
+                  )}
+                  {onDiscardInvoice && (
+                    <button
+                      onClick={() => {
+                        onDiscardInvoice(doc.id);
+                        onClose();
+                        if (onShowToast) onShowToast('Factura descartada.');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase rounded-xs transition-colors shadow-xs cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Descartar</span>
+                    </button>
+                  )}
+                </div>
               )}
 
               <button
