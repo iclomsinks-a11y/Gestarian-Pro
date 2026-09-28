@@ -68,38 +68,22 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
     onUpdateUser?.({ metisTechnicalAdviceEnabled: !metisAdviceActive });
   };
 
-  const handleGoogleSync = () => {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-
-    signInWithPopup(auth, provider)
-      .then(async (result) => {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const accessToken = credential?.accessToken;
-        const user = result.user;
-        
-        if (!accessToken) {
-           alert("No se pudo obtener el token de acceso de Google.");
-           return;
-        }
-
-        console.log("Usuario sincronizado:", user.email);
-        setIsScanningGmail(true);
-        
-        try {
-           const nuevasFacturas = await scanGmailForInvoices(accessToken);
-           setRastreoActivo(true);
-           alert(`¡Sincronización completada!\n\nSe han escaneado y extraído datos de ${nuevasFacturas.length} facturas recientes de proveedores desde tu Gmail.`);
-        } catch (err) {
-           console.error("Error escaneando correos:", err);
-           alert("Hubo un error descargando o procesando las facturas de la bandeja de entrada.");
-        } finally {
-           setIsScanningGmail(false);
-        }
-      }).catch((error) => {
-        console.error("Error de sincronización OAuth:", error);
-        alert("Hubo un error al conectar la cuenta.");
-      });
+  const handleGoogleSync = async () => {
+    try {
+      setIsScanningGmail(true);
+      const response = await fetch('/api/auth/google/url');
+      const data = await response.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Error al obtener URL de autenticación de Google');
+      }
+    } catch (err: any) {
+      console.error("Error iniciando sincronización OAuth en servidor:", err);
+      alert(`No se pudo iniciar la conexión con Google: ${err.message}. Comprueba que GOOGLE_CLIENT_ID esté configurado en el servidor.`);
+      setIsScanningGmail(false);
+    }
   };
 
   const cardVariants = {
