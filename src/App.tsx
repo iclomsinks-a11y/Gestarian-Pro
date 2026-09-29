@@ -213,6 +213,22 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined' || urlHandledRef.current) return;
     const params = new URLSearchParams(window.location.search);
+    
+    // Notificación de éxito de Google Auth
+    const googleAuth = params.get('google_auth');
+    if (googleAuth === 'success') {
+      setTimeout(() => {
+        showToast('✅ Conexión con Google completada correctamente');
+      }, 500);
+      // Limpiar URL
+      window.history.replaceState({}, document.title, window.location.pathname + '?view=configuracion');
+    } else if (googleAuth === 'error') {
+      const msg = params.get('message') || 'Error desconocido';
+      setTimeout(() => {
+        showToast(`❌ Error conectando a Google: ${msg}`);
+      }, 500);
+    }
+
     let viewParam = params.get('view');
     let idParam = params.get('id');
 
