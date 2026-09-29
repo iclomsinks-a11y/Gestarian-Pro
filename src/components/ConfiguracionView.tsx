@@ -71,6 +71,17 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   const handleGoogleSync = async () => {
     try {
       setIsScanningGmail(true);
+      
+      // Intentar rastrear directamente primero
+      const scanRes = await fetch('/api/scan-gmail-now');
+      if (scanRes.ok) {
+        const scanData = await scanRes.json();
+        alert(`¡Rastreo completado! Se han encontrado ${scanData.invoicesFound} facturas nuevas.`);
+        setIsScanningGmail(false);
+        return;
+      }
+
+      // Si no hay cuentas vinculadas (404), pedir autorización a Google
       const response = await fetch('/api/auth/google/url');
       const data = await response.json();
       

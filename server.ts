@@ -4,14 +4,14 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
-import { scanGmailForInvoices } from './src/services/gmailScannerService';
 import { createClient } from '@supabase/supabase-js';
+import { scanGmailForInvoices } from './src/services/gmailScannerService';
 
 dotenv.config();
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = 3001;
 
   // Middleware para JSON con límite ampliado para imágenes en base64
   app.use(express.json({ limit: '15mb' }));
@@ -56,8 +56,6 @@ async function startServer() {
     res.json({ url: authUrl });
   });
 
-import { createClient } from '@supabase/supabase-js';
-
 // Setup Supabase Client
 const getSupabaseClient = () => {
   const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -66,11 +64,11 @@ const getSupabaseClient = () => {
   return createClient(url, key);
 };
 
-  app.post('/api/auth/google/callback', async (req, res) => {
-    const { code } = req.body;
+  app.get('/api/auth/google/callback', async (req, res) => {
+    const { code } = req.query;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback';
 
     if (!clientId || !clientSecret) {
       return res.status(500).json({ error: 'Faltan credenciales de Google en el .env (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET)' });
@@ -113,9 +111,59 @@ const getSupabaseClient = () => {
         if (error) console.error('Error guardando en Supabase:', error);
       }
 
-      res.json({ success: true, refresh_token: data.refresh_token, access_token: data.access_token, email });
+      // Redirect back to the frontend with a success parameter
+      res.redirect('/?google_auth=success');
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      console.error('Error en OAuth callback:', err.message);
+      res.redirect(`/?google_auth=error&message=${encodeURIComponent(err.message)}`);
+    }
+  });
+
+  app.get('/api/scan-gmail-now', async (req, res) => {
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase no configurado.' });
+      }
+
+      const { data: users, error } = await supabase.from('user_integrations').select('user_email, google_refresh_token');
+      if (error || !users || users.length === 0) {
+        return res.status(404).json({ error: 'No hay cuentas de Gmail vinculadas.' });
+      }
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      
+      let processed = 0;
+      let invoices = 0;
+
+      for (const user of users) {
+        try {
+          const response = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId || '',
+              client_secret: clientSecret || '',
+              refresh_token: user.google_refresh_token,
+              grant_type: 'refresh_token',
+            }),
+          });
+
+          const data = await response.json();
+          if (response.ok && data.access_token) {
+            const results = await scanGmailForInvoices(data.access_token);
+            processed++;
+            invoices += results.length;
+          }
+        } catch (e) {
+          console.error(`Error escaneando para ${user.user_email}:`, e);
+        }
+      }
+
+      res.json({ success: true, processedUsers: processed, invoicesFound: invoices });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
