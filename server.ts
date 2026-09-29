@@ -4,6 +4,8 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import { scanGmailForInvoices } from './src/services/gmailScannerService';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -54,6 +56,16 @@ async function startServer() {
     res.json({ url: authUrl });
   });
 
+import { createClient } from '@supabase/supabase-js';
+
+// Setup Supabase Client
+const getSupabaseClient = () => {
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+};
+
   app.post('/api/auth/google/callback', async (req, res) => {
     const { code } = req.body;
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -82,8 +94,26 @@ async function startServer() {
         throw new Error(data.error_description || data.error || 'Error al intercambiar token');
       }
 
-      // Devolvemos el refresh_token para que el cliente lo asocie a Supabase o lo guardamos directamente aquí si tuviéramos la sesión.
-      res.json({ success: true, refresh_token: data.refresh_token, access_token: data.access_token, expires_in: data.expires_in });
+      // Obtener el email del usuario de Google
+      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${data.access_token}` }
+      });
+      const userInfo = await userInfoResponse.json();
+      const email = userInfo.email;
+
+      // Guardar en Supabase si está configurado
+      const supabase = getSupabaseClient();
+      if (supabase && email && data.refresh_token) {
+        const { error } = await supabase
+          .from('user_integrations')
+          .upsert(
+            { user_email: email, google_refresh_token: data.refresh_token, updated_at: new Date().toISOString() },
+            { onConflict: 'user_email' }
+          );
+        if (error) console.error('Error guardando en Supabase:', error);
+      }
+
+      res.json({ success: true, refresh_token: data.refresh_token, access_token: data.access_token, email });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -622,26 +652,73 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
     console.log(`[GESTARIAN] Servidor activo en http://0.0.0.0:${PORT}`);
     
     // --- TAREAS PROGRAMADAS (CRON JOBS) ---
-    // Simularemos la ejecución importando el servicio real cuando tengamos acceso a la BD
     console.log('[CRON] Iniciando programador de tareas para escaneo de facturas (Gmail)...');
     
-    // 1. Escaneo 06:00 AM (Rastrea desde las 16:00 del día anterior hasta las 05:59 del actual)
-    cron.schedule('0 6 * * *', () => {
-      console.log('[CRON - 06:00] Ejecutando escaneo de facturas (Periodo: 16:00 ayer - 05:59 hoy)...');
-      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
-    });
+    // Función centralizada para ejecutar el rastreo de todos los usuarios
+    const runGlobalScanner = async (label: string) => {
+      console.log(`[CRON - ${label}] Iniciando ciclo de escaneo global...`);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.error(`[CRON - ${label}] Error: Supabase no configurado.`);
+        return;
+      }
 
-    // 2. Escaneo 10:00 AM (Rastrea desde las 06:00 hasta las 09:59)
-    cron.schedule('0 10 * * *', () => {
-      console.log('[CRON - 10:00] Ejecutando escaneo de facturas (Periodo: 06:00 hoy - 09:59 hoy)...');
-      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
-    });
+      // 1. Obtener todos los usuarios con token
+      const { data: users, error } = await supabase.from('user_integrations').select('user_email, google_refresh_token');
+      if (error || !users) {
+        console.error(`[CRON - ${label}] Error obteniendo usuarios:`, error);
+        return;
+      }
 
-    // 3. Escaneo 16:00 PM (Rastrea desde las 10:00 hasta las 15:59)
-    cron.schedule('0 16 * * *', () => {
-      console.log('[CRON - 16:00] Ejecutando escaneo de facturas (Periodo: 10:00 hoy - 15:59 hoy)...');
-      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
-    });
+      console.log(`[CRON - ${label}] Procesando ${users.length} cuentas vinculadas...`);
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+      for (const user of users) {
+        try {
+          console.log(`[CRON - ${label}] Renovando token para ${user.user_email}...`);
+          // 2. Renovar el access_token usando el refresh_token
+          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId!,
+              client_secret: clientSecret!,
+              refresh_token: user.google_refresh_token,
+              grant_type: 'refresh_token'
+            })
+          });
+
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok || !tokenData.access_token) {
+            console.error(`[CRON - ${label}] Error renovando token de ${user.user_email}:`, tokenData);
+            continue;
+          }
+
+          // 3. Ejecutar el escáner
+          const facturas = await scanGmailForInvoices(tokenData.access_token);
+          
+          if (facturas.length > 0) {
+            console.log(`[CRON - ${label}] 🟢 ¡Éxito! Encontradas ${facturas.length} nuevas facturas para ${user.user_email}`);
+            // TODO: Guardar `facturas` en Supabase asociado al cliente (requerirá tabla de documentos en el futuro)
+          } else {
+            console.log(`[CRON - ${label}] ⚪ Sin nuevas facturas para ${user.user_email}`);
+          }
+        } catch (err: any) {
+           console.error(`[CRON - ${label}] Error procesando ${user.user_email}:`, err.message);
+        }
+      }
+      console.log(`[CRON - ${label}] Ciclo de escaneo finalizado.`);
+    };
+    
+    // 1. Escaneo 06:00 AM
+    cron.schedule('0 6 * * *', () => runGlobalScanner('06:00'));
+
+    // 2. Escaneo 10:00 AM
+    cron.schedule('0 10 * * *', () => runGlobalScanner('10:00'));
+
+    // 3. Escaneo 16:00 PM
+    cron.schedule('0 16 * * *', () => runGlobalScanner('16:00'));
   });
 }
 

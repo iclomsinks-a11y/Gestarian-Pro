@@ -53,7 +53,10 @@ export async function scanGmailForInvoices(accessToken: string): Promise<Gestari
 
         // 4. Send to our OCR endpoint
         try {
-          const ocrResponse = await fetch('/api/scan-receipt', {
+          const isBrowser = typeof window !== 'undefined';
+          const apiUrl = isBrowser ? '/api/scan-receipt' : 'http://localhost:3000/api/scan-receipt';
+          
+          const ocrResponse = await fetch(apiUrl, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({ image: base64Uri })
@@ -111,15 +114,20 @@ export async function scanGmailForInvoices(accessToken: string): Promise<Gestari
       }
     }
 
-    // Save to local storage
+    // Save to local storage only if running in browser
     if (newFacturas.length > 0) {
-      try {
-        const existingRaw = localStorage.getItem('gestarian_documents_v1');
-        const existingDocs: GestarianDocument[] = existingRaw ? JSON.parse(existingRaw) : [];
-        const merged = [...newFacturas, ...existingDocs];
-        localStorage.setItem('gestarian_documents_v1', JSON.stringify(merged));
-      } catch (e) {
-        console.error("Error guardando facturas recibidas", e);
+      if (typeof window !== 'undefined') {
+        try {
+          const existingRaw = localStorage.getItem('gestarian_documents_v1');
+          const existingDocs: GestarianDocument[] = existingRaw ? JSON.parse(existingRaw) : [];
+          const merged = [...newFacturas, ...existingDocs];
+          localStorage.setItem('gestarian_documents_v1', JSON.stringify(merged));
+        } catch (e) {
+          console.error("Error guardando facturas recibidas", e);
+        }
+      } else {
+        // En Node.js (Servidor) aquí enviaríamos a Supabase en el futuro
+        console.log(`[BACKEND SCANNER] ${newFacturas.length} nuevas facturas listas para ser persistidas.`);
       }
     }
 
