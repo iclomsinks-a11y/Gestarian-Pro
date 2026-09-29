@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -617,8 +618,30 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
     console.log(`[GESTARIAN] Servidor activo en http://0.0.0.0:${PORT}`);
+    
+    // --- TAREAS PROGRAMADAS (CRON JOBS) ---
+    // Simularemos la ejecución importando el servicio real cuando tengamos acceso a la BD
+    console.log('[CRON] Iniciando programador de tareas para escaneo de facturas (Gmail)...');
+    
+    // 1. Escaneo 06:00 AM (Rastrea desde las 16:00 del día anterior hasta las 05:59 del actual)
+    cron.schedule('0 6 * * *', () => {
+      console.log('[CRON - 06:00] Ejecutando escaneo de facturas (Periodo: 16:00 ayer - 05:59 hoy)...');
+      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
+    });
+
+    // 2. Escaneo 10:00 AM (Rastrea desde las 06:00 hasta las 09:59)
+    cron.schedule('0 10 * * *', () => {
+      console.log('[CRON - 10:00] Ejecutando escaneo de facturas (Periodo: 06:00 hoy - 09:59 hoy)...');
+      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
+    });
+
+    // 3. Escaneo 16:00 PM (Rastrea desde las 10:00 hasta las 15:59)
+    cron.schedule('0 16 * * *', () => {
+      console.log('[CRON - 16:00] Ejecutando escaneo de facturas (Periodo: 10:00 hoy - 15:59 hoy)...');
+      // Lógica de base de datos para obtener todos los tokens de usuarios e invocar el scanner
+    });
   });
 }
 
