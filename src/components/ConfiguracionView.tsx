@@ -24,6 +24,7 @@ interface ConfiguracionViewProps {
   onOpenCompanyConfig: () => void;
   onOpenSpec: () => void;
   onLogout?: () => void;
+  onScanComplete?: (invoices: GestarianDocument[]) => void;
 }
 
 export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
@@ -38,9 +39,10 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   onOpenMenu,
   onOpenCompanyConfig,
   onOpenSpec,
-  onLogout
+  onLogout,
+  onScanComplete
 }) => {
-  const [rastreoActivo, setRastreoActivo] = useState(false);
+  const [rastreoActivo, setRastreoActivo] = useState(true);
   const [offlineActivo, setOfflineActivo] = useState(true);
   const [replaceTarget, setReplaceTarget] = useState<ReplaceTargetInfo | null>(null);
   const [isScanningGmail, setIsScanningGmail] = useState(false);
@@ -76,8 +78,13 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
       const scanRes = await fetch('/api/scan-gmail-now');
       if (scanRes.ok) {
         const scanData = await scanRes.json();
-        alert(`¡Rastreo completado! Se han encontrado ${scanData.invoicesFound} facturas nuevas.`);
         setIsScanningGmail(false);
+        if (scanData.invoices && scanData.invoices.length > 0) {
+          onScanComplete?.(scanData.invoices);
+        } else {
+          alert('¡Rastreo completado! No se encontraron facturas nuevas.');
+        }
+        if (onNavigateHome) onNavigateHome();
         return;
       }
 
@@ -141,6 +148,74 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               className="px-4 py-3 sm:py-2 text-slate-300 hover:text-white text-[18px] font-semibold underline transition-colors cursor-pointer"
             >
               Especificación Técnica
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Tarjeta 3: Automatización y Sincronización */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, margin: "-50px" }}
+          transition={{ duration: 0.5, delay: 0.08 }}
+          variants={cardVariants}
+          className="bg-[#1E293B] p-6 sm:p-8 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-8 relative sticky top-[120px] sm:static z-20"
+        >
+          {/* Cabecera Tarjeta */}
+          <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(147,51,234,0.4)] shrink-0">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-[27px] font-bold text-white leading-tight">Automatización y Sincronización</h3>
+              <p className="text-[18px] text-slate-300 mt-1">Gestiona la recolección de facturas y la persistencia local</p>
+            </div>
+          </div>
+
+          {/* Bloque A: Extracción con IA */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 p-5 rounded-xl bg-[#0F172A]/50 border border-purple-500/30 shadow-[inset_0_0_20px_rgba(147,51,234,0.05)] transition-all hover:border-purple-500/50 hover:shadow-[inset_0_0_20px_rgba(147,51,234,0.15)]">
+            <div className="flex flex-col">
+              <span className="text-[21px] font-bold text-white flex items-center gap-2">
+                <Mail className="w-5 h-5 text-purple-400 shrink-0" />
+                Rastreo automático de facturas
+              </span>
+              <span className="text-[18px] text-slate-300 mt-2 max-w-xl leading-relaxed">
+                Permite a la IA de Gestarian revisar continuamente tu correo ({currentUser?.email || "email de acceso"}) en busca de facturas nuevas, tanto al iniciar la app como en segundo plano.
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (rastreoActivo) {
+                  setRastreoActivo(false);
+                } else {
+                  handleGoogleSync();
+                  setRastreoActivo(true);
+                }
+              }}
+              disabled={isScanningGmail}
+              className={`w-full sm:w-auto px-6 py-3 font-bold text-[18px] rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer ${rastreoActivo ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
+            >
+              {isScanningGmail ? "Conectando..." : (rastreoActivo ? "Conectado" : "Desconectado")}
+            </button>
+          </div>
+
+          {/* Bloque C: Persistencia de datos sin conexión */}
+          <div className="flex items-center justify-between gap-4 py-2 border-t border-white/5 pt-6">
+            <div className="flex flex-col">
+              <span className="text-[21px] font-bold text-white flex items-center gap-2">
+                <WifiOff className="w-5 h-5 text-emerald-400 shrink-0" />
+                Modo Fuera de Línea (Offline-First)
+              </span>
+              <span className="text-[18px] text-slate-300 mt-2 max-w-xl leading-relaxed">
+                Permite trabajar sin red. Sincronización automática al recuperar cobertura.
+              </span>
+            </div>
+            {/* Toggle Minimalista */}
+            <button 
+              onClick={() => setOfflineActivo(!offlineActivo)}
+              className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer ${offlineActivo ? "bg-emerald-500" : "bg-slate-700"}`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${offlineActivo ? "translate-x-7" : "translate-x-0"}`} />
             </button>
           </div>
         </motion.div>
@@ -316,87 +391,6 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               title={metisAdviceActive ? 'Desactivar consejos técnicos' : 'Activar consejos técnicos'}
             >
               <div className={`w-5 h-5 rounded-full bg-white transition-transform ${metisAdviceActive ? 'translate-x-7' : 'translate-x-0'}`} />
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Tarjeta 3: Automatización y Sincronización */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: false, margin: "-50px" }}
-          transition={{ duration: 0.5, delay: 0.16 }}
-          variants={cardVariants}
-          className="bg-[#1E293B] p-6 sm:p-8 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-8 relative sticky top-[140px] sm:static z-20"
-        >
-          {/* Cabecera Tarjeta */}
-          <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(147,51,234,0.4)] shrink-0">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-[27px] font-bold text-white leading-tight">Automatización y Sincronización</h3>
-              <p className="text-[18px] text-slate-300 mt-1">Gestiona la recolección de facturas y la persistencia local</p>
-            </div>
-          </div>
-
-          {/* Bloque A: Extracción con IA */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 p-5 rounded-xl bg-[#0F172A]/50 border border-purple-500/30 shadow-[inset_0_0_20px_rgba(147,51,234,0.05)] transition-all hover:border-purple-500/50 hover:shadow-[inset_0_0_20px_rgba(147,51,234,0.15)]">
-            <div className="flex flex-col">
-              <span className="text-[21px] font-bold text-white flex items-center gap-2">
-                <Mail className="w-5 h-5 text-purple-400 shrink-0" />
-                Extracción con IA (Gmail)
-              </span>
-              <span className="text-[18px] text-slate-300 mt-2 max-w-xl leading-relaxed">
-                Conecta tu cuenta de Gmail de forma segura para que nuestra IA escanee, extraiga y procese tus facturas adjuntas automáticamente en segundo plano.
-              </span>
-            </div>
-            <button
-              onClick={handleGoogleSync}
-              disabled={isScanningGmail}
-              className={`w-full sm:w-auto px-6 py-3 font-bold text-[18px] rounded-lg transition-all shadow-[0_0_15px_rgba(147,51,234,0.4)] flex items-center justify-center gap-2 shrink-0 cursor-pointer ${isScanningGmail ? 'bg-slate-600 text-slate-300' : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white hover:shadow-[0_0_25px_rgba(147,51,234,0.6)]'}`}
-            >
-              {isScanningGmail ? 'Escaneando inbox...' : 'Conectar y escanear'}
-            </button>
-          </div>
-
-          {/* Bloque B: Rastreo de Bandeja de Entrada */}
-          <div className="flex items-center justify-between gap-4 py-2 border-b border-white/5 pb-6">
-            <div className="flex flex-col">
-              <span className="text-[21px] font-bold text-white flex items-center gap-2">
-                <Inbox className="w-5 h-5 text-[#38BDF8] shrink-0" />
-                Rastreo automático de facturas
-              </span>
-              <span className="text-[18px] text-slate-300 mt-2 max-w-xl leading-relaxed">
-                Analiza la bandeja de entrada una vez al día en busca de adjuntos.
-              </span>
-            </div>
-            {/* Toggle Minimalista */}
-            <button 
-              onClick={() => setRastreoActivo(!rastreoActivo)}
-              className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer ${rastreoActivo ? 'bg-[#38BDF8]' : 'bg-slate-700'}`}
-            >
-              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${rastreoActivo ? 'translate-x-7' : 'translate-x-0'}`} />
-            </button>
-          </div>
-
-          {/* Bloque C: Persistencia de datos sin conexión */}
-          <div className="flex items-center justify-between gap-4 py-2">
-            <div className="flex flex-col">
-              <span className="text-[21px] font-bold text-white flex items-center gap-2">
-                <WifiOff className="w-5 h-5 text-emerald-400 shrink-0" />
-                Modo Fuera de Línea (Offline-First)
-              </span>
-              <span className="text-[18px] text-slate-300 mt-2 max-w-xl leading-relaxed">
-                Permite trabajar sin red. Sincronización automática al recuperar cobertura.
-              </span>
-            </div>
-            {/* Toggle Minimalista */}
-            <button 
-              onClick={() => setOfflineActivo(!offlineActivo)}
-              className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer ${offlineActivo ? 'bg-emerald-500' : 'bg-slate-700'}`}
-            >
-              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${offlineActivo ? 'translate-x-7' : 'translate-x-0'}`} />
             </button>
           </div>
         </motion.div>
