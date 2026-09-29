@@ -207,6 +207,31 @@ export default function App() {
     });
   }, []);
 
+  // Escaneo en segundo plano al iniciar sesión
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return;
+    const runBackgroundScan = async () => {
+      try {
+        const scanRes = await fetch('/api/scan-gmail-now');
+        if (scanRes.ok) {
+          const scanData = await scanRes.json();
+          if (scanData.invoices && scanData.invoices.length > 0) {
+            setDocuments(prev => {
+              const prevIds = new Set(prev.map(d => d.id));
+              const uniqueNew = scanData.invoices.filter((d: GestarianDocument) => !prevIds.has(d.id));
+              return [...prev, ...uniqueNew];
+            });
+            showToast(`¡Se han detectado ${scanData.invoices.length} facturas nuevas en segundo plano!`);
+          }
+        }
+      } catch (e) {
+        // Silencioso en caso de error para no molestar al usuario en el inicio
+      }
+    };
+    // Pequeño retraso para que no interrumpa la animación inicial
+    setTimeout(runBackgroundScan, 3000);
+  }, [isAuthenticated]);
+
   // Manejo automático de enlaces recibidos en WhatsApp / Email
   const urlHandledRef = useRef<boolean>(false);
 
@@ -1476,6 +1501,14 @@ export default function App() {
           onOpenCompanyConfig={() => setIsNewUserOpen(true)}
           onOpenSpec={() => setIsSpecOpen(true)}
           onLogout={handleLogout}
+          onScanComplete={(newInvoices) => {
+            setDocuments(prev => {
+              const prevIds = new Set(prev.map(d => d.id));
+              const uniqueNew = newInvoices.filter(d => !prevIds.has(d.id));
+              return [...prev, ...uniqueNew];
+            });
+            showToast(`¡Se han añadido ${newInvoices.length} facturas nuevas!`);
+          }}
         />
       </div>
 
