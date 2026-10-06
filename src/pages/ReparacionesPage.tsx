@@ -11,6 +11,9 @@ import { ExpedienteFolderIcon, PresupuestoIcon } from '../components/CustomIcons
 import { usuarioService } from '../services/usuarioService'
 import { useToast } from '../lib/ToastContext'
 import { playSuccessChime } from '../lib/sound'
+import { PanelAccionesEmpleadoOT } from '../components/PanelAccionesEmpleadoOT'
+import { getAccionesOT, AccionOT } from '../services/otAccionesService'
+
 
 export function ReparacionesPage() {
   const location = useLocation()
@@ -832,7 +835,22 @@ export function ReparacionesPage() {
                     )
                   })()}
 
+                  {/* PANEL DE ACCIONES DEL EMPLEADO (SUBIR IMAGEN, TEXTO, GRABAR VOZ CON GEMINI Y CLOUDFLARE) */}
+                  <div className="pt-3 border-t border-slate-800">
+                    <PanelAccionesEmpleadoOT
+                      reparacionId={rep.id}
+                      ordenTrabajoId={`ot-${rep.id}`}
+                      clienteId={rep.cliente_id}
+                      vehiculoId={rep.vehiculo_id || undefined}
+                      acciones={getAccionesOT({ cliente_id: rep.cliente_id, reparacion_id: rep.id })}
+                      onAccionesUpdated={() => {
+                        setReparaciones(prev => [...prev])
+                      }}
+                    />
+                  </div>
+
                   {/* Acciones flotantes integradas según permisos */}
+
                   <div className="flex items-center justify-around gap-2 pt-3 border-t border-white/10">
                     {/* 1. Expediente */}
                     {tienePermisoExpediente && (

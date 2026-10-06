@@ -421,7 +421,7 @@ function Layout() {
 import { SelectorCuentasModal, type CuentaGuardada } from './components/SelectorCuentasModal'
 
 export default function App() {
-  const [showIntro, setShowIntro] = useState(() => !sessionStorage.getItem('gestarian_intro_shown'))
+  const [showIntro, setShowIntro] = useState(false)
   const [introState, setIntroState] = useState<'start' | 'grow' | 'fadeOut'>('start')
   const [profileReady, setProfileReady] = useState(false)
   const [licenciaValida, setLicenciaValida] = useState(false)

@@ -450,25 +450,35 @@ export function AsignarCitaPage() {
           </div>
         </div>
 
-        {/* 3. Botones CANCELAR y ASIGNAR CITA (bajados 40px) */}
-        <div className="w-full grid grid-cols-2 gap-2.5 pt-1 mt-10 shrink-0">
+        {/* 3. Botones CANCELAR, RECHAZAR DEFINITIVAMENTE y ASIGNAR CITA (bajados 40px) */}
+        <div className="w-full grid grid-cols-3 gap-2 pt-1 mt-10 shrink-0">
           <button
             onClick={() => navigate(-1)}
             disabled={guardando}
-            className="py-2.5 px-4 rounded-2xl font-black text-base sm:text-lg border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-white transition-all active:scale-95 uppercase tracking-wider text-center flex items-center justify-center"
+            className="py-2.5 px-2 rounded-2xl font-black text-xs sm:text-sm border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 text-white transition-all active:scale-95 uppercase tracking-wider text-center flex items-center justify-center"
           >
             CANCELAR
           </button>
 
           <button
+            onClick={handleRechazarDefinitivamente}
+            disabled={guardando}
+            className="py-2.5 px-2 rounded-2xl font-black text-xs sm:text-sm border-2 border-rose-500/80 bg-rose-950/80 hover:bg-rose-900 text-rose-200 transition-all active:scale-95 uppercase tracking-wider text-center flex items-center justify-center"
+            title="Rechazar definitivamente: cierra el expediente (presupuesto y cita)"
+          >
+            RECHAZAR
+          </button>
+
+          <button
             onClick={handleAsignarCita}
             disabled={guardando}
-            className="py-2.5 px-4 rounded-2xl font-black text-base sm:text-lg bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center uppercase tracking-wider text-center"
+            className="py-2.5 px-2 rounded-2xl font-black text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center uppercase tracking-wider text-center"
           >
-            <span>{guardando ? 'ASIGNANDO...' : 'ASIGNAR CITA'}</span>
+            <span>{guardando ? 'GUARDANDO...' : 'ACEPTAR CITA'}</span>
           </button>
         </div>
       </div>
     </div>
   );
 }
+

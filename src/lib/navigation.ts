@@ -37,6 +37,9 @@ export const FOOTER_NAV: NavItem[] = storedOrder.length
   ? storedOrder.map((label) => DEFAULT_FOOTER_NAV.find((i) => i.label === label)!).filter(Boolean)
   : DEFAULT_FOOTER_NAV;
 
+export const NAV_ITEMS = FOOTER_NAV;
+
+
 // Mobile / Tablet Portrait footer (3 icons: camera, menu, mic)
 export const MOBILE_FOOTER_ICONS = ['camera', 'menu', 'mic'] as const
 

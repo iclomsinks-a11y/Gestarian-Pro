@@ -14,6 +14,8 @@ import { getDocumentOcrConfig, testDocumentOcrConnection } from '../services/doc
 import { getPlateRecognizerConfig, testPlateRecognizerConnection } from '../services/plateRecognizerService'
 import { can, hasRole, guardarPreferenciasUsuario, getPerfil } from '../services/authService'
 import { AI_CATALOG, runAiHealthCheck } from '../services/aiCatalogService'
+import { HorarioTallerCard } from '../components/HorarioTallerCard'
+
 
 
 export function ConfiguracionPage() {
@@ -863,7 +865,11 @@ export function ConfiguracionPage() {
 
         {renderTestResult('ESCANEO DE SALUD IA')}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* CONFIGURACIÓN DEL HORARIO DEL TALLER */}
+        <HorarioTallerCard />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
 
             {/* 1. AYUDANTE IA GESTARIAN */}
           <Card className="p-6 space-y-4 border border-cyan-500/20 shadow-xl relative overflow-hidden">

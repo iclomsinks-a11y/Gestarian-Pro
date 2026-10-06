@@ -354,3 +354,88 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
 
   throw new Error('No hay servicios de transcripción configurados (Falta API Key de Groq o Gemini).');
 }
+
+/**
+ * Filtra muletillas, repeticiones e incoherencias de un texto escrito o dictado por voz por el empleado del taller.
+ * Redacta un texto profesional, claro y empático listo para ser mostrado al cliente final.
+ */
+export async function mejorarTextoConGemini(
+  textoBruto: string,
+  tipo: 'pie_foto' | 'comentario' | 'transcripcion_voz' = 'comentario'
+): Promise<string> {
+  if (!textoBruto || !textoBruto.trim()) return '';
+
+  const config = getAiConfig();
+  const fallback = getFallbackConfig();
+
+  const promptMejora = `Eres un asistente de taller mecánico profesional. Tu objetivo es mejorar la redacción de una nota/comentario escrito o dictado por el mecánico para informarle al cliente sobre el estado de su vehículo en la Orden de Trabajo.
+  
+Reglas estrictas:
+1. Elimina muletillas (ehh, bueno, mira, quillo, o sea, vale, etc.), titubeos y repeticiones.
+2. Mantén exactamente el significado técnico y la información relevante original.
+3. Escribe en castellano de España profesional, claro, directo y respetuoso hacia el cliente.
+4. Devuelve ÚNICAMENTE el texto mejorado final. Sin saludos introductorios, sin explicaciones, sin comillas, sin formato markdown.
+
+Texto a mejorar (${tipo}): "${textoBruto}"`;
+
+  try {
+    if (config.api_key && config.provider === 'gemini') {
+      const model = config.model || 'gemini-3.7-flash';
+      const body = {
+        contents: [{ role: 'user', parts: [{ text: promptMejora }] }],
+        generationConfig: { temperature: 0.1 }
+      };
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.api_key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim()) return text.trim();
+      }
+    }
+
+    // Fallback con OpenRouter / Groq si está habilitado
+    if (fallback.enabled && fallback.api_key) {
+      const endpoint = fallback.provider === 'openrouter'
+        ? 'https://openrouter.ai/api/v1/chat/completions'
+        : 'https://api.groq.com/openai/v1/chat/completions';
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${fallback.api_key}`
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: fallback.model || 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: promptMejora }]
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text && text.trim()) return text.trim();
+      }
+    }
+  } catch (e) {
+    console.warn('Error al mejorar texto con Gemini, devolviendo texto formateado:', e);
+  }
+
+  // Fallback local básico de limpieza si no hay API disponible
+  return textoBruto
+    .replace(/\b(eh+|o sea|bueno|mira|quillo|illo|vale|sabes|entiendes)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+

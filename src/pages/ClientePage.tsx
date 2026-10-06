@@ -56,6 +56,9 @@ import {
 import { notificarCitaSolicitadaAlTaller, notificarSolicitudPresupuestoAlTaller } from '../services/notificationService'
 import { useToast } from '../lib/ToastContext'
 import { playSuccessChime, playTimepickerTickSound } from '../lib/sound'
+import { TimelineAccionesOTCliente } from '../components/TimelineAccionesOTCliente'
+import { ModalContrapropuestaFechaEntrega } from '../components/ModalContrapropuestaFechaEntrega'
+
 
 interface ExpedienteGroup {
   id: string
@@ -124,6 +127,12 @@ export function ClientePage() {
     cobros: [],
     expedienteStr: ''
   })
+  const [modalContrapropuesta, setModalContrapropuesta] = useState<{ open: boolean; presupuesto: Presupuesto | null; expedienteStr: string }>({
+    open: false,
+    presupuesto: null,
+    expedienteStr: ''
+  })
+
   const [modalGaleria, setModalGaleria] = useState<{ open: boolean; imagenes: string[]; activeIndex: number }>({
     open: false,
     imagenes: [],
@@ -1248,7 +1257,7 @@ export function ClientePage() {
 
                                               <button
                                                 onClick={() =>
-                                                  setModalCita({
+                                                  setModalContrapropuesta({
                                                     open: true,
                                                     presupuesto: exp.presupuesto,
                                                     expedienteStr: expStr,
@@ -1264,7 +1273,7 @@ export function ClientePage() {
                                             <div className="flex justify-center w-full">
                                               <button
                                                 onClick={() =>
-                                                  setModalCita({
+                                                  setModalContrapropuesta({
                                                     open: true,
                                                     presupuesto: exp.presupuesto,
                                                     expedienteStr: expStr,
@@ -1382,7 +1391,15 @@ export function ClientePage() {
                     })
                   )}
                 </div>
+
+                {/* TIMELINE DE NOTIFICACIONES OT EN TIEMPO REAL */}
+                {cliente && (
+                  <div className="mt-6">
+                    <TimelineAccionesOTCliente clienteId={cliente.id} vehiculoId={vehiculo?.id} />
+                  </div>
+                )}
               </motion.div>
+
             )}
           </AnimatePresence>
         </div>
@@ -2467,6 +2484,36 @@ export function ClientePage() {
           </div>
         </div>
       )}
+
+      {/* MODAL CONTRAPROPUESTA DE FECHA DE ENTREGA POR EL CLIENTE */}
+      {modalContrapropuesta.open && modalContrapropuesta.presupuesto && (
+        <ModalContrapropuestaFechaEntrega
+          presupuestoEstado={modalContrapropuesta.presupuesto.estado}
+          fechaPropuestaTaller={
+            modalContrapropuesta.presupuesto.fecha_entrega || modalContrapropuesta.presupuesto.created_at
+          }
+          onConfirmarContrapropuesta={async (nuevaFechaISO, obs) => {
+            try {
+              const pres = modalContrapropuesta.presupuesto!
+              await supabase
+                .from('presupuestos')
+                .update({
+                  fecha_entrega: nuevaFechaISO.split('T')[0],
+                  observaciones: `[CONTRAPROPUESTA CLIENTE]: Fecha solicitada ${new Date(nuevaFechaISO).toLocaleString('es-ES')}. ${obs || ''}\n${pres.observaciones || ''}`
+                })
+                .eq('id', pres.id)
+
+              showToast('Contrapropuesta de fecha enviada al taller con éxito', 'success')
+              setModalContrapropuesta({ open: false, presupuesto: null })
+              loadData()
+            } catch (e: any) {
+              showToast('Error al enviar contrapropuesta: ' + (e?.message || ''), 'error')
+            }
+          }}
+          onCerrar={() => setModalContrapropuesta({ open: false, presupuesto: null })}
+        />
+      )}
     </div>
   )
 }
+
