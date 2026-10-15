@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print-hidden,
+  .no-print,
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+  .print-clean-page {
+    position: static !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  /* Asegurar que el logo del taller en impresión/PDF nunca supere los 250x250px */
+  .issuer-logo-box {
+    width: 250px !important;
+    height: 250px !important;
+    max-width: 250px !important;
+    max-height: 250px !important;
+    min-width: 250px !important;
+    min-height: 250px !important;
+  }
+  .issuer-logo-img {
+    width: 250px !important;
+    height: 250px !important;
+    max-width: 250px !important;
+    max-height: 250px !important;
+    object-fit: contain !important;
+  }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInTop {
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInBottom {
+  from { opacity: 0; transform: translateY(50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInBg {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.stagger-left { opacity: 0; animation: slideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.stagger-right { opacity: 0; animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.stagger-top { opacity: 0; animation: slideInTop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.stagger-bottom { opacity: 0; animation: slideInBottom 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.fade-in-bg { opacity: 0; animation: fadeInBg 1.5s ease-in-out forwards; animation-delay: 1.5s; }
