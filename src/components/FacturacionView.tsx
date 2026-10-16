@@ -191,16 +191,16 @@ export const FacturaCard: React.FC<{
           )}
         </div>
 
-        {/* Line 2: Brand and Model or Location */}
-        {doc.showLocationData && doc.taskLocation && (!doc.showVehicleData || !doc.vehiclePlate) ? (
-          <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="text-[#475569]">Lugar de tarea:</span> {doc.taskLocation}
-          </div>
-        ) : (
-          <div className="text-sm font-bold text-[#475569] uppercase tracking-wider">
-            {doc.vehicleBrand || ''} {doc.vehicleModel || doc.vehicleType || 'Vehículo Genérico'}
-          </div>
-        )}
+        {/* Line 2: Brand and Model with optional Location badge */}
+        <div className="flex flex-wrap items-center justify-between gap-1 text-sm font-bold text-[#475569] uppercase tracking-wider">
+          <span>{doc.vehicleBrand || ''} {doc.vehicleModel || doc.vehicleType || (!doc.vehiclePlate && doc.taskLocation ? '' : 'Vehículo')}</span>
+          {doc.taskLocation && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md">
+              <Home className="w-3 h-3 text-emerald-700 shrink-0" />
+              <span className="max-w-[150px] truncate">{doc.taskLocation}</span>
+            </span>
+          )}
+        </div>
 
         {/* Line 3: Client Name */}
         <div className="text-xl font-black text-[#0F172A] truncate">

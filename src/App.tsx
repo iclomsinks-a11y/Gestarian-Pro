@@ -1830,6 +1830,8 @@ export default function App() {
                 total: 0,
                 status: 'borrador',
                 isLocked: false,
+                showLocationData: true,
+                taskLocation: matchingClient?.taskLocation || matchingClient?.address || '',
                 notes: 'Validez del presupuesto: 30 días.\nEste presupuesto puede verse alterado en función de incidencias no contempladas en primera valoración.\nSe ruega puntualidad para entregar el vehículo en la fecha y hora establecida.',
               };
 

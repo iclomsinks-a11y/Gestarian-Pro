@@ -232,18 +232,18 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
         </div>
       )}
 
-      {/* LUGAR DE LA TAREA */}
-      {doc.showLocationData !== false && doc.taskLocation && (
+      {/* LUGAR DE LA TAREA / LOCALIZACIÓN */}
+      {(doc.showLocationData !== false || doc.type === 'presupuesto') && (doc.taskLocation || (doc.type === 'presupuesto' && doc.clientAddress)) && (
         <div className="border border-emerald-300 rounded-2xl p-3 sm:p-3.5 mb-4 flex items-center gap-3 w-full bg-emerald-50/70 shadow-2xs">
           <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
             <Home className="w-5 h-5" />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">
-              Lugar donde se realiza la tarea:
+              Localización / Lugar donde se realiza la tarea:
             </span>
             <span className="text-xs sm:text-base font-extrabold text-slate-900 uppercase truncate">
-              {doc.taskLocation}
+              {doc.taskLocation || doc.clientAddress}
             </span>
           </div>
         </div>

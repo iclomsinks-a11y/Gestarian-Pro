@@ -198,18 +198,19 @@ export async function generateDocumentPdf(doc: GestarianDocument, options: Gener
     pdf.text(vehicleText.toUpperCase(), vehicleX, currentY + 10);
   }
 
-  // Lugar donde se realiza la tarea (si está presente y activado)
-  if (doc.taskLocation && doc.showLocationData !== false) {
+  // Localización / Lugar donde se realiza la tarea
+  const effectiveLocation = doc.taskLocation || (doc.type === 'presupuesto' && doc.clientAddress ? doc.clientAddress : undefined);
+  if (effectiveLocation && doc.showLocationData !== false) {
     if (!doc.vehiclePlate && !vehicleText) {
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
+      pdf.setFontSize(8.5);
       pdf.setTextColor(15, 23, 42);
-      pdf.text(`LUGAR DE TAREA: ${doc.taskLocation.toUpperCase()}`, vehicleX, currentY + 10);
+      pdf.text(`LOCALIZACIÓN: ${effectiveLocation.toUpperCase()}`, vehicleX, currentY + 10);
     } else {
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(6.5);
-      pdf.setTextColor(71, 85, 105);
-      pdf.text(`Lugar: ${doc.taskLocation.toUpperCase()}`, vehicleX, currentY + 14);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`Localización: ${effectiveLocation.toUpperCase()}`, vehicleX, currentY + 14);
     }
   }
 

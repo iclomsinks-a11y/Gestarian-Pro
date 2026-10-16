@@ -234,10 +234,11 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     if (initialBudget?.showLocationData !== undefined) {
       return initialBudget.showLocationData;
     }
-    return currentUser?.enableLocation === true;
+    // En todos los nuevos presupuestos se incluye el campo localización por defecto
+    return true;
   });
   const [taskLocation, setTaskLocation] = useState<string>(() => {
-    return initialBudget?.taskLocation || "";
+    return initialBudget?.taskLocation || initialBudget?.clientAddress || "";
   });
 
   // Líneas del documento
@@ -419,8 +420,8 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setVehicleModel(initialBudget.vehicleModel || "");
       setVehicleDeliveryDate(initialBudget.vehicleDeliveryDate || "");
       setVehicleImages(initialBudget.vehicleImages || []);
-      setShowLocationData(initialBudget.showLocationData !== undefined ? initialBudget.showLocationData : (currentUser?.enableLocation === true));
-      setTaskLocation(initialBudget.taskLocation || "");
+      setShowLocationData(initialBudget.showLocationData !== false);
+      setTaskLocation(initialBudget.taskLocation || initialBudget.clientAddress || "");
       setPayments(initialBudget.payments || []);
       setIsInvoiceConfirmed(Boolean(initialBudget.invoiceConfirmed));
 
@@ -482,7 +483,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setVehicleModel("");
       setVehicleDeliveryDate("");
       setVehicleImages([]);
-      setShowLocationData(currentUser?.enableLocation === true);
+      setShowLocationData(true);
       setTaskLocation("");
       setItems([
         {
@@ -527,7 +528,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setVehicleModel("");
       setVehicleDeliveryDate("");
       setVehicleImages([]);
-      setShowLocationData(currentUser?.enableLocation === true);
+      setShowLocationData(true);
       setTaskLocation("");
       setItems([
         {
@@ -749,7 +750,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       expediente: (currentUser.currentTier === 'lite' || currentUser.currentTier === 'quick') ? undefined : finalExpediente,
       showVehicleData,
       showLocationData,
-      taskLocation: showLocationData ? taskLocation.trim() : '',
+      taskLocation: showLocationData ? (taskLocation.trim() || selectedClient?.taskLocation || selectedClient?.address || '') : '',
       vehiclePlate: showVehicleData ? cleanPlate : '',
       vehicleBrand: showVehicleData ? vehicleBrand.trim() : '',
       vehicleModel: showVehicleData ? vehicleModel.trim() : '',
@@ -864,7 +865,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       expediente: (currentUser.currentTier === 'lite' || currentUser.currentTier === 'quick') ? undefined : finalExpediente,
       showVehicleData,
       showLocationData,
-      taskLocation: showLocationData ? taskLocation.trim() : '',
+      taskLocation: showLocationData ? (taskLocation.trim() || selectedClient?.taskLocation || selectedClient?.address || '') : '',
       vehiclePlate: showVehicleData ? cleanPlate : '',
       vehicleBrand: showVehicleData ? vehicleBrand.trim() : '',
       vehicleModel: showVehicleData ? vehicleModel.trim() : '',
@@ -983,7 +984,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       expediente: (currentUser.currentTier === 'lite' || currentUser.currentTier === 'quick') ? undefined : finalExpediente,
       showVehicleData,
       showLocationData,
-      taskLocation: showLocationData ? taskLocation.trim() : '',
+      taskLocation: showLocationData ? (taskLocation.trim() || selectedClient?.taskLocation || selectedClient?.address || '') : '',
       vehiclePlate: showVehicleData ? cleanPlate : '',
       vehicleBrand: showVehicleData ? vehicleBrand.trim() : '',
       vehicleModel: showVehicleData ? vehicleModel.trim() : '',
@@ -1392,7 +1393,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         )}
 
         {/* 3B. TARJETA LOCALIZACIÓN CON CASILLA ACTIVAR/DESACTIVAR DATOS DE LOCALIZACIÓN */}
-        {(currentUser?.enableLocation || docType === 'factura' || initialBudget?.taskLocation || initialBudget?.showLocationData !== undefined) && (
+        {(docType === 'presupuesto' || docType === 'factura' || currentUser?.enableLocation || initialBudget?.taskLocation || initialBudget?.showLocationData !== undefined) && (
           <div className="bg-emerald-50/90 rounded-2xl p-4 sm:p-5 mb-3 flex flex-col gap-3 shadow-xs border border-emerald-300/80">
             {/* Casilla activar / desactivar datos de localización */}
             <div className="flex items-center justify-between pb-2 border-b border-emerald-300/80">
@@ -1408,12 +1409,12 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                   className="w-5 h-5 rounded text-emerald-900 accent-emerald-900 cursor-pointer"
                 />
                 <span className="font-extrabold text-xs sm:text-sm text-emerald-950 uppercase tracking-wide">
-                  Incluir datos de localización en la {docType === 'factura' ? 'factura' : 'factura/presupuesto'}
+                  Campo Localización del {docType === 'presupuesto' ? 'Presupuesto' : 'Documento'}
                 </span>
               </label>
               {!showLocationData && (
                 <span className="text-[11px] font-black uppercase text-amber-800 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
-                  Datos de localización desactivados
+                  Localización desactivada
                 </span>
               )}
             </div>
@@ -1431,7 +1432,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                         setIsSaved(false);
                       }
                     }}
-                    title={selectedClient?.address ? "Pulsar para autocompletar con la dirección del cliente" : "Lugar de la tarea"}
+                    title={selectedClient?.address ? "Pulsar para autocompletar con la dirección del cliente" : "Localización / Lugar de la tarea"}
                     className="w-10 h-10 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center shrink-0 shadow-xs transition-transform active:scale-95 cursor-pointer"
                   >
                     <Home className="w-6 h-6 shrink-0" />
@@ -1441,7 +1442,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                   <div className="flex-1 flex items-center border-2 border-emerald-900 bg-white rounded-xl overflow-hidden shadow-xs h-10 px-3">
                     <input
                       type="text"
-                      placeholder="LUGAR DONDE SE REALIZA LA TAREA"
+                      placeholder="LOCALIZACIÓN / LUGAR DONDE SE REALIZA LA TAREA"
                       value={taskLocation}
                       readOnly={isLocked}
                       onChange={(e) => {
