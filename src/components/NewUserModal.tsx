@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  X, CheckCircle2, Mail, ShieldAlert, ArrowRight, RefreshCw, 
+  X, CheckCircle2, Mail, ShieldAlert, ArrowRight, ArrowLeft, RefreshCw, 
   KeyRound, Briefcase, Users, Save, Check,
   Sun, Moon, Eye, Inbox
 } from 'lucide-react';
@@ -33,6 +33,7 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [email, setEmail] = useState(currentUser.email || '');
   const [agencyEmail, setAgencyEmail] = useState(currentUser.agencyEmail || '');
+  const [useCustomSenderEmail, setUseCustomSenderEmail] = useState<boolean>(Boolean(currentUser.useCustomSenderEmail));
 
   // Business context fields
   const [businessType, setBusinessType] = useState<'autonomo' | 'empresa'>(currentUser.businessType || 'empresa');
@@ -84,6 +85,7 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
       phone: phone.trim(),
       email: email.trim().toLowerCase(),
       agencyEmail: agencyEmail.trim().toLowerCase(),
+      useCustomSenderEmail,
       verified: true,
       businessType,
       sector: sector.trim(),
@@ -152,6 +154,7 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
       phone: phone.trim(),
       email: email.trim().toLowerCase(),
       agencyEmail: agencyEmail.trim().toLowerCase(),
+      useCustomSenderEmail,
       verified: true,
       createdAt: currentUser.createdAt || new Date().toISOString(),
       currentTier: currentUser.currentTier || 'pro',
@@ -173,104 +176,100 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0F172A]/50 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex flex-col bg-[#0F172A]/20 backdrop-blur-md w-full h-full overflow-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-4xl bg-[#F8F7F3] border border-[#D5D2C9] rounded-xl shadow-2xl my-auto max-h-[92vh] flex flex-col overflow-hidden">
-        {/* Cabecera del Modal de Configuración */}
-        <div className="px-6 py-4 bg-white border-b border-[#E2E0D8] flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-[24px] font-bold text-[#0F172A] flex items-center gap-2">
-              <Briefcase className="w-6 h-6 text-[#0F2942]" />
-              Configuración de la Empresa
-            </h2>
-            <p className="text-[18px] text-[#64748B] mt-0.5">
-              Datos fiscales del emisor y gestión de plantilla de empleados
-            </p>
-          </div>
+      <div className="w-full h-full flex flex-col overflow-hidden bg-slate-900/20">
+        {/* Cabecera Fija del Modal: solo arriba centrado "Configuración" y botón volver a la izquierda */}
+        <div className="relative flex items-center justify-center px-4 py-3 sm:py-4 bg-[#581C87] border-b border-purple-900/60 shadow-md shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[18px] font-bold text-[#64748B] hover:text-white hover:bg-rose-600 rounded-lg transition-colors cursor-pointer"
-            title="Cerrar configuración"
+            className="absolute left-4 flex items-center gap-1.5 px-3.5 py-1.5 text-base font-bold text-white hover:bg-white/20 bg-white/10 border border-white/25 rounded-lg transition-colors cursor-pointer shadow-2xs"
+            title="Volver"
           >
-            <X className="w-5 h-5" />
-            <span>Cerrar</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Volver</span>
           </button>
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide text-center">
+            Configuración
+          </h2>
         </div>
 
-        {/* Pestañas: Datos Fiscales | Empleados */}
-        <div className="flex border-b border-[#E2E0D8] bg-[#F1F5F9]/50 px-6 shrink-0">
+        {/* Pestañas Fijas Debajo: Datos Fiscales | Empleados (en una sola línea, sin dibujitos ni contador) */}
+        <div className="grid grid-cols-2 gap-2 p-2 sm:px-6 bg-white/40 border-b border-gray-300/60 backdrop-blur-md shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('fiscal')}
-            className={`px-5 py-3.5 text-[18px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2.5 ${
+            className={`py-2 px-3 text-sm sm:text-base font-bold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap text-center cursor-pointer ${
               activeTab === 'fiscal'
-                ? 'text-[#0F2942] border-b-2 border-[#0F2942] bg-white'
-                : 'text-[#64748B] hover:text-[#0F172A]'
+                ? 'bg-[#0F2942] text-white shadow-xs'
+                : 'bg-white/60 text-[#0F2942] hover:bg-white/80 border border-gray-200/60'
             }`}
           >
-            <Briefcase className="w-5 h-5" />
             Datos Fiscales
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('empleados')}
-            className={`px-5 py-3.5 text-[18px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2.5 ${
+            className={`py-2 px-3 text-sm sm:text-base font-bold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap text-center cursor-pointer ${
               activeTab === 'empleados'
-                ? 'text-[#0F2942] border-b-2 border-[#0F2942] bg-white'
-                : 'text-[#64748B] hover:text-[#0F172A]'
+                ? 'bg-[#0F2942] text-white shadow-xs'
+                : 'bg-white/60 text-[#0F2942] hover:bg-white/80 border border-gray-200/60'
             }`}
           >
-            <Users className="w-5 h-5" />
-            Empleados ({employees.length})
+            Empleados
           </button>
         </div>
 
         {/* Cuerpo del Modal con scroll */}
-        <div className="p-6 overflow-y-auto flex-1">
-          {errorMessage && (
-            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-[18px] rounded-lg flex items-start gap-2.5">
-              <ShieldAlert className="w-5 h-5 mt-0.5 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+        <div className="p-3 sm:p-5 overflow-y-auto flex-1 w-full">
+          <div className="w-[95%] max-w-5xl mx-auto">
+            {errorMessage && (
+              <div className="mb-4 p-3.5 bg-red-100/80 border border-red-300 text-red-800 text-[18px] rounded-lg flex items-start gap-2.5">
+                <ShieldAlert className="w-5 h-5 mt-0.5 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          {saveSuccessMsg && (
-            <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[18px] rounded-lg flex items-center gap-2.5">
-              <Check className="w-5 h-5 shrink-0 text-emerald-600" />
-              <span className="font-semibold">¡Configuración guardada correctamente!</span>
-            </div>
-          )}
+            {saveSuccessMsg && (
+              <div className="mb-4 p-3.5 bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-[18px] rounded-lg flex items-center gap-2.5">
+                <Check className="w-5 h-5 shrink-0 text-emerald-600" />
+                <span className="font-semibold">¡Configuración guardada correctamente!</span>
+              </div>
+            )}
+          </div>
 
           {step === 'form' && (
             <form onSubmit={handleSendCode} className="space-y-6">
               {/* TAB 1: DATOS FISCALES */}
-              <div className={activeTab === 'fiscal' ? 'space-y-6' : 'hidden'}>
-                <div className="space-y-4">
-                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F2942] border-b border-[#E2E0D8] pb-1.5">
+              <div className={activeTab === 'fiscal' ? 'space-y-6 w-[95%] max-w-5xl mx-auto' : 'hidden'}>
+                {/* Tarjeta 1: Clasificación del Negocio */}
+                <div className="p-5 rounded-xl border border-gray-300/70 bg-[#E5E7EB] shadow-xs space-y-4">
+                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F2942] border-b border-gray-300/60 pb-2">
                     Clasificación del Negocio
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Tipo de Entidad *
                       </label>
                       <select
                         value={businessType}
                         onChange={(e) => setBusinessType(e.target.value as 'autonomo' | 'empresa')}
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       >
-                        <option value="empresa">Sociedad / Empresa (S.L., S.A.)</option>
-                        <option value="autonomo">Autónomo / Profesional Independiente</option>
+                        <option value="empresa" className="bg-white text-[#0F172A]">Sociedad / Empresa (S.L., S.A.)</option>
+                        <option value="autonomo" className="bg-white text-[#0F172A]">Autónomo / Profesional Independiente</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Sector *
                       </label>
                       <input
@@ -278,12 +277,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={sector}
                         onChange={(e) => setSector(e.target.value)}
                         placeholder="Ej: Automoción"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Rama de Actividad *
                       </label>
                       <input
@@ -291,12 +290,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={branch}
                         onChange={(e) => setBranch(e.target.value)}
                         placeholder="Ej: Reparaciones"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Especialidad Concreta *
                       </label>
                       <input
@@ -304,20 +303,21 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={specialty}
                         onChange={(e) => setSpecialty(e.target.value)}
                         placeholder="Ej: Chapa y Pintura"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F2942] border-b border-[#E2E0D8] pb-1.5">
+                {/* Tarjeta 2: Datos Fiscales del Emisor */}
+                <div className="p-5 rounded-xl border border-gray-300/70 bg-[#E5E7EB] shadow-xs space-y-4">
+                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-[#0F2942] border-b border-gray-300/60 pb-2">
                     Datos Fiscales del Emisor
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Marca / Razón Social / Nombre Comercial *
                       </label>
                       <input
@@ -326,12 +326,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="DM CAR"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none uppercase font-semibold"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] outline-none uppercase font-bold focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         NIF / CIF *
                       </label>
                       <input
@@ -340,12 +340,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={cif}
                         onChange={(e) => setCif(e.target.value)}
                         placeholder="B-89324511"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none uppercase font-mono"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] outline-none uppercase font-mono font-bold focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Teléfono de Contacto *
                       </label>
                       <input
@@ -354,12 +354,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="+34 912 345 678"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Domicilio Fiscal Completo *
                       </label>
                       <input
@@ -368,12 +368,12 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={fiscalAddress}
                         onChange={(e) => setFiscalAddress(e.target.value)}
                         placeholder="Polígono Industrial Las Eras, Nave 14, 28052 Madrid"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] font-semibold outline-none focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Correo Electrónico Corporativo *
                       </label>
                       <input
@@ -382,11 +382,11 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="contacto@dmcar.es"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none font-mono"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] outline-none font-mono font-bold focus:bg-white focus:border-[#0F2942]"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#334155] mb-1.5">
+                      <label className="block text-[16.5px] font-bold uppercase tracking-wider text-[#0F2942] mb-1.5">
                         Email de la gestoría (Informes trimestrales)
                       </label>
                       <input
@@ -394,55 +394,70 @@ export const NewUserModal: React.FC<NewUserModalProps> = ({
                         value={agencyEmail}
                         onChange={(e) => setAgencyEmail(e.target.value)}
                         placeholder="gestoria@asesores.com"
-                        className="w-full px-3.5 py-2.5 text-[18px] bg-white border border-[#D5D2C9] rounded-lg text-[#0F172A] outline-none font-mono"
+                        className="w-full px-3.5 py-2.5 text-[18px] bg-white/80 border border-gray-300/80 rounded-lg text-[#0F172A] outline-none font-mono font-bold focus:bg-white focus:border-[#0F2942]"
                       />
+                    </div>
+
+                    {/* Tarjeta de autorización de email */}
+                    <div className="sm:col-span-2 p-4 bg-[#E5E7EB] border border-gray-300/70 rounded-xl space-y-1.5 my-2">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useCustomSenderEmail}
+                          onChange={(e) => setUseCustomSenderEmail(e.target.checked)}
+                          className="w-5 h-5 accent-[#0F2942] rounded cursor-pointer mt-0.5 shrink-0"
+                        />
+                        <div>
+                          <span className="text-[18px] font-bold text-[#0F2942] block leading-snug">
+                            Autorizo / Acepto enviar los correos desde mi dirección de email ({email || 'contacto@empresa.com'})
+                          </span>
+                          <span className="text-[15px] text-[#0F2942]/80 block mt-1 leading-normal font-medium">
+                            Si no se activa, por defecto todas las notificaciones y documentos saldrán desde <strong className="text-[#0F2942]">notificaciones@gestarian.com</strong> con dirección de respuesta a tu correo.
+                          </span>
+                        </div>
+                      </label>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* TAB 2: EMPLEADOS (CON TARJETAS Y EPÍGRAFES OFICIALES) */}
-              <div className={activeTab === 'empleados' ? 'block' : 'hidden'}>
+              <div className={activeTab === 'empleados' ? 'block w-[95%] mx-auto' : 'hidden'}>
                 <EmployeeManager employees={employees} onChange={setEmployees} />
               </div>
 
-              {/* Pie de guardado */}
-              <div className="pt-4 border-t border-[#E2E0D8] flex items-center justify-between sticky bottom-0 bg-[#F8F7F3] pb-2">
+              {/* Botones Cerrar y Guardar abajo del todo - No flotantes, ambos en la misma fila */}
+              <div className={`pt-6 pb-8 border-t border-gray-300/60 flex items-center justify-between gap-3 mt-6 ${activeTab === 'empleados' ? 'w-[95%] mx-auto' : 'w-[95%] max-w-5xl mx-auto'}`}>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-[18px] font-bold text-[#64748B] hover:text-[#0F172A] bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none px-6 py-2.5 text-[18px] font-bold text-[#0F2942] bg-[#E5E7EB] hover:bg-gray-300 border border-gray-300/80 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center"
                 >
-                  <X className="w-4 h-4 text-gray-500" />
+                  <X className="w-5 h-5 text-[#0F2942]" />
                   <span>Cerrar</span>
                 </button>
-                <div className="flex items-center gap-3">
-                  <span className="hidden sm:inline text-[16.5px] text-[#64748B]">
-                    * Datos protegidos por normativa fiscal y laboral
-                  </span>
-                  <button
-                    type="submit"
-                    disabled={isSendingCode}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors cursor-pointer"
-                  >
-                    {isSendingCode ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Enviando código...</span>
-                      </>
-                    ) : isAlreadyVerified ? (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>Guardar Configuración</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Continuar y Verificar</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={isSendingCode}
+                  className="flex-1 sm:flex-none px-8 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[18px] font-bold uppercase tracking-wider rounded-lg shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 text-center"
+                >
+                  {isSendingCode ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Enviando...</span>
+                    </>
+                  ) : isAlreadyVerified ? (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Guardar</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Guardar</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               </div>
             </form>
           )}

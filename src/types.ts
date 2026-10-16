@@ -1,7 +1,7 @@
 export type DocumentType = 'presupuesto' | 'budget' | 'factura_rectificativa' | 'factura' | 'orden_trabajo' | 'factura_recibida' | 'factura_proforma' | 'recibo_abono';
 
 export type BudgetStatus = 'borrador' | 'pagado' | 'PAGADO' | 'enviado' | 'aceptado' | 'rechazado';
-export type InvoiceStatus = 'borrador' | 'enviado' | 'pagada' | 'pagado' | 'confirmada' | 'enviada';
+export type InvoiceStatus = 'borrador' | 'enviado' | 'pagada' | 'pagado' | 'confirmada' | 'enviada' | 'rechazada' | 'rechazado';
 export type WorkOrderStatus = 'pendiente' | 'en_ejecucion' | 'finalizada';
 
 export interface DocumentItem {
@@ -73,6 +73,9 @@ export interface GestarianDocument {
   convertedToInvoiceId?: string;
   relatedBudgetId?: string;
   expediente?: string; // Número de expediente
+  showVehicleData?: boolean; // Activar o desactivar visualización de datos de vehículo
+  showLocationData?: boolean; // Activar o desactivar visualización de datos de localización
+  taskLocation?: string; // Lugar donde se realiza la tarea / ubicación
   vehiclePlate?: string; // Matrícula reconocida o introducida
   vehicleType?: string; // Tipo de vehículo reconocido (Sedan, SUV, Camión, etc.)
   vehicleBrand?: string; // Marca del vehículo (ej: SEAT, Renault, Mercedes)
@@ -103,9 +106,14 @@ export interface GestarianDocument {
   acceptedByClient?: boolean;
   linkedBudgetId?: string;
   linkedBudgetNumber?: string;
+  solicitudId?: string;
+  solicitudNumber?: string;
   createdAt?: string;
   cobroStatus?: string;
   updatedAt?: string;
+  attachmentBase64?: string;
+  attachmentFilename?: string;
+  attachmentMimeType?: string;
 }
 
 export interface PlateRecognizerResult {
@@ -144,6 +152,20 @@ export interface EmployeePermissions {
   viewReports: boolean;      // default: false
 }
 
+export type GestarianPlan = 'lite' | 'quick' | 'pro' | 'enterprise';
+
+export interface EmployeeTimeLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  entryTime: string; // HH:mm
+  pauseStart?: string; // HH:mm
+  pauseEnd?: string; // HH:mm
+  exitTime?: string; // HH:mm
+  totalHours: number;
+  status: 'completado' | 'en_curso' | 'pausado';
+  type: 'ordinaria' | 'extra';
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -152,11 +174,42 @@ export interface Employee {
   email?: string;
   role: 'autorizado';
   profession?: string; // Puesto / Profesión (ej: Chapista, Pintor, Mecánico)
+  laborEncomendada?: string; // Descripción clara de sus funciones principales asignadas
+  epigrafeActividad?: string; // Código y categoría oficial (ej. Epígrafe 691.2 - Reparación y mantenimiento de vehículos de motor / CNAE)
   cnoCode?: string; // Código CNO-11 oficial (ej: 7313 Chapistas, 7232 Pintores)
   cnoDescription?: string; // Título oficial del epígrafe según Ministerio de Trabajo
   cotizacionGroup?: string; // Grupo de cotización Seguridad Social (ej: Grupo 8 Oficiales de 1ª y 2ª)
   accidentsEpigrafe?: string; // Tarifa de primas de accidentes (ej: 45.20 Reparación de vehículos)
+  salaryMonthly?: number; // Salario base mensual en euros
+  irpfRate?: number; // Porcentaje de retención IRPF (ej: 12%)
+  ssEmployeeRate?: number; // Cotización SS a cargo del trabajador (ej: 6.35%)
+  ssEmployerRate?: number; // Cotización SS a cargo de la empresa (ej: 31.4%)
+  workHoursType?: 'completa' | 'media' | 'personalizada'; // 160h jornada completa / 80h media jornada
+  monthlyTargetHours?: number; // Horas mensuales por defecto (160h o 80h)
+  timeTrackingEnabled?: boolean; // Toggle switch minimalista (RD-ley 8/2019)
+  timeLogs?: EmployeeTimeLog[]; // Registro de fichajes de entrada, pausa y salida
   permissions: EmployeePermissions;
+}
+
+export interface QuickExtrasConfig {
+  custodiaFiscalAnios?: 1 | 4 | 8;
+  ocrOrganismosEnabled?: boolean;
+  emailScannerEnabled?: boolean;
+}
+
+export interface EnterpriseB2BOrder {
+  id: string;
+  date: string;
+  orderNumber: string;
+  vehiclePlate: string;
+  vehicleModel: string;
+  sourceCompany: string;
+  destinationCompany: string;
+  serviceType: string;
+  orderAmount: number;
+  commissionRate: number; // 5% por defecto
+  commissionAmount: number;
+  status: 'pendiente' | 'en_reparto' | 'finalizada_con_exito';
 }
 
 export interface InternalNotification {
@@ -165,14 +218,16 @@ export interface InternalNotification {
   message: string;
   timestamp: string;
   read: boolean;
-  type: 'order_status_change' | 'general' | 'metis_budget_review' | 'metis_invoice_paid';
+  type: 'order_status_change' | 'general' | 'metis_budget_review' | 'metis_invoice_paid' | 'budget_sent_client';
   orderId?: string;
   orderNumber?: string;
   employeeName?: string;
   newStatus?: WorkOrderStatus;
   budgetId?: string;
+  documentNumber?: string;
   invoiceId?: string;
   totalAmount?: number;
+  attachmentType?: 'presupuesto' | 'factura';
 }
 
 export type HighContrastThemeId =
@@ -195,8 +250,9 @@ export interface AppUser {
   email: string;
   verified: boolean;
   createdAt: string;
-  currentTier: 'lite' | 'pro' | 'enterprise';
+  currentTier: GestarianPlan;
   agencyEmail?: string;
+  useCustomSenderEmail?: boolean; // Acepta/autoriza el envío con su dirección de email corporativo como remitente
   
   role?: 'boss' | 'employee' | 'client' | 'developer';
   businessType?: 'autonomo' | 'empresa';
@@ -205,6 +261,7 @@ export interface AppUser {
   specialty?: string;
   
   employees?: Employee[];
+  quickExtras?: QuickExtrasConfig;
   permissions?: {
     manageWorkOrders?: boolean;
     viewInvoices?: boolean;
@@ -218,8 +275,25 @@ export interface AppUser {
   bgPortraitUrl?: string;
   bgLandscapeUrl?: string;
   bgBentoMenuUrl?: string;
+  enableSystemWallpaper?: boolean; // Activar o desactivar fondos de pantalla del sistema
   metisTechnicalAdviceEnabled?: boolean;
+  enableVehicle?: boolean; // Activar o desactivar apartado de vehículos (por defecto true)
+  enableLocation?: boolean; // Activar o desactivar apartado de localización (lugar de realización de la tarea)
+  defaultIvaRate?: number; // Tasa de IVA por defecto (por defecto 21%)
 }
+
+export const getDefaultIvaRate = (currentUser?: AppUser): number => {
+  if (currentUser?.defaultIvaRate !== undefined) {
+    return currentUser.defaultIvaRate;
+  }
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('gestarian_default_iva_rate');
+    if (saved !== null && !isNaN(Number(saved))) {
+      return Number(saved);
+    }
+  }
+  return 21;
+};
 
 export interface MetisMessage {
   id: string;
@@ -279,6 +353,7 @@ export interface Client {
   plates?: string[]; // Matrículas asociadas a los vehículos del cliente
   vehicles?: ClientVehicle[]; // Listado estructurado de vehículos del cliente
   notes?: string;
+  taskLocation?: string; // Lugar donde se realiza la tarea / ubicación
 }
 
 export interface Appointment {
@@ -289,7 +364,7 @@ export interface Appointment {
   date: string;
   time: string;
   title: string;
-  status: 'pendiente' | 'confirmada' | 'completada' | 'cancelada';
+  status: 'pendiente' | 'aceptada' | 'confirmada' | 'completada' | 'cancelada';
   notes?: string;
 }
 

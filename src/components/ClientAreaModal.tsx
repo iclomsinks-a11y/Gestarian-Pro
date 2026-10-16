@@ -151,99 +151,78 @@ export const ClientAreaModal: React.FC<ClientAreaModalProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleCreateClient} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleCreateClient} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Razón Social / Nombre *
-                </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: DISTRIBUCIONES IBERIA S.L."
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs"
+                  placeholder="NOMBRE / RAZÓN SOCIAL *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  CIF / NIF *
-                </label>
                 <input
                   type="text"
                   required
                   value={cif}
-                  onChange={(e) => setCif(e.target.value)}
-                  placeholder="B-99887766"
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs uppercase"
+                  onChange={(e) => setCif(e.target.value.toUpperCase())}
+                  placeholder="NIF / CIF *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all uppercase font-mono"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Dirección Fiscal Completa *
-                </label>
                 <input
                   type="text"
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Calle, número, código postal, localidad"
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs"
+                  placeholder="DIRECCIÓN FISCAL COMPLETA *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Email de Facturación *
-                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="facturacion@cliente.es"
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs"
+                  placeholder="EMAIL *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Teléfono
-                </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+34 900 000 000"
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs"
+                  placeholder="TELÉFONO *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Matrícula / Flota (ALPR Opcional)
-                </label>
                 <input
                   type="text"
                   value={plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                  placeholder="Ej: 8492-LMX"
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs font-mono uppercase font-bold tracking-wider"
+                  placeholder="MATRÍCULA / FLOTA *"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all font-mono uppercase"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Notas Internas
-                </label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Observaciones de pago, persona de contacto..."
-                  className="w-full px-2.5 py-1.5 text-xs bg-[#F8F7F3] border border-[#CBD5E1] rounded-xs"
+                  placeholder="NOTAS INTERNAS"
+                  className="w-full px-4 py-3.5 text-lg font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
                 />
               </div>
 
@@ -404,7 +383,7 @@ export const ClientAreaModal: React.FC<ClientAreaModalProps> = ({
                           <button
                             key={d.id}
                             onClick={() => onViewDoc(d)}
-                            className="font-mono text-[10px] px-2 py-0.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] rounded-xs text-[#0F172A]"
+                            className="font-mono text-xs sm:text-sm font-black px-2 py-0.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] rounded-xs text-[#0F172A] cursor-pointer"
                           >
                             {d.number}
                           </button>

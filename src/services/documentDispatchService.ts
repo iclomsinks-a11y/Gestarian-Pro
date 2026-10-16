@@ -28,41 +28,89 @@ export function getAppBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('gestarian_notificaciones_domain');
     if (custom && custom.trim()) return custom.trim().replace(/\/$/, '');
-
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host.startsWith('192.168.')) {
-      return window.location.origin;
-    }
+    return window.location.origin;
   }
   return NOTIFICACIONES_GESTRIAN_DOMAIN;
 }
 
 /**
- * Genera el enlace ultra corto directo al documento para WhatsApp y notificaciones oficiales.
- * Formato: https://notificaciones.gestrian.com/d/NUMERO
- * Cumple estrictamente con el requerimiento del usuario: 'usa notificaciones.gestrian para whatsap'
+ * Codifica los datos esenciales del documento en un parámetro ultra compacto
+ * para permitir la apertura inmediata en cualquier dispositivo móvil o navegador de clientes.
+ */
+export function encodeDocumentToDataParam(doc: GestarianDocument): string {
+  try {
+    const payload = {
+      n: doc.number,
+      t: doc.type,
+      dt: doc.date,
+      cn: doc.clientName,
+      cc: doc.clientCif,
+      ca: doc.clientAddress,
+      cp: doc.clientPhone,
+      ce: doc.clientEmail,
+      e: doc.expediente,
+      vp: doc.vehiclePlate,
+      vb: doc.vehicleBrand,
+      vm: doc.vehicleModel,
+      vd: doc.vehicleDeliveryDate,
+      sub: doc.subtotal,
+      iva: doc.ivaAmount,
+      tot: doc.total,
+      notes: doc.notes,
+      items: (doc.items || []).map((it, idx) => ({
+        id: it.id || String(idx + 1),
+        d: it.description,
+        q: it.quantity,
+        u: it.unitPrice,
+        a: it.amount
+      }))
+    };
+    return encodeURIComponent(btoa(encodeURIComponent(JSON.stringify(payload))));
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * Genera el enlace directo y accesible al documento para WhatsApp y notificaciones.
+ * Formato: https://<dominio>/d/NUMERO?data=...
  */
 export function getShortDocumentUrl(doc: GestarianDocument | string): string {
+  const baseUrl = getAppBaseUrl();
   const docNum = typeof doc === 'object' ? (doc.number || doc.id) : doc;
   const cleanDoc = (docNum || '').trim().toUpperCase();
-  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/d/${encodeURIComponent(cleanDoc)}`;
+
+  if (typeof doc === 'object') {
+    const dataParam = encodeDocumentToDataParam(doc);
+    if (dataParam) {
+      return `${baseUrl}/d/${encodeURIComponent(cleanDoc)}?data=${dataParam}`;
+    }
+  }
+  return `${baseUrl}/d/${encodeURIComponent(cleanDoc)}`;
 }
 
 /**
  * Genera el enlace corto directo al documento / presupuesto.
- * Retorna la URL ultra corta limpia sin parámetros extensos ni sobrecarga de datos.
  */
 export function generateDocumentPdfUrl(doc: GestarianDocument | string): string {
   return getShortDocumentUrl(doc);
 }
 
 export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: GestarianDocument): string {
+  const baseUrl = getAppBaseUrl();
   const cleanExp = (expedienteNum || (doc?.expediente) || '').trim().toUpperCase();
-  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/exp/${encodeURIComponent(cleanExp)}`;
+  if (doc && typeof doc === 'object') {
+    const dataParam = encodeDocumentToDataParam(doc);
+    if (dataParam) {
+      return `${baseUrl}/exp/${encodeURIComponent(cleanExp)}?data=${dataParam}`;
+    }
+  }
+  return `${baseUrl}/exp/${encodeURIComponent(cleanExp)}`;
 }
 
 export function generateClientPortalAppUrl(): string {
-  return `${NOTIFICACIONES_GESTRIAN_DOMAIN}/?view=app`;
+  const baseUrl = getAppBaseUrl();
+  return `${baseUrl}/?view=app`;
 }
 
 export const CLIENT_PORTAL_DOWNLOAD_URL = generateClientPortalAppUrl();
@@ -169,10 +217,12 @@ export function buildDocumentDispatchPayload(
 export async function sendDocumentViaApi(
   payload: DispatchResult,
   doc: GestarianDocument,
-  user: AppUser
+  user: AppUser,
+  options?: { useCustomSenderEmail?: boolean }
 ): Promise<{ success: boolean; messageId?: string; isSimulated?: boolean; error?: string }> {
   try {
     const docLabel = doc.type === 'presupuesto' ? 'Presupuesto' : doc.type === 'factura' ? 'Factura' : 'Documento';
+    const useCustom = options?.useCustomSenderEmail ?? user.useCustomSenderEmail ?? false;
     const response = await fetch('/api/send-document-dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -190,6 +240,8 @@ export async function sendDocumentViaApi(
         userLogoUrl: payload.userLogoUrl || '',
         doc,
         attachedDocumentName: `${docLabel}_${doc.number || 'doc'}.pdf`,
+        customFromEmail: user.email,
+        useCustomSenderEmail: useCustom,
       }),
     });
     return await response.json();

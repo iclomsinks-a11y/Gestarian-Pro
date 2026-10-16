@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, FolderOpen, Inbox, Users, FileText, 
@@ -6,6 +6,8 @@ import {
   Truck, AlertTriangle, Settings, X, Sparkles, Plus,
   ArrowLeft, LayoutGrid
 } from 'lucide-react';
+
+import { GestarianPlan } from '../types';
 
 interface NavigationMenuProps {
   isOpen: boolean;
@@ -16,10 +18,17 @@ interface NavigationMenuProps {
   bgBentoMenuUrl?: string;
   onOpenImageCustomizer?: () => void;
   onOpenClientLanding?: () => void;
+  hasAutoDetectedInvoices?: boolean;
+  isScanningInvoices?: boolean;
+  scanButtonStatus?: 'idle' | 'scanning' | 'detected' | 'not_found';
+  onTriggerScan?: () => void;
+  onViewDetectedInvoices?: () => void;
+  currentPlan?: GestarianPlan;
+  activeEmployeesCount?: number;
 }
 
 // Icono +P dentro de una hoja A4 con tamaño ampliado x2
-const A4PlusPIcon: React.FC<{ className?: string }> = ({ className = 'w-16 h-20 sm:w-24 sm:h-28' }) => (
+export const A4PlusPIcon: React.FC<{ className?: string }> = ({ className = 'w-16 h-20 sm:w-24 sm:h-28' }) => (
   <svg viewBox="0 0 100 125" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     {/* Silueta de hoja A4 con esquina doblada */}
     <path 
@@ -56,7 +65,7 @@ const A4PlusPIcon: React.FC<{ className?: string }> = ({ className = 'w-16 h-20 
 );
 
 // Icono con + y luego el dibujo del cliente ampliado x3
-const PlusClientIcon: React.FC<{ className?: string }> = ({ className = 'w-24 h-20 sm:w-36 sm:h-32' }) => (
+export const PlusClientIcon: React.FC<{ className?: string }> = ({ className = 'w-24 h-20 sm:w-36 sm:h-32' }) => (
   <svg viewBox="0 0 130 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     {/* Signo + a la izquierda */}
     <text 
@@ -84,7 +93,7 @@ const PlusClientIcon: React.FC<{ className?: string }> = ({ className = 'w-24 h-
   </svg>
 );
 
-const allNavItems = [
+export const allNavItems = [
   { id: 'page-inicio', label: 'Inicio', icon: Home, color: 'bg-emerald-600' },
   { id: 'page-expedientes', label: 'Expedientes', icon: FolderOpen, color: 'bg-blue-600' },
   { id: 'page-solicitudes', label: 'Solicitudes', icon: Inbox, color: 'bg-indigo-600' },
@@ -92,9 +101,10 @@ const allNavItems = [
   { id: 'page-presupuestos', label: 'Presupuestos', icon: FileText, color: 'bg-amber-600' },
   { id: 'page-citas', label: 'Citas', icon: Calendar, color: 'bg-rose-600' },
   { id: 'page-taller', label: 'Taller', icon: Wrench, color: 'bg-orange-600' },
-  { id: 'page-facturacion', label: 'Facturación', icon: Calculator, color: 'bg-emerald-700' },
+  { id: 'page-facturacion', label: 'Facturas', icon: Calculator, color: 'bg-emerald-700' },
   { id: 'page-balances', label: 'Balances', icon: PieChart, color: 'bg-violet-600' },
   { id: 'page-proveedores', label: 'Proveedores', icon: Truck, color: 'bg-slate-600' },
+  { id: 'page-equipo', label: 'Mi equipo', icon: Users, color: 'bg-teal-700' },
   { id: 'page-incidencias', label: 'Incidencias', icon: AlertTriangle, color: 'bg-red-600' },
   { id: 'page-configuracion', label: 'Configuración', icon: Settings, color: 'bg-zinc-700' },
 ];
@@ -103,34 +113,26 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
   isOpen,
   onClose,
   onNavigate,
-  onNewBudget,
-  onNewClient,
   bgBentoMenuUrl,
   onOpenImageCustomizer,
-  onOpenClientLanding,
+  hasAutoDetectedInvoices = false,
+  isScanningInvoices = false,
+  scanButtonStatus = 'idle',
+  onTriggerScan,
+  onViewDetectedInvoices,
+  currentPlan,
+  activeEmployeesCount = 4,
 }) => {
-  const [bentoScreen, setBentoScreen] = useState<1 | 2>(1);
-
-  useEffect(() => {
-    if (isOpen) {
-      setBentoScreen(1);
-    }
-  }, [isOpen]);
-
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (bentoScreen === 2) {
-          setBentoScreen(1);
-        } else {
-          onClose();
-        }
+        onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, bentoScreen, onClose]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -144,7 +146,7 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
-          className="fixed inset-0 z-[100] bg-[#0F172A] flex flex-col p-4 sm:p-6 overflow-hidden select-none"
+          className="fixed inset-0 z-[100] bg-[#0F172A] flex flex-col p-3 sm:p-5 overflow-hidden select-none"
         >
           {/* Fondo personalizado */}
           {bgBentoMenuUrl && (
@@ -155,173 +157,180 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-[#0F172A]/90 via-[#0F172A]/80 to-[#0F172A]/95 backdrop-blur-md pointer-events-none" />
 
-          {/* Barra superior solo en Pantalla 1: Casita de inicio a la izquierda y flecha VOLVER sin texto a la derecha */}
-          {bentoScreen === 1 && (
-            <div className="relative z-20 w-full flex items-center justify-between pb-3 shrink-0 gap-2 border-b border-white/10">
-              {/* Lado izquierdo: Casita para ir a inicio + botón de fondos si aplica */}
-              <div className="flex items-center gap-2">
-                <button
+          {/* Cuadrícula Directa de Todas las Secciones ajustada para entrar 100% sin scroll */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            className="relative z-10 flex-1 w-full h-full flex flex-col justify-center p-1 sm:p-2 overflow-hidden"
+          >
+            {/* Cuadrícula Bento con todas las páginas: 3x4 en móvil, 4x3 en tablet/desktop */}
+            <div className="w-full h-full max-w-6xl mx-auto grid grid-cols-3 grid-rows-4 sm:grid-cols-4 sm:grid-rows-3 gap-2 sm:gap-3 py-1 items-stretch">
+              {allNavItems
+                .filter((item) => {
+                  if (currentPlan === 'lite') {
+                    return item.id === 'page-inicio' || item.id === 'page-presupuestos' || item.id === 'page-facturacion' || item.id === 'page-configuracion';
+                  }
+                  if (currentPlan === 'quick') {
+                    return (
+                      item.id === 'page-inicio' ||
+                      item.id === 'page-facturacion' ||
+                      item.id === 'page-clientes' ||
+                      item.id === 'page-proveedores' ||
+                      item.id === 'page-balances' ||
+                      item.id === 'page-configuracion'
+                    );
+                  }
+                  return true;
+                })
+                .sort((a, b) => {
+                  if (currentPlan === 'quick') {
+                    const order = ['page-inicio', 'page-facturacion', 'page-clientes', 'page-proveedores', 'page-balances', 'page-configuracion'];
+                    return order.indexOf(a.id) - order.indexOf(b.id);
+                  }
+                  return 0;
+                })
+                .map((item, i) => (
+                <motion.button
+                  key={item.id}
                   type="button"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.012 }}
                   onClick={() => {
-                    onNavigate('page-inicio');
+                    onNavigate(item.id);
                     onClose();
                   }}
-                  className="p-2.5 bg-white/10 hover:bg-white/20 text-emerald-400 hover:text-emerald-300 rounded-full backdrop-blur-md border border-white/20 transition-all hover:scale-105 shadow-md cursor-pointer"
-                  title="Ir a Pantalla de Inicio"
+                  className={`relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl ${item.color} text-white shadow-lg hover:scale-[1.03] active:scale-95 transition-all cursor-pointer border border-white/20 group h-full w-full select-none`}
                 >
-                  <Home className="w-5 h-5" />
-                </button>
-
-                {/* Botón para cambiar fondo solo si NO hay una imagen de fondo personalizada */}
-                {onOpenImageCustomizer && !bgBentoMenuUrl && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenImageCustomizer();
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold backdrop-blur-md border border-white/20 transition-all hover:scale-105 shadow-md cursor-pointer"
-                    title="Personalizar fondo con IA (por defecto)"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
-                    <span className="hidden sm:inline">Personalizar Fondos</span>
-                    <span className="sm:hidden">Fondos</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Lado derecho: Botón VOLVER icono de flecha a la izquierda sin texto */}
-              <button 
-                type="button"
-                onClick={onClose}
-                className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full border border-white/20 transition-all shadow-lg hover:scale-105 cursor-pointer shrink-0"
-                title="Volver"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-
-          {/* PANTALLA 1: Botón Nuevo Presupuesto (+P en A4 x2), Botón Nuevo Cliente (+ y cliente x3), Botón Todas las Secciones (+ x2) */}
-          {bentoScreen === 1 && (
-            <motion.div 
-              key="screen-1"
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ duration: 0.25 }}
-              className="relative z-10 flex-1 w-full flex flex-col justify-between py-2 sm:py-4"
-            >
-              {/* Botones Grandes Principales */}
-              <div className="flex-1 w-full max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 items-center my-auto py-2">
-                {/* 1. Botón Grande de Nuevo Presupuesto (+P dentro de hoja A4 tamaño x2) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    if (onNewBudget) {
-                      onNewBudget();
-                    } else {
-                      onNavigate('page-presupuestos');
-                    }
-                  }}
-                  className="group flex flex-col items-center justify-center p-6 sm:p-8 h-44 sm:h-72 rounded-3xl bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:shadow-[0_15px_40px_rgba(245,158,11,0.5)] border border-amber-300/40 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-105 group-hover:rotate-3 transition-transform">
-                    <A4PlusPIcon className="w-20 h-24 sm:w-28 sm:h-32 text-white drop-shadow-md" />
-                  </div>
-                  <span className="font-black text-base sm:text-xl tracking-wider uppercase text-center leading-tight">
-                    Nuevo Presupuesto
-                  </span>
-                </button>
-
-                {/* 2. Botón Grande de Nuevo Cliente (+ y luego dibujo del cliente tamaño x3) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    if (onNewClient) {
-                      onNewClient();
-                    } else {
-                      onNavigate('page-clientes');
-                    }
-                  }}
-                  className="group flex flex-col items-center justify-center p-6 sm:p-8 h-44 sm:h-72 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_10px_30px_rgba(6,182,212,0.3)] hover:shadow-[0_15px_40px_rgba(6,182,212,0.5)] border border-cyan-300/40 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-105 group-hover:-rotate-3 transition-transform">
-                    <PlusClientIcon className="w-28 h-24 sm:w-36 sm:h-32 text-white drop-shadow-md" />
-                  </div>
-                  <span className="font-black text-base sm:text-xl tracking-wider uppercase text-center leading-tight">
-                    Nuevo Cliente
-                  </span>
-                </button>
-
-                {/* 3. Botón Grande de TODAS LAS SECCIONES (icono x2) */}
-                <button
-                  type="button"
-                  onClick={() => setBentoScreen(2)}
-                  className="group flex flex-col items-center justify-center p-6 sm:p-8 h-44 sm:h-72 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.5)] border border-indigo-300/40 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl bg-white/20 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
-                    <Plus className="w-14 h-14 sm:w-20 sm:h-20 text-white" strokeWidth={2.5} />
-                  </div>
-                  <span className="font-black text-base sm:text-xl tracking-wider uppercase text-center leading-tight">
-                    Todas las Secciones
-                  </span>
-                </button>
-              </div>
-
-              {/* Botón de Volver a Pantalla de Inicio en Bento 1 */}
-              <div className="w-full flex items-center justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onNavigate('page-inicio');
-                    onClose();
-                  }}
-                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 border border-white/20 transition-all hover:scale-105 cursor-pointer shadow-lg"
-                >
-                  <Home className="w-4 h-4 text-emerald-400" />
-                  <span>Volver a Pantalla de Inicio</span>
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* PANTALLA 2: Cuadrícula de Todas las Secciones ajustada para entrar 100% sin scroll */}
-          {bentoScreen === 2 && (
-            <motion.div 
-              key="screen-2"
-              initial={{ opacity: 0, scale: 0.95, x: 30 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.95, x: -30 }}
-              transition={{ duration: 0.25 }}
-              className="relative z-10 flex-1 w-full h-full flex flex-col justify-center p-1 sm:p-2 overflow-hidden"
-            >
-              {/* Cuadrícula Bento con todas las páginas: 3x4 en móvil, 4x3 en tablet/desktop */}
-              <div className="w-full h-full max-w-6xl mx-auto grid grid-cols-3 grid-rows-4 sm:grid-cols-4 sm:grid-rows-3 gap-2 sm:gap-3 py-1 items-stretch">
-                {allNavItems.map((item, i) => (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.015 }}
-                    onClick={() => {
-                      onNavigate(item.id);
-                      onClose();
-                    }}
-                    className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl ${item.color} text-white shadow-lg hover:scale-[1.03] active:scale-95 transition-all cursor-pointer border border-white/20 group h-full w-full select-none`}
-                  >
-                    <item.icon className="w-6 h-6 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition-transform shrink-0" />
-                    <span className="font-black text-[11px] sm:text-xs md:text-sm tracking-wider uppercase text-center leading-tight line-clamp-1">
-                      {item.label}
+                  {/* Badge de empleados activos para Mi Equipo */}
+                  {item.id === 'page-equipo' && (
+                    <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-emerald-400 text-slate-950 font-black text-[9px] rounded-full shadow-xs">
+                      {activeEmployeesCount} activos
                     </span>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                  )}
+                  <item.icon className="w-6 h-6 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="font-black text-[11px] sm:text-xs md:text-sm tracking-wider uppercase text-center leading-tight line-clamp-1">
+                    {item.label}
+                  </span>
+                </motion.button>
+              ))}
+
+              {/* Botón de Rastrear Facturas con aviso dinámico y diseño llamativo (Solo PRO y ENTERPRISE) */}
+              {onTriggerScan && currentPlan !== 'lite' && currentPlan !== 'quick' && (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={() => {
+                    if (scanButtonStatus === 'detected') {
+                      onViewDetectedInvoices?.();
+                      onClose();
+                    } else if (scanButtonStatus !== 'scanning') {
+                      onTriggerScan();
+                      onClose();
+                    }
+                  }}
+                  className={`relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl shadow-lg transition-all cursor-pointer group h-full w-full select-none text-center ${
+                    scanButtonStatus === 'detected'
+                      ? 'bg-gradient-to-r from-emerald-400 via-teal-300 to-lime-400 text-slate-950 font-black shadow-[0_0_35px_rgba(52,211,153,0.95)] border-2 border-white ring-4 ring-emerald-300 animate-pulse hover:scale-[1.06] active:scale-95'
+                      : scanButtonStatus === 'not_found'
+                      ? 'bg-slate-800 text-slate-300 border border-slate-600'
+                      : scanButtonStatus === 'scanning'
+                      ? 'bg-emerald-950 text-emerald-200 border border-emerald-500 animate-pulse'
+                      : hasAutoDetectedInvoices
+                      ? 'bg-emerald-800 hover:bg-emerald-700 text-white border-2 border-emerald-400 ring-4 ring-emerald-400/80 shadow-[0_0_25px_rgba(52,211,153,0.7)] animate-pulse hover:scale-[1.03] active:scale-95'
+                      : 'bg-emerald-800 hover:bg-emerald-700 text-white border border-white/20 hover:scale-[1.03] active:scale-95'
+                  }`}
+                  title={
+                    scanButtonStatus === 'detected'
+                      ? "¡Facturas detectadas! Pulse para ver las facturas"
+                      : scanButtonStatus === 'not_found'
+                      ? "No se han detectado facturas"
+                      : "Rastrear facturas en Gmail"
+                  }
+                >
+                  {(scanButtonStatus === 'detected' || hasAutoDetectedInvoices) && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border border-white"></span>
+                    </span>
+                  )}
+                  <svg className={`w-6 h-6 sm:w-8 sm:h-8 mb-1 group-hover:scale-110 transition-transform shrink-0 ${
+                    scanButtonStatus === 'detected' ? 'text-slate-950' : 'text-white'
+                  }`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <circle cx="16.5" cy="16.5" r="3.5" stroke="currentColor" strokeWidth={2} />
+                    <path d="M19 19L22 22" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+                  </svg>
+                  <span className={`tracking-wider uppercase text-center leading-tight line-clamp-2 px-1 ${
+                    scanButtonStatus === 'detected'
+                      ? 'font-black text-[10px] sm:text-xs text-slate-950'
+                      : 'font-black text-[10px] sm:text-xs md:text-sm'
+                  }`}>
+                    {scanButtonStatus === 'detected'
+                      ? "Facturas detectadas, pulse para ver"
+                      : scanButtonStatus === 'not_found'
+                      ? "No se han detectado facturas"
+                      : (scanButtonStatus === 'scanning' || isScanningInvoices)
+                      ? "Rastreando..."
+                      : "Rastrear Facturas"}
+                  </span>
+                </motion.button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Barra del menú trasladada al pie, abajo de todos los botones */}
+          <div className="relative z-20 w-full flex items-center justify-between pt-2 sm:pt-3 shrink-0 gap-2 border-t border-white/10">
+            {/* Lado izquierdo: Casita para ir a inicio + botón de fondos si aplica */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigate('page-inicio');
+                  onClose();
+                }}
+                className="p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 text-emerald-400 hover:text-emerald-300 rounded-full backdrop-blur-md border border-white/20 transition-all hover:scale-105 shadow-md cursor-pointer"
+                title="Ir a Pantalla de Inicio"
+              >
+                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+
+              {/* Botón para cambiar fondo solo si NO hay una imagen de fondo personalizada */}
+              {onOpenImageCustomizer && !bgBentoMenuUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenImageCustomizer();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold backdrop-blur-md border border-white/20 transition-all hover:scale-105 shadow-md cursor-pointer"
+                  title="Personalizar fondo con IA"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <span className="hidden sm:inline">Personalizar Fondos</span>
+                  <span className="sm:hidden">Fondos</span>
+                </button>
+              )}
+            </div>
+
+            {/* Centro: Título de Todas las Secciones */}
+            <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white/90">
+              Todas las Secciones
+            </h2>
+
+            {/* Lado derecho: Botón VOLVER icono de flecha a la izquierda sin texto */}
+            <button 
+              type="button"
+              onClick={onClose}
+              className="p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full border border-white/20 transition-all shadow-lg hover:scale-105 cursor-pointer shrink-0"
+              title="Volver"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

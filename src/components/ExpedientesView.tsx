@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Wrench, FolderOpen, ClipboardList } from 'lucide-react';
+import { User, Wrench, FolderOpen, ClipboardList, ArrowLeft } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { GestarianDocument, Client, AppUser } from '../types';
 import { StandardCard } from './StandardCard';
@@ -22,6 +22,9 @@ interface ExpedientesViewProps {
   onGenerateInvoiceFromBudget?: (budget: GestarianDocument) => void;
   onShowToast?: (msg: string) => void;
   onOpenWorkOrdersModal?: () => void;
+  onRoadmapOpenChange?: (isOpen: boolean) => void;
+  onSelectExpediente?: (expId: string | null) => void;
+  onPlateChange?: (plate: string | null) => void;
 }
 
 export const ExpedientesView: React.FC<ExpedientesViewProps> = ({ 
@@ -39,32 +42,116 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
   onGenerateInvoiceFromBudget,
   onShowToast,
   onOpenWorkOrdersModal,
+  onRoadmapOpenChange,
+  onSelectExpediente,
+  onPlateChange,
 }) => {
   const [selectedExpediente, setSelectedExpediente] = useState<string | null>(initialExpedienteId);
   const [clientFilter, setClientFilter] = useState<string | null>(initialClientId);
-  const [activeTab, setActiveTab] = useState<'abiertos' | 'cerrados'>('abiertos');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'en_curso' | 'cerrados'>('todos');
   const [showDatosModal, setShowDatosModal] = useState<boolean>(false);
 
   React.useEffect(() => {
-    if (initialExpedienteId) setSelectedExpediente(initialExpedienteId);
-  }, [initialExpedienteId]);
+    const handleFilter = (e: any) => {
+      const filter = e.detail?.filter;
+      if (filter === 'todos' || filter === 'en_curso' || filter === 'cerrados') {
+        setStatusFilter(filter);
+      }
+    };
+    window.addEventListener('gestarian_filter_expedientes', handleFilter);
+    return () => window.removeEventListener('gestarian_filter_expedientes', handleFilter);
+  }, []);
+
+  React.useEffect(() => {
+    setSelectedExpediente(initialExpedienteId || null);
+    const isOpen = Boolean(initialExpedienteId);
+    if (onRoadmapOpenChange) {
+      onRoadmapOpenChange(isOpen);
+    }
+    if (isOpen && initialExpedienteId) {
+      const expDoc = documents.find(
+        (d) => d.expediente === initialExpedienteId || d.number === initialExpedienteId || d.id === initialExpedienteId
+      );
+      if (onPlateChange) {
+        onPlateChange(expDoc?.vehiclePlate || null);
+      }
+    } else {
+      if (onPlateChange) {
+        onPlateChange(null);
+      }
+    }
+  }, [initialExpedienteId, onRoadmapOpenChange, onPlateChange, documents]);
 
   React.useEffect(() => {
     if (initialClientId !== undefined) setClientFilter(initialClientId);
   }, [initialClientId]);
+
+  React.useEffect(() => {
+    const handleOpenDatos = () => setShowDatosModal(true);
+    window.addEventListener('gestarian_open_expediente_datos', handleOpenDatos);
+    return () => window.removeEventListener('gestarian_open_expediente_datos', handleOpenDatos);
+  }, []);
+
+  // Escuchar evento para cerrar el roadmap y volver al listado de tarjetas de expedientes
+  React.useEffect(() => {
+    const handleClose = () => {
+      setSelectedExpediente(null);
+      if (onRoadmapOpenChange) onRoadmapOpenChange(false);
+      if (onSelectExpediente) onSelectExpediente(null);
+      if (onPlateChange) onPlateChange(null);
+    };
+    window.addEventListener('gestarian_close_roadmap', handleClose);
+    return () => window.removeEventListener('gestarian_close_roadmap', handleClose);
+  }, [onRoadmapOpenChange, onSelectExpediente, onPlateChange]);
+
+  const handleSelectExpediente = (expId: string | null) => {
+    setSelectedExpediente(expId);
+    if (onRoadmapOpenChange) {
+      onRoadmapOpenChange(Boolean(expId));
+    }
+    if (onSelectExpediente) {
+      onSelectExpediente(expId);
+    }
+    if (expId) {
+      const expDoc = documents.find(
+        (d) => d.expediente === expId || d.number === expId || d.id === expId
+      );
+      if (onPlateChange) {
+        onPlateChange(expDoc?.vehiclePlate || null);
+      }
+    } else {
+      if (onPlateChange) {
+        onPlateChange(null);
+      }
+    }
+  };
+
+  const handleCloseRoadmap = () => {
+    handleSelectExpediente(null);
+  };
   
-  // Extract unique expedientes
+  // Extract unique expedientes: ÚNICAMENTE se generan a partir de presupuestos
   const expedientesMap = new Map<string, { doc: GestarianDocument, client?: Client }>();
   documents.forEach(doc => {
+    // REGLA FUNDAMENTAL: Las facturas recibidas NUNCA generan expediente ni aparecen en expedientes ni en roadmap
+    if (doc.type === 'factura_recibida') return;
+
+    // Los expedientes ÚNICAMENTE se generan a partir de los presupuestos (o facturas derivadas de un presupuesto)
     if (doc.expediente) {
-      if (!expedientesMap.has(doc.expediente)) {
-        const client = clients.find(c => c.id === doc.clientId);
-        expedientesMap.set(doc.expediente, { doc, client });
-      } else {
-        // If there's an invoice, prefer that document to get the latest status
+      if (doc.type === 'presupuesto' || (doc.type as string) === 'budget') {
+        if (!expedientesMap.has(doc.expediente)) {
+          const client = clients.find(c => c.id === doc.clientId);
+          expedientesMap.set(doc.expediente, { doc, client });
+        }
+      } else if (doc.type === 'factura') {
+        // Si ya existe el presupuesto registrado para este expediente, preferimos la factura para el último estado
         const existing = expedientesMap.get(doc.expediente);
-        if (doc.type === 'factura' && existing?.doc.type !== 'factura') {
-          expedientesMap.set(doc.expediente, { doc, client: existing?.client });
+        if (existing) {
+          expedientesMap.set(doc.expediente, { doc, client: existing.client });
+        } else if (doc.linkedBudgetId) {
+          // Factura emitida con presupuesto vinculado
+          const client = clients.find(c => c.id === doc.clientId);
+          expedientesMap.set(doc.expediente, { doc, client });
         }
       }
     }
@@ -72,7 +159,7 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
 
   const expedientes = Array.from(expedientesMap.values());
 
-  // Calcular estado para clasificar entre abiertos y cerrados
+  // Calcular estado de cada expediente
   const expedientesWithStatus = expedientes.map((item) => {
     const expStatus = item.doc.expediente
       ? getExpedienteStatus(item.doc.expediente, documents)
@@ -98,10 +185,7 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
     };
   });
 
-  const openCount = expedientesWithStatus.filter((e) => !e.isCerrado).length;
-  const closedCount = expedientesWithStatus.filter((e) => e.isCerrado).length;
-
-    if (selectedExpediente) {
+  if (selectedExpediente) {
     let data = expedientesMap.get(selectedExpediente);
     if (!data) {
       const cleanTarget = selectedExpediente.replace(/\D/g, '');
@@ -122,213 +206,59 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
     if (!data) {
       const fallbackDoc = documents.find(
         (d) =>
-          d.expediente === selectedExpediente ||
+          d.type !== 'factura_recibida' &&
+          (d.type === 'presupuesto' || (d.type as string) === 'budget' || d.type === 'factura') &&
+          (d.expediente === selectedExpediente ||
           d.number === selectedExpediente ||
-          d.id === selectedExpediente
+          d.id === selectedExpediente)
       );
-      if (fallbackDoc) {
+      if (fallbackDoc && fallbackDoc.expediente) {
         const client = clients.find((c) => c.id === fallbackDoc.clientId);
         data = { doc: fallbackDoc, client };
       }
     }
-    if (!data) return null;
-    
-    const { doc, client } = data;
-    const isCurrentCerrado = (() => {
-      if (!doc.expediente) return false;
-      const st = getExpedienteStatus(doc.expediente, documents);
-      return st.label === 'CERRADO' || st.type === 'verde';
-    })();
+    if (data) {
+      const { doc, client } = data;
+      return (
+        <div className="w-full min-h-screen flex flex-col bg-white animate-in fade-in duration-300">
+          <div className="w-full px-3 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col">
+            {/* Roadmap Interactivo con 6 paradas (sin header superior) */}
+            <RoadmapTracker
+              document={doc}
+              client={client}
+              allDocuments={documents}
+              currentUser={currentUser}
+              onUpdateDocument={(updated) => {
+                if (onUpdateDocument) onUpdateDocument(updated);
+              }}
+              onGenerateInvoiceFromBudget={(budgetDoc) => {
+                if (onGenerateInvoiceFromBudget) onGenerateInvoiceFromBudget(budgetDoc);
+              }}
+              onShowToast={onShowToast}
+              onOpenWorkOrdersModal={onOpenWorkOrdersModal}
+            />
 
-    return (
-      <div id="page-expedientes" className="flex flex-col h-full min-h-screen bg-[#F8F7F3] p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300 overflow-y-auto w-screen shrink-0 snap-start">
-        <div className="w-full max-w-7xl mx-auto">
-        <PageHeader
-          pageId="page-expedientes"
-          title="Expedientes"
-          onOpenMenu={onOpenMenu}
-          onBack={() => setSelectedExpediente(null)}
-          onNavigateHome={onNavigateHome}
-        />
-
-        {/* Fila 1: Botones abiertos - cerrados en una sola fila */}
-        <div id="row-roadmap-header" className="w-[calc(100vw-40px)] md:w-[calc(100vw-80px)] lg:w-[calc(100vw-600px)] mx-auto mb-4 flex items-center gap-3 sm:gap-4 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
-          <button
-            id="btn-roadmap-expedientes-abiertos"
-            type="button"
-            onClick={() => {
-              setActiveTab('abiertos');
-              setSelectedExpediente(null);
-            }}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold tracking-tight transition-all flex items-center gap-2 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
-              !isCurrentCerrado
-                ? 'bg-[#0F2942] text-white ring-2 ring-[#0F2942] ring-offset-2'
-                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <span>Abiertos</span>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full font-bold transition-colors ${
-                !isCurrentCerrado ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-              }`}
-            >
-              {openCount}
-            </span>
-          </button>
-
-          <button
-            id="btn-roadmap-expedientes-cerrados"
-            type="button"
-            onClick={() => {
-              setActiveTab('cerrados');
-              setSelectedExpediente(null);
-            }}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold tracking-tight transition-all flex items-center gap-2 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
-              isCurrentCerrado
-                ? 'bg-[#0F2942] text-white ring-2 ring-[#0F2942] ring-offset-2'
-                : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <span>Cerrados</span>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full font-bold transition-colors ${
-                isCurrentCerrado ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-              }`}
-            >
-              {closedCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Fila 2: Dibujo de la matrícula y botón datos */}
-        <div id="row-matricula-datos" className="w-[calc(100vw-40px)] md:w-[calc(100vw-80px)] lg:w-[calc(100vw-600px)] mx-auto mb-6 flex flex-wrap items-center justify-between gap-4">
-          {/* Dibujo de la matrícula oficial española */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-9 sm:h-10 min-w-[140px] sm:min-w-[160px] shadow-xs">
-              <div className="bg-blue-700 h-full w-6 sm:w-7 flex flex-col items-center justify-center shrink-0">
-                <span className="text-[6px] text-yellow-300 font-bold mb-0.5 leading-none">⭐</span>
-                <span className="text-[10px] sm:text-xs text-white font-black leading-none">E</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-base sm:text-lg tracking-widest text-[#0F172A]">
-                {doc.vehiclePlate || 'SIN-MAT'}
-              </div>
-            </div>
-
-            {/* Subtítulo vehículo / cliente */}
-            {(doc.vehicleBrand || doc.vehicleModel) && (
-              <span className="hidden sm:inline-block text-xs font-bold text-slate-600 uppercase tracking-wider bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
-                {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ')}
-              </span>
-            )}
+            {/* Modal Datos del Expediente */}
+            <ExpedienteDatosModal
+              isOpen={showDatosModal}
+              onClose={() => setShowDatosModal(false)}
+              document={doc}
+              client={client}
+              currentUser={currentUser}
+              allDocuments={documents}
+              onUpdateDocument={onUpdateDocument}
+              onShowToast={onShowToast}
+            />
           </div>
-
-          {/* Botón Datos */}
-          <button
-            id="btn-datos-expediente"
-            type="button"
-            onClick={() => setShowDatosModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm tracking-wide shadow-sm hover:shadow transition-all cursor-pointer"
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span>Datos</span>
-            {doc.items && doc.items.length > 0 && (
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ml-1">
-                {doc.items.length} {doc.items.length === 1 ? 'tarea' : 'tareas'}
-              </span>
-            )}
-          </button>
         </div>
-
-        {/* Roadmap Interactivo con 6 rectángulos */}
-        <RoadmapTracker
-          document={doc}
-          client={client}
-          allDocuments={documents}
-          currentUser={currentUser}
-          onUpdateDocument={(updated) => {
-            if (onUpdateDocument) onUpdateDocument(updated);
-          }}
-          onGenerateInvoiceFromBudget={(budgetDoc) => {
-            if (onGenerateInvoiceFromBudget) onGenerateInvoiceFromBudget(budgetDoc);
-          }}
-          onShowToast={onShowToast}
-          onOpenWorkOrdersModal={onOpenWorkOrdersModal}
-        />
-
-        {/* Modal Datos del Expediente: orden de trabajo, empleados asignados y trabajo a realizar */}
-        <ExpedienteDatosModal
-          isOpen={showDatosModal}
-          onClose={() => setShowDatosModal(false)}
-          document={doc}
-          client={client}
-          currentUser={currentUser}
-          allDocuments={documents}
-          onUpdateDocument={onUpdateDocument}
-          onShowToast={onShowToast}
-        />
-        </div>
-      </div>
-    );
+      );
+    }
   }
 
   // Dashboard de Tarjetas de Expedientes
   return (
-    <div id="page-expedientes" className="flex flex-col h-full min-h-screen bg-[#F8F7F3] p-4 sm:p-6 lg:p-8 animate-in fade-in duration-300 overflow-y-auto w-screen shrink-0 snap-start">
-      <div className="w-full max-w-7xl mx-auto">
-      <PageHeader
-        pageId="page-expedientes"
-        title="Expedientes"
-        onOpenMenu={onOpenMenu}
-        onBack={onBack}
-        onNavigateHome={onNavigateHome}
-      />
-
-      {/* Botones debajo del header como título / selector: Abiertos y Cerrados en una sola fila */}
-      <div id="expedientes-title-tabs" className="flex items-center gap-3 sm:gap-4 mb-6 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
-        <button
-          id="btn-expedientes-abiertos"
-          type="button"
-          onClick={() => setActiveTab('abiertos')}
-          className={`px-5 py-2.5 rounded-xl text-base sm:text-lg font-bold tracking-tight transition-all flex items-center gap-2.5 cursor-pointer shadow-sm ${
-            activeTab === 'abiertos'
-              ? 'bg-[#0F2942] text-white ring-2 ring-[#0F2942] ring-offset-2'
-              : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-100 hover:text-slate-900'
-          }`}
-        >
-          <span>Abiertos</span>
-          <span
-            className={`text-xs px-2.5 py-0.5 rounded-full font-bold transition-colors ${
-              activeTab === 'abiertos'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {openCount}
-          </span>
-        </button>
-
-        <button
-          id="btn-expedientes-cerrados"
-          type="button"
-          onClick={() => setActiveTab('cerrados')}
-          className={`px-5 py-2.5 rounded-xl text-base sm:text-lg font-bold tracking-tight transition-all flex items-center gap-2.5 cursor-pointer shadow-sm ${
-            activeTab === 'cerrados'
-              ? 'bg-[#0F2942] text-white ring-2 ring-[#0F2942] ring-offset-2'
-              : 'bg-white text-slate-600 border border-[#CBD5E1] hover:bg-slate-100 hover:text-slate-900'
-          }`}
-        >
-          <span>Cerrados</span>
-          <span
-            className={`text-xs px-2.5 py-0.5 rounded-full font-bold transition-colors ${
-              activeTab === 'cerrados'
-                ? 'bg-white/20 text-white'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {closedCount}
-          </span>
-        </button>
-      </div>
+    <div id="page-expedientes" className="w-screen h-screen shrink-0 snap-start flex flex-col bg-white overflow-y-auto animate-in fade-in duration-300">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col">
 
       {clientFilter && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-900">
@@ -352,23 +282,27 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
             )
           : expedientesWithStatus;
 
-        const displayedExpedientes = filteredByClient.filter((e) =>
-          activeTab === 'abiertos' ? !e.isCerrado : e.isCerrado
-        );
+        const displayedExpedientes = filteredByClient.filter((item) => {
+          if (statusFilter === 'en_curso') {
+            return !item.isCerrado;
+          }
+          if (statusFilter === 'cerrados') {
+            return item.isCerrado;
+          }
+          return true;
+        });
 
         if (displayedExpedientes.length === 0) {
           return (
             <div id="empty-expedientes-state" className="flex flex-col items-center justify-center h-[50vh] text-center bg-white rounded-xl border border-gray-200 p-8">
               <FolderOpen className="w-16 h-16 text-gray-300 mb-4" />
               <h2 className="text-lg font-bold text-gray-700">
-                {activeTab === 'abiertos' ? 'No hay expedientes abiertos' : 'No hay expedientes cerrados'}
+                No hay expedientes registrados
               </h2>
               <p className="text-sm text-gray-500 max-w-md mt-2">
                 {clientFilter
-                  ? `Este cliente no tiene expedientes ${activeTab === 'abiertos' ? 'abiertos' : 'cerrados'}.`
-                  : activeTab === 'abiertos'
-                  ? 'Genera un nuevo presupuesto para que se asigne y se cree automáticamente su número de expediente.'
-                  : 'Los expedientes finalizados y con todas sus facturas cobradas aparecerán aquí.'}
+                  ? 'Este cliente no tiene expedientes registrados.'
+                  : 'Genera un nuevo presupuesto para que se asigne y se cree automáticamente su número de expediente.'}
               </p>
               {clientFilter && (
                 <button
@@ -404,8 +338,9 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
                   title={client?.name || doc.clientName || 'Cliente'}
                   refCode={doc.number}
                   expediente={doc.expediente}
-                  onClick={() => doc.expediente && setSelectedExpediente(doc.expediente)}
+                  onClick={() => doc.expediente && handleSelectExpediente(doc.expediente)}
                   isExpandable={false}
+                  cleanNumbersLayout={true}
                 />
               );
             })}

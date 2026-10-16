@@ -275,15 +275,15 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
         </button>
       </div>
 
-      {/* Grid de Tarjetas de Empleados */}
+      {/* Grid de Tarjetas de Empleados ocupando el 95% del ancho */}
       {employees.length === 0 ? (
-        <div className="p-8 text-center bg-white border border-[#CBD5E1] rounded-xl text-[#64748B]">
-          <Users className="w-12 h-12 mx-auto text-[#94A3B8] mb-2" />
-          <p className="text-[21px] font-medium">No hay empleados registrados todavía.</p>
-          <p className="text-[18px] mt-1">Haz clic en "Añadir Empleado" para registrar al primer trabajador.</p>
+        <div className="w-[95%] mx-auto p-8 text-center bg-[#E5E7EB] border border-gray-300/70 rounded-xl text-[#0F2942]">
+          <Users className="w-12 h-12 mx-auto text-[#0F2942] mb-2" />
+          <p className="text-[21px] font-bold">No hay empleados registrados todavía.</p>
+          <p className="text-[18px] mt-1 text-[#0F2942]">Haz clic en "Añadir Empleado" para registrar al primer trabajador.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="w-[95%] mx-auto space-y-3">
           {employees.map((emp) => {
             const initials = emp.name
               .split(' ')
@@ -295,118 +295,128 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
             return (
               <div
                 key={emp.id}
-                className="bg-white rounded-xl border border-[#CBD5E1] shadow-2xs hover:shadow-md transition-shadow p-5 flex flex-col justify-between"
+                className="w-full bg-[#E5E7EB] rounded-xl border border-gray-300/70 shadow-xs hover:shadow-md transition-shadow p-4 sm:p-5 flex flex-col gap-3 text-[#0F2942]"
               >
-                <div>
-                  {/* Encabezado tarjeta: Avatar, Nombre y Acciones */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-xl bg-[#0F2942] text-white flex items-center justify-center font-bold text-[21px] tracking-wider shrink-0 shadow-2xs">
-                        {initials || 'EM'}
-                      </div>
-                      <div>
-                        <h4 className="text-[21px] font-bold text-[#0F172A] leading-tight">
+                {/* Fila Superior: Perfil, Contacto y Todos los Botones Compactos */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-gray-300/60">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-xl bg-[#0F2942] text-white flex items-center justify-center font-bold text-[20px] tracking-wider shrink-0 shadow-2xs">
+                      {initials || 'EM'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-[20px] font-bold text-[#0F2942] leading-tight">
                           {emp.name}
                         </h4>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[15px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-sm bg-blue-50 text-blue-700 border border-blue-200">
-                            {emp.role}
+                        <span className="text-[14px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm bg-[#0F2942]/10 text-[#0F2942] border border-[#0F2942]/20">
+                          {emp.role}
+                        </span>
+                        {emp.dni && (
+                          <span className="text-[15px] font-mono font-bold text-[#0F2942] bg-white/80 border border-gray-300/70 px-2 py-0.5 rounded-sm">
+                            DNI: {emp.dni}
                           </span>
-                          {emp.dni && (
-                            <span className="text-[16.5px] font-mono text-[#475569] bg-[#F1F5F9] px-2.5 py-0.5 rounded-sm">
-                              DNI: {emp.dni}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(emp)}
-                        className="p-2 text-[#64748B] hover:text-[#0F2942] hover:bg-[#F1F5F9] rounded-md transition-colors cursor-pointer"
-                        title="Editar datos del empleado"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteEmployee(emp.id)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                        title="Eliminar empleado"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Datos de contacto */}
-                  <div className="text-[18px] text-[#64748B] space-y-1.5 mb-3 bg-[#F8FAFC] p-3.5 rounded-lg border border-[#E2E8F0]">
-                    {emp.phone && (
-                      <div className="flex items-center gap-2.5">
-                        <Phone className="w-4.5 h-4.5 text-[#64748B] shrink-0" />
-                        <span>{emp.phone}</span>
-                      </div>
-                    )}
-                    {emp.email && (
-                      <div className="flex items-center gap-2.5">
-                        <Mail className="w-4.5 h-4.5 text-[#64748B] shrink-0" />
-                        <span className="font-mono">{emp.email}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2.5 font-medium text-[#1E293B]">
-                      <Briefcase className="w-4.5 h-4.5 text-[#0F2942] shrink-0" />
-                      <span>{emp.profession || 'Especialista en automoción'}</span>
-                    </div>
-                  </div>
-
-                  {/* Ficha Oficial de Seguridad Social & Nómina */}
-                  <div className="space-y-2 pt-2.5 border-t border-[#F1F5F9] text-[16.5px]">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[#64748B] font-semibold">Epígrafe Oficial CNO-11:</span>
-                      <span className="text-right font-medium text-[#0F172A]">
-                        {emp.cnoCode ? (
-                          <span className="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-xs font-mono font-bold text-[16.5px]">
-                            {emp.cnoCode} - {emp.cnoDescription}
-                          </span>
-                        ) : (
-                          <span className="text-amber-600 italic">Sin epígrafe asignado</span>
                         )}
+                      </div>
+                      <div className="flex items-center gap-3 text-[16px] text-[#0F2942] font-semibold mt-1 flex-wrap">
+                        <span className="flex items-center gap-1.5">
+                          <Briefcase className="w-4 h-4 text-[#0F2942] shrink-0" />
+                          {emp.profession || 'Especialista en automoción'}
+                        </span>
+                        {emp.phone && (
+                          <span className="flex items-center gap-1.5">
+                            <Phone className="w-4 h-4 text-[#0F2942] shrink-0" />
+                            {emp.phone}
+                          </span>
+                        )}
+                        {emp.email && (
+                          <span className="flex items-center gap-1.5 font-mono">
+                            <Mail className="w-4 h-4 text-[#0F2942] shrink-0" />
+                            {emp.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botones de acción juntos en la fila superior */}
+                  <div className="flex items-center gap-2 self-start lg:self-center shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setManagingPermissionsEmp(emp)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-[16px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                    >
+                      <Shield className="w-4 h-4 text-white" />
+                      <span>Gestionar Permisos</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(emp)}
+                      className="p-2 text-[#0F2942] hover:bg-white/80 bg-white/40 border border-gray-300/70 rounded-lg transition-colors cursor-pointer"
+                      title="Editar datos del empleado"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEmployee(emp.id)}
+                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100/70 bg-white/40 border border-gray-300/70 rounded-lg transition-colors cursor-pointer"
+                      title="Eliminar empleado"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fila Media: Seguridad Social y Permisos de manera compacta */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 text-[16px]">
+                  {/* Seguridad Social (4 columnas) */}
+                  <div className="lg:col-span-4 p-2.5 rounded-lg bg-white/50 border border-gray-200/80 space-y-1">
+                    <div className="flex items-center justify-between gap-1 text-[15px]">
+                      <span className="font-semibold text-[#0F2942]">CNO-11:</span>
+                      <span className="font-bold text-[#0F2942] truncate max-w-[200px]" title={emp.cnoDescription}>
+                        {emp.cnoCode ? `${emp.cnoCode} - ${emp.cnoDescription}` : 'Sin asignar'}
                       </span>
                     </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[#64748B] font-semibold">Grupo Cotización:</span>
-                      <span className="text-right text-[#334155] font-medium">
+                    <div className="flex items-center justify-between gap-1 text-[15px]">
+                      <span className="font-semibold text-[#0F2942]">Cotización:</span>
+                      <span className="font-bold text-[#0F2942] truncate">
                         {emp.cotizacionGroup || 'Grupo 8: Oficiales'}
                       </span>
                     </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[#64748B] font-semibold">Tarifa Accidentes (IT/IMS):</span>
-                      <span className="text-right text-[#334155] font-medium">
+                    <div className="flex items-center justify-between gap-1 text-[15px]">
+                      <span className="font-semibold text-[#0F2942]">Tarifa Accidentes:</span>
+                      <span className="font-bold text-[#0F2942]">
                         {emp.accidentsEpigrafe || '45.20'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Resumen de permisos */}
-                  <div className="mt-3.5 pt-3.5 border-t border-[#F1F5F9]">
-                    <div className="text-[15px] uppercase font-bold tracking-wider text-[#64748B] mb-2 flex items-center justify-between">
-                      <span>Partes con acceso:</span>
-                      {emp.permissions?.canSetPrices ? (
-                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-xs font-bold text-[15px]">
-                          Precios: Habilitado
+                  {/* Resumen de Permisos y Botones de estado (8 columnas) */}
+                  <div className="lg:col-span-8 p-2.5 rounded-lg bg-white/50 border border-gray-200/80 flex flex-col justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[14px] font-bold uppercase tracking-wider text-[#0F2942]">
+                        Módulos con acceso ({APP_MODULES.filter(m => emp.permissions?.[m.key]).length}):
+                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {emp.permissions?.canSetPrices ? (
+                          <span className="text-emerald-950 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded text-[14px] font-bold">
+                            Precios: Sí
+                          </span>
+                        ) : (
+                          <span className="text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded text-[14px] font-bold">
+                            Precios: Solo Jefe
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded text-[14px] font-bold border ${emp.permissions?.scanPlates ? 'bg-emerald-100 text-emerald-950 border-emerald-300' : 'bg-gray-100 text-gray-400 border-gray-200'}`}>
+                          Cámara OCR {emp.permissions?.scanPlates ? '✓' : '✗'}
                         </span>
-                      ) : (
-                        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-xs font-bold text-[15px]">
-                          Precios: Solo Jefe
+                        <span className={`px-2 py-0.5 rounded text-[14px] font-bold border ${emp.permissions?.manageWorkOrders ? 'bg-blue-100 text-blue-950 border-blue-300' : 'bg-gray-100 text-gray-400 border-gray-200'}`}>
+                          Órdenes {emp.permissions?.manageWorkOrders ? '✓' : '✗'}
                         </span>
-                      )}
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    <div className="flex flex-wrap gap-1.5">
                       {APP_MODULES.map((mod) => {
                         const hasAccess = emp.permissions ? (emp.permissions[mod.key] ?? false) : false;
                         if (!hasAccess) return null;
@@ -414,7 +424,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                         return (
                           <span
                             key={mod.key}
-                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#F1F5F9] text-[#0F2942] rounded-xs text-[15px] font-semibold border border-[#E2E8F0]"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/80 text-[#0F2942] rounded text-[14px] font-bold border border-gray-200"
                           >
                             <Icon className="w-3.5 h-3.5 text-[#0F2942]" />
                             <span>{mod.label}</span>
@@ -422,33 +432,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                         );
                       })}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[16.5px]">
-                      <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border ${emp.permissions?.scanPlates ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                        <Camera className="w-4.5 h-4.5" />
-                        <span className="truncate">Cámara OCR</span>
-                        <span className="ml-auto font-bold">{emp.permissions?.scanPlates ? '✓' : '✗'}</span>
-                      </div>
-
-                      <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border ${emp.permissions?.manageWorkOrders ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                        <Wrench className="w-4.5 h-4.5" />
-                        <span className="truncate">Órdenes Taller</span>
-                        <span className="ml-auto font-bold">{emp.permissions?.manageWorkOrders ? '✓' : '✗'}</span>
-                      </div>
-                    </div>
                   </div>
-                </div>
-
-                {/* Botón Ver / Gestionar Permisos */}
-                <div className="mt-4 pt-3.5 border-t border-[#E2E0D8]">
-                  <button
-                    type="button"
-                    onClick={() => setManagingPermissionsEmp(emp)}
-                    className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-2.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F2942] rounded-lg text-[18px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <Shield className="w-5 h-5 text-[#0F2942]" />
-                    Gestionar Permisos de Acceso
-                  </button>
                 </div>
               </div>
             );
@@ -458,39 +442,40 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
 
       {/* MODAL: Gestionar Permisos de un Empleado Específico */}
       {managingPermissionsEmp && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-[#0F172A]/50 backdrop-blur-xs">
-          <div className="bg-white rounded-xl border border-[#CBD5E1] shadow-2xl max-w-xl w-full p-4 sm:p-6 flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-[#0F172A]/60 backdrop-blur-xs">
+          <div className="bg-[#F8FAFC] rounded-2xl border-2 border-[#CBD5E1] shadow-2xl max-w-3xl w-full p-6 sm:p-8 flex flex-col max-h-[92vh]">
             {/* Cabecera */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E0D8] shrink-0">
+            <div className="flex items-center justify-between pb-4 border-b-2 border-[#CBD5E1] shrink-0">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F2942]">
+                <span className="text-[20px] font-extrabold uppercase tracking-widest text-[#0F2942] block mb-1">
                   Panel de Control de Permisos
                 </span>
-                <h4 className="text-base font-bold text-[#0F172A] flex items-center gap-2">
-                  <UserCheck className="w-5 h-5 text-[#0F2942]" />
+                <h4 className="text-[28px] font-bold text-[#0F2942] flex items-center gap-2.5">
+                  <UserCheck className="w-8 h-8 text-[#0F2942]" />
                   {managingPermissionsEmp.name}
                 </h4>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-[20px] font-medium text-[#0F2942] mt-1">
                   {managingPermissionsEmp.profession || 'Empleado Autorizado'} • CNO: {managingPermissionsEmp.cnoCode || 'N/D'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setManagingPermissionsEmp(null)}
-                className="text-[#64748B] hover:text-[#0F172A] p-1"
+                className="text-[#0F2942] hover:text-red-600 p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+                title="Cerrar Panel"
               >
-                <X className="w-5 h-5" />
+                <X className="w-8 h-8" />
               </button>
             </div>
 
             {/* Guía y selección rápida */}
-            <div className="py-2.5 px-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg my-3 text-xs text-[#475569] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
+            <div className="py-3.5 px-4 bg-[#F1F5F9] border-2 border-[#CBD5E1] rounded-xl my-4 text-[20px] font-medium text-[#0F2942] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
               <span>Activa o desactiva casillas para conceder o restringir el acceso a partes y funciones.</span>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-3 shrink-0 font-bold">
                 <button
                   type="button"
                   onClick={() => handleToggleAllModules(managingPermissionsEmp.id, true)}
-                  className="text-[11px] font-bold text-[#0F2942] hover:underline"
+                  className="text-[20px] font-bold text-[#0F2942] underline hover:text-[#1E3A8A] cursor-pointer"
                 >
                   Marcar todo
                 </button>
@@ -498,43 +483,43 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                 <button
                   type="button"
                   onClick={() => handleToggleAllModules(managingPermissionsEmp.id, false)}
-                  className="text-[11px] font-bold text-[#64748B] hover:underline"
+                  className="text-[20px] font-bold text-[#0F2942] underline hover:text-red-700 cursor-pointer"
                 >
                   Desmarcar todo
                 </button>
               </div>
             </div>
 
-            <div className="overflow-y-auto space-y-4 pr-1 flex-1">
+            <div className="overflow-y-auto space-y-6 pr-2 flex-1">
               {/* Bloque 1: Partes de la Aplicación de Usuario */}
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#0F2942] mb-2 flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5" />
+                <div className="text-[22px] font-bold uppercase tracking-wider text-[#0F2942] mb-3 flex items-center gap-2">
+                  <Shield className="w-6 h-6 text-[#0F2942]" />
                   Acceso a Secciones de la Aplicación
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {APP_MODULES.map((mod) => {
                     const isChecked = managingPermissionsEmp.permissions ? (managingPermissionsEmp.permissions[mod.key] ?? false) : false;
                     const Icon = mod.icon;
                     return (
                       <label
                         key={mod.key}
-                        className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer ${
-                          isChecked ? 'bg-white border-[#0F2942]/30 shadow-xs' : 'bg-gray-50/70 border-gray-200 opacity-60'
+                        className={`flex items-start gap-3.5 p-3.5 rounded-xl border-2 transition-colors cursor-pointer ${
+                          isChecked ? 'bg-white border-[#0F2942] shadow-sm' : 'bg-[#F1F5F9] border-[#CBD5E1] opacity-75'
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleSinglePermission(managingPermissionsEmp.id, mod.key)}
-                          className="w-4 h-4 accent-[#0F2942] rounded-xs cursor-pointer mt-0.5 shrink-0"
+                          className="w-6 h-6 accent-[#0F2942] rounded-md cursor-pointer mt-0.5 shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
-                            <Icon className="w-3.5 h-3.5 text-[#0F2942]" />
+                          <div className="text-[20px] font-bold text-[#0F2942] flex items-center gap-2">
+                            <Icon className="w-5 h-5 text-[#0F2942]" />
                             <span>{mod.label}</span>
                           </div>
-                          <p className="text-[10px] text-[#64748B] leading-tight mt-0.5">
+                          <p className="text-[18px] text-[#0F2942]/85 leading-tight mt-1">
                             {mod.desc}
                           </p>
                         </div>
@@ -546,11 +531,11 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
 
               {/* Bloque 2: Permisos Operativos */}
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#0F2942] mb-2 flex items-center gap-1.5">
-                  <Wrench className="w-3.5 h-3.5" />
+                <div className="text-[22px] font-bold uppercase tracking-wider text-[#0F2942] mb-3 flex items-center gap-2">
+                  <Wrench className="w-6 h-6 text-[#0F2942]" />
                   Permisos Operativos y de Trabajo en Taller
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {OPERATIONAL_PERMISSIONS.map((op) => {
                     const isChecked = managingPermissionsEmp.permissions ? (managingPermissionsEmp.permissions[op.key] ?? false) : false;
                     const Icon = op.icon;
@@ -558,22 +543,22 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                     return (
                       <div
                         key={op.key}
-                        className={`flex items-start justify-between p-3 rounded-lg border ${
+                        className={`flex items-start justify-between p-4 rounded-xl border-2 ${
                           isSpecialPrice 
-                            ? 'border-amber-300 bg-amber-50/60' 
-                            : 'border-[#E2E8F0] hover:bg-[#F8FAFC]'
+                            ? 'border-amber-400 bg-amber-50' 
+                            : 'border-[#CBD5E1] bg-[#F1F5F9]'
                         }`}
                       >
-                        <div className="pr-3">
-                          <div className={`text-xs font-bold flex items-center gap-1.5 ${isSpecialPrice ? 'text-amber-900' : 'text-[#0F172A]'}`}>
-                            <Icon className={`w-4 h-4 ${isSpecialPrice ? 'text-amber-800' : 'text-[#0F2942]'}`} />
+                        <div className="pr-4">
+                          <div className={`text-[20px] font-bold flex items-center gap-2 ${isSpecialPrice ? 'text-amber-950' : 'text-[#0F2942]'}`}>
+                            <Icon className={`w-6 h-6 ${isSpecialPrice ? 'text-amber-900' : 'text-[#0F2942]'}`} />
                             {op.label}
                           </div>
-                          <p className={`text-[11px] mt-0.5 ${isSpecialPrice ? 'text-amber-800 leading-snug' : 'text-[#64748B]'}`}>
+                          <p className={`text-[18px] mt-1 ${isSpecialPrice ? 'text-amber-950 font-medium' : 'text-[#0F2942]/85'}`}>
                             {op.desc}
                           </p>
                           {op.restrictedWarning && !isChecked && (
-                            <p className="text-[10px] text-amber-900 font-medium mt-1 bg-amber-100/70 p-1.5 rounded-xs border border-amber-200">
+                            <p className="text-[18px] text-amber-950 font-semibold mt-2 bg-amber-100/90 p-2.5 rounded-lg border border-amber-300">
                               {op.restrictedWarning}
                             </p>
                           )}
@@ -582,7 +567,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleSinglePermission(managingPermissionsEmp.id, op.key)}
-                          className="w-5 h-5 accent-[#0F2942] rounded-xs cursor-pointer mt-0.5 shrink-0"
+                          className="w-7 h-7 accent-[#0F2942] rounded-md cursor-pointer mt-0.5 shrink-0"
                         />
                       </div>
                     );
@@ -591,11 +576,11 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#E2E0D8] flex justify-end shrink-0 mt-3">
+            <div className="pt-4 border-t-2 border-[#CBD5E1] flex justify-end shrink-0 mt-4">
               <button
                 type="button"
                 onClick={() => setManagingPermissionsEmp(null)}
-                className="px-5 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors"
+                className="px-8 py-3.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-[20px] font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-md"
               >
                 Cerrar y Guardar
               </button>

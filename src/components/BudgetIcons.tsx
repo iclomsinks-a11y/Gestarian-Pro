@@ -1,35 +1,18 @@
 import React from 'react';
+import { Eye } from 'lucide-react';
 
 /**
- * Icono de Presupuesto: Hoja con una 'P' mayúscula dentro
+ * Icono de Presupuesto (Ver Presupuesto): Dibujo del ojito
  */
 export const SheetPIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="1.8" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    {/* Contorno de hoja con esquina superior derecha doblada */}
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    {/* P mayúscula centrada */}
-    <text 
-      x="12" 
-      y="16.5" 
-      textAnchor="middle" 
-      fontSize="9.5" 
-      fontWeight="900" 
-      fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
-      fill="currentColor" 
-      stroke="none"
-    >
-      P
-    </text>
-  </svg>
+  <Eye className={className} strokeWidth={1.8} />
+);
+
+/**
+ * Icono de Factura (Ver Factura): Dibujo del ojito
+ */
+export const SheetFIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
+  <Eye className={className} strokeWidth={1.8} />
 );
 
 /**

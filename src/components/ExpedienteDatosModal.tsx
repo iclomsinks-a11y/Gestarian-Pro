@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ClipboardList, User, Users, Wrench, Phone, CheckCircle2 } from 'lucide-react';
+import { X, ClipboardList, User, Users, Wrench, Phone, CheckCircle2, Eye } from 'lucide-react';
 import { GestarianDocument, Client, AppUser } from '../types';
 import { DocumentViewerModal } from './DocumentViewerModal';
 
@@ -127,14 +127,14 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
                   </span>
                 </div>
 
-                {/* Matrícula arriba centrada */}
+                {/* Matrícula arriba centrada (misma altura h-8 que en solicitudes) */}
                 <div className="flex flex-col items-center justify-center shrink-0">
-                  <div className="flex items-center bg-white border-2 border-slate-700 rounded-lg overflow-hidden h-9 sm:h-11 shadow-xs">
-                    <div className="bg-blue-700 h-full w-6 sm:w-7 flex flex-col items-center justify-center shrink-0 px-1">
-                      <span className="text-[6px] sm:text-[7px] text-yellow-300 font-bold mb-0.5 leading-none">⭐</span>
-                      <span className="text-[10px] sm:text-xs text-white font-black leading-none">E</span>
+                  <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-xs">
+                    <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
+                      <span className="text-[10px] text-white font-bold leading-none">E</span>
                     </div>
-                    <div className="px-3 sm:px-4 font-mono font-black text-base sm:text-xl tracking-widest text-[#0F172A]">
+                    <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
                       {doc.vehiclePlate || 'SIN-MAT'}
                     </div>
                   </div>
@@ -164,7 +164,7 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
 
               {/* Debajo: Iconos de acción flotantes SIN recuadro de fondo */}
               <div className="flex items-center justify-center gap-6 sm:gap-8 pt-1">
-                {/* Icono de ver presupuesto minimalista flotante con la P dentro de la hoja sin recuadro de fondo */}
+                {/* Icono de ver presupuesto con el dibujo del ojito sin recuadro de fondo */}
                 <button
                   id="btn-ver-presupuesto-hoja-p"
                   type="button"
@@ -172,15 +172,7 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
                   title="Ver Presupuesto"
                   className="group relative transition-transform hover:scale-115 active:scale-100 flex items-center justify-center cursor-pointer p-1"
                 >
-                  <div className="relative w-8 h-9 flex items-center justify-center">
-                    <svg className="w-full h-full text-amber-600 drop-shadow-xs" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 3C3 1.89543 3.89543 1 5 1H13.5858C14.1162 1 14.6249 1.21071 15 1.58579L20.4142 7C20.7893 7.3751 21 7.88378 21 8.41421V25C21 26.1046 20.1046 27 19 27H5C3.89543 27 3 26.1046 3 25V3Z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                      <path d="M13 1V8H20" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center font-black text-amber-700 text-sm sm:text-base pt-0.5 tracking-tighter select-none">
-                      P
-                    </span>
-                  </div>
+                  <Eye className="w-8 h-8 sm:w-9 sm:h-9 text-amber-600 drop-shadow-xs stroke-[1.8]" />
                   <span className="absolute -bottom-8 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 shadow-sm">
                     Ver Presupuesto
                   </span>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PageHeader } from './PageHeader';
 import { StandardCard } from './StandardCard';
-import { Search, AlertTriangle, FolderKanban, MessageSquare, CheckCircle } from 'lucide-react';
+import { Search, AlertTriangle, FolderKanban, MessageCircle, Phone, Car, CheckCircle } from 'lucide-react';
 
 interface IncidenciasViewProps {
   id: string;
@@ -93,8 +93,9 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
   });
 
   return (
-    <div id={id} className="min-h-screen bg-[#FDFBF7] flex flex-col snap-start shrink-0 w-full overflow-y-auto">
+    <div id={id} className="w-screen h-screen shrink-0 snap-start flex flex-col bg-white overflow-y-auto">
       <PageHeader
+        pageId={id || 'page-incidencias'}
         title="Incidencias"
         onBack={onBack}
         onNavigateHome={onNavigateHome}
@@ -103,7 +104,7 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
         userFullName={userFullName}
       />
 
-      <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 md:p-8 flex flex-col gap-6">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8 flex flex-col gap-6">
         {/* Barra superior con buscador */}
         <div className="bg-white border border-[#E2E0D8] rounded-xl p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
           <div className="relative flex-1 min-w-[240px]">
@@ -133,7 +134,7 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
               <StandardCard
                 key={inc.id}
                 status="PENDIENTE"
-                statusColor="border-orange-500"
+                statusColor="border-[3px] border-orange-500"
                 statusTextColor="text-orange-500"
                 vehiclePlate={inc.vehiclePlate}
                 subtitle={inc.category}
@@ -143,35 +144,63 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
                 isExpandable={true}
                 actions={
                   <div className="flex flex-col gap-3">
-                    <p className="text-xs text-[#475569] bg-white p-2 rounded border border-gray-200">
+                    <p className="text-xs text-[#475569] bg-white p-2.5 rounded border border-gray-200">
                       <strong>Detalle técnico:</strong> {inc.description}
                     </p>
 
-                    <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                    <div className="grid grid-cols-4 gap-3 items-center justify-items-center pt-2 border-t border-gray-200">
+                      {/* 1. WhatsApp avisar cliente */}
                       <a
                         href={`https://wa.me/34${inc.clientPhone}?text=${encodeURIComponent(
                           `Estimado/a ${inc.clientName}, le contactamos de su taller respecto a su vehículo matrícula ${inc.vehiclePlate}: ${inc.description}`
                         )}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors p-2 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
                         title="Avisar a cliente por WhatsApp"
+                        aria-label="Avisar WhatsApp"
                       >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>Avisar Cliente</span>
+                        <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                       </a>
 
-                      {onNavigateToExpediente && (
+                      {/* 2. Llamar por teléfono */}
+                      <a
+                        href={`tel:${inc.clientPhone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 text-blue-600 hover:text-blue-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                        title={`Llamar a ${inc.clientName} (${inc.clientPhone})`}
+                        aria-label="Llamar"
+                      >
+                        <Phone className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                      </a>
+
+                      {/* 3. Ver Expediente */}
+                      {onNavigateToExpediente ? (
                         <button
                           type="button"
-                          onClick={() => onNavigateToExpediente(inc.expediente)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[#38BDF8] hover:text-[#0284C7] transition-colors p-2 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigateToExpediente(inc.expediente);
+                          }}
+                          className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
                           title="Ver Expediente"
+                          aria-label="Expediente"
                         >
-                          <FolderKanban className="w-4 h-4" />
-                          <span>Expediente</span>
+                          <FolderKanban className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                         </button>
+                      ) : (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14" />
                       )}
+
+                      {/* 4. Vehículo afectado */}
+                      <div
+                        className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 transition-all flex items-center justify-center relative cursor-default"
+                        title={`Vehículo: ${inc.vehicleBrand} ${inc.vehicleModel} (${inc.vehiclePlate})`}
+                        aria-label="Vehículo"
+                      >
+                        <Car className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                      </div>
                     </div>
                   </div>
                 }

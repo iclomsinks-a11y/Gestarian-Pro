@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { 
   FileText, FileCheck, Search, Filter, Plus, Eye, Share2, 
   ArrowRight, Lock, CheckCircle, Car, Sparkles, Send, MessageSquare, Mail,
-  LayoutGrid, List, Clock, FolderOpen
+  LayoutGrid, List, Clock, FolderOpen, FolderKanban, MessageCircle, Phone, Euro
 } from 'lucide-react';
 import { DocumentType, GestarianDocument } from '../types';
 import { StandardCard } from './StandardCard';
-import { SheetPlusPIcon } from './BudgetIcons';
+import { SheetPlusPIcon, SheetPIcon, SheetFIcon } from './BudgetIcons';
+import { getDocStatusColors } from '../utils/clientStatusHelper';
 
 interface DocumentListProps {
   documents: GestarianDocument[];
@@ -20,6 +21,7 @@ interface DocumentListProps {
   onDispatchDoc?: (doc: GestarianDocument) => void;
   onNavigateToExpediente?: (expId: string) => void;
   initialSearch?: string;
+  onlyCards?: boolean;
 }
 
 export const DocumentList: React.FC<DocumentListProps> = ({
@@ -34,6 +36,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   onDispatchDoc,
   onNavigateToExpediente,
   initialSearch = '',
+  onlyCards = false,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'presupuesto' | 'factura'>('all');
   const [search, setSearch] = useState(initialSearch);
@@ -44,6 +47,17 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       setSearch(initialSearch);
     }
   }, [initialSearch]);
+
+  React.useEffect(() => {
+    const handleBudgetSearch = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query: string }>;
+      if (customEvent.detail && typeof customEvent.detail.query === 'string') {
+        setSearch(customEvent.detail.query);
+      }
+    };
+    window.addEventListener('gestarian_budget_search', handleBudgetSearch);
+    return () => window.removeEventListener('gestarian_budget_search', handleBudgetSearch);
+  }, []);
 
   const hasInvoices = documents.some((d) => d.type === 'factura');
 
@@ -60,6 +74,180 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     }
     return true;
   });
+
+  if (onlyCards) {
+    return (
+      <div className="w-full">
+        {filtered.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 text-sm font-medium bg-white rounded-2xl border border-slate-200">
+            No se han encontrado presupuestos con el criterio de búsqueda.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filtered.map((doc) => {
+              const isBudget = doc.type === 'presupuesto';
+              const subtitle = [doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico';
+
+              const isRejected = doc.status === 'rechazado';
+              const isPaid = doc.status === 'pagado' || doc.status === 'PAGADO' || doc.status === 'confirmada';
+              const isClientProposedPending = doc.deliveryDateProposedBy === 'client' && doc.deliveryDateStatus === 'pending_acceptance';
+              const isAccepted = (doc.acceptedByClient || doc.status === 'aceptado') && !isClientProposedPending;
+
+              let cardStatus = 'PENDIENTE';
+              let statusColor = 'border border-orange-500';
+              let statusTextColor = 'text-orange-500';
+
+              if (isRejected) {
+                cardStatus = 'RECHAZADO';
+                statusColor = 'border border-rose-500';
+                statusTextColor = 'text-rose-600 font-black';
+              } else if (isClientProposedPending) {
+                cardStatus = 'FECHA PROPUESTA';
+                statusColor = 'border border-orange-500 shadow-md ring-2 ring-orange-400/40';
+                statusTextColor = 'text-orange-600 font-black animate-pulse';
+              } else if (isAccepted) {
+                cardStatus = 'ACEPTADO';
+                statusColor = 'border border-emerald-500 shadow-md ring-1 ring-emerald-400/30';
+                statusTextColor = 'text-emerald-600 font-black';
+              } else if (isPaid) {
+                cardStatus = 'PAGADO';
+                statusColor = 'border border-blue-600';
+                statusTextColor = 'text-blue-600 font-black';
+              } else if (doc.status === 'enviado' || doc.status === 'enviada' || Boolean(doc.sentAt)) {
+                cardStatus = 'ATENDIDO';
+                statusColor = 'border border-blue-500 shadow-md ring-1 ring-blue-400/30';
+                statusTextColor = 'text-blue-600 font-black';
+              }
+
+              const isFacturaRecibida = doc.type === 'factura_recibida';
+              const targetExp = !isFacturaRecibida 
+                ? (doc.expediente || (isBudget && doc.number ? `E${doc.number.replace(/\D/g, '')}` : undefined)) 
+                : undefined;
+              
+              const singleDocColors = getDocStatusColors(doc, documents);
+
+              return (
+                <StandardCard
+                  key={doc.id}
+                  status={cardStatus}
+                  statusColor={statusColor}
+                  statusTextColor={statusTextColor}
+                  vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
+                  subtitle={subtitle}
+                  title={doc.clientName}
+                  refCode={singleDocColors.budgetNum || doc.number}
+                  refCodeColor={singleDocColors.budgetColor}
+                  expediente={singleDocColors.expNum || targetExp}
+                  expedienteColor={singleDocColors.expedienteColor}
+                  facturaNum={singleDocColors.invoiceNum}
+                  facturaColor={singleDocColors.invoiceColor}
+                  cleanNumbersLayout={true}
+                  isExpandable={true}
+                  onViewDoc={() => onViewDoc(doc)}
+                  onViewExpediente={targetExp && onNavigateToExpediente ? () => onNavigateToExpediente(targetExp) : undefined}
+                  viewDocLabel={isBudget ? 'Ver presupuesto' : 'Ver factura'}
+                  viewExpedienteLabel="Ver expediente (Roadmap)"
+                  actions={
+                    <div className="grid grid-cols-4 gap-3 items-center justify-items-center">
+                      {/* 1. Ver Documento (Hoja P o F o Eye) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewDoc(doc);
+                        }}
+                        className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                        title={isBudget ? 'Ver presupuesto' : 'Ver documento'}
+                        aria-label="Ver documento"
+                      >
+                        {isBudget ? (
+                          <SheetPIcon className="w-12 h-12 sm:w-14 sm:h-14" />
+                        ) : (
+                          <SheetFIcon className="w-12 h-12 sm:w-14 sm:h-14" />
+                        )}
+                      </button>
+
+                      {/* 2. Expediente Vinculado */}
+                      {!isFacturaRecibida && targetExp && onNavigateToExpediente ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigateToExpediente(targetExp);
+                          }}
+                          className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                          title="Ver Roadmap del expediente vinculado"
+                          aria-label="Ver expediente"
+                        >
+                          <FolderKanban className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                        </button>
+                      ) : (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14" />
+                      )}
+
+                      {/* 3. Compartir / Enviar */}
+                      {onDispatchDoc ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDispatchDoc(doc);
+                          }}
+                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                          title="Enviar por WhatsApp"
+                          aria-label="Enviar WhatsApp"
+                        >
+                          <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onShareDoc(doc);
+                          }}
+                          className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                          title="Compartir documento"
+                          aria-label="Compartir"
+                        >
+                          <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                        </button>
+                      )}
+
+                      {/* 4. Contacto Telefónico */}
+                      {doc.clientPhone ? (
+                        <a
+                          href={`tel:${doc.clientPhone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 text-blue-600 hover:text-blue-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                          title={`Llamar a ${doc.clientPhone}`}
+                          aria-label="Llamar"
+                        >
+                          <Phone className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                        </a>
+                      ) : doc.clientEmail ? (
+                        <a
+                          href={`mailto:${doc.clientEmail}?subject=Documento ${doc.number}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 text-indigo-600 hover:text-indigo-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                          title={`Email a ${doc.clientEmail}`}
+                          aria-label="Email"
+                        >
+                          <Mail className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                        </a>
+                      ) : (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14" />
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section className="w-full bg-white border border-[#E2E0D8] rounded-xl shadow-xs overflow-hidden">
@@ -195,29 +383,34 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                 const isPaid = doc.status === 'pagado' || doc.status === 'PAGADO' || doc.status === 'confirmada';
 
                 let cardStatus = 'PENDIENTE';
-                let statusColor = 'border-[3px] border-orange-500';
+                let statusColor = 'border border-orange-500';
                 let statusTextColor = 'text-orange-500';
 
                 if (isAccepted) {
                   cardStatus = 'ACEPTADO';
-                  statusColor = 'border-[3px] border-emerald-500';
+                  statusColor = 'border border-emerald-500';
                   statusTextColor = 'text-emerald-600';
                 } else if (isRejected) {
                   cardStatus = 'RECHAZADO';
-                  statusColor = 'border-[3px] border-red-500';
+                  statusColor = 'border border-red-500';
                   statusTextColor = 'text-red-500';
                 } else if (isPaid) {
                   cardStatus = 'PAGADO';
-                  statusColor = 'border-[3px] border-blue-600';
+                  statusColor = 'border border-blue-600';
                   statusTextColor = 'text-blue-600';
                 } else if (doc.status === 'enviado' || doc.status === 'enviada') {
                   cardStatus = 'ENVIADO';
-                  statusColor = 'border-[3px] border-amber-500';
+                  statusColor = 'border border-amber-500';
                   statusTextColor = 'text-amber-600';
                 }
 
-                const targetExp = doc.expediente || (doc.number ? `E${doc.number.replace(/\D/g, '')}` : undefined);
+                const isFacturaRecibida = doc.type === 'factura_recibida';
+                const targetExp = !isFacturaRecibida 
+                  ? (doc.expediente || (isBudget && doc.number ? `E${doc.number.replace(/\D/g, '')}` : undefined)) 
+                  : undefined;
                 
+                const singleDocColors = getDocStatusColors(doc, documents);
+
                 return (
                   <StandardCard
                     key={doc.id}
@@ -227,96 +420,142 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                     vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
                     subtitle={subtitle}
                     title={doc.clientName}
-                    refCode={doc.number}
-                    expediente={targetExp}
+                    refCode={singleDocColors.budgetNum || doc.number}
+                    refCodeColor={singleDocColors.budgetColor}
+                    expediente={singleDocColors.expNum || targetExp}
+                    expedienteColor={singleDocColors.expedienteColor}
+                    facturaNum={singleDocColors.invoiceNum}
+                    facturaColor={singleDocColors.invoiceColor}
                     isExpandable={true}
                     onViewDoc={() => onViewDoc(doc)}
                     onViewExpediente={targetExp && onNavigateToExpediente ? () => onNavigateToExpediente(targetExp) : undefined}
                     viewDocLabel={isBudget ? 'Ver presupuesto' : 'Ver factura'}
                     viewExpedienteLabel="Ver expediente (Roadmap)"
                     actions={
-                      <div className="flex items-center justify-around gap-1 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => onViewDoc(doc)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[#0F2942] hover:text-[#38BDF8] transition-colors p-2 cursor-pointer"
-                          title={isBudget ? 'Ver presupuesto' : 'Ver documento'}
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>Ver</span>
-                        </button>
-
-                        {(doc.expediente || doc.number) && onNavigateToExpediente && (
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-4 gap-3 items-center justify-items-center">
+                          {/* 1. Ver Documento (Hoja P o F o Eye) */}
                           <button
                             type="button"
-                            onClick={() => onNavigateToExpediente(doc.expediente || `E${doc.number.replace(/\D/g, '')}`)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-[#1E3A8A] hover:text-[#0F2942] transition-colors p-2 cursor-pointer"
-                            title="Ver Roadmap del expediente vinculado"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDoc(doc);
+                            }}
+                            className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                            title={isBudget ? 'Ver presupuesto' : 'Ver documento'}
+                            aria-label="Ver documento"
                           >
-                            <FolderOpen className="w-4 h-4" />
-                            <span>Expediente</span>
+                            {isBudget ? (
+                              <SheetPIcon className="w-12 h-12 sm:w-14 sm:h-14" />
+                            ) : (
+                              <SheetFIcon className="w-12 h-12 sm:w-14 sm:h-14" />
+                            )}
                           </button>
-                        )}
 
-                        {onDispatchDoc && (
-                          <button
-                            type="button"
-                            onClick={() => onDispatchDoc(doc)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-500 transition-colors p-2 cursor-pointer"
-                            title="Enviar por WhatsApp / Email"
-                          >
-                            <Send className="w-4 h-4" />
-                            <span>Enviar</span>
-                          </button>
-                        )}
+                          {/* 2. Expediente Vinculado */}
+                          {!isFacturaRecibida && targetExp && onNavigateToExpediente ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onNavigateToExpediente(targetExp);
+                              }}
+                              className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                              title="Ver Roadmap del expediente vinculado"
+                              aria-label="Ver expediente"
+                            >
+                              <FolderKanban className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                            </button>
+                          ) : (
+                            <div className="w-12 h-12 sm:w-14 sm:h-14" />
+                          )}
 
-                        {isBudget && (
-                          <>
+                          {/* 3. Compartir / Enviar por WhatsApp */}
+                          {onDispatchDoc ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDispatchDoc(doc);
+                              }}
+                              className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                              title="Enviar por WhatsApp"
+                              aria-label="Enviar WhatsApp"
+                            >
+                              <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onShareDoc(doc);
+                              }}
+                              className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                              title="Compartir documento"
+                              aria-label="Compartir"
+                            >
+                              <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                            </button>
+                          )}
+
+                          {/* 4. Teléfono o Email */}
+                          {doc.clientPhone ? (
+                            <a
+                              href={`tel:${doc.clientPhone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-blue-600 hover:text-blue-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                              title={`Llamar a ${doc.clientPhone}`}
+                              aria-label="Llamar"
+                            >
+                              <Phone className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                            </a>
+                          ) : doc.clientEmail ? (
+                            <a
+                              href={`mailto:${doc.clientEmail}?subject=Documento ${doc.number}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 text-indigo-600 hover:text-indigo-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                              title={`Email a ${doc.clientEmail}`}
+                              aria-label="Email"
+                            >
+                              <Mail className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                            </a>
+                          ) : (
+                            <div className="w-12 h-12 sm:w-14 sm:h-14" />
+                          )}
+                        </div>
+
+                        {/* Fila secundaria si hay fijar precios o facturar */}
+                        {(doc.needsBossPricing || isAccepted) && (
+                          <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-200/60">
                             {doc.needsBossPricing && onEditBudgetPricing && (
                               <button
                                 type="button"
-                                onClick={() => onEditBudgetPricing(doc)}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-500 transition-colors p-2 cursor-pointer"
-                                title="Fijar precios"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditBudgetPricing(doc);
+                                }}
+                                className="p-2 text-orange-600 hover:text-orange-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                                title="Fijar Precios"
                               >
-                                <Sparkles className="w-4 h-4" />
-                                <span>Precios</span>
+                                <Euro className="w-10 h-10" strokeWidth={1.8} />
                               </button>
                             )}
-
-                            {!isAccepted && !doc.needsBossPricing && (
-                              <span
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded"
-                                title="El presupuesto debe ser aceptado por el cliente en su área de cliente"
-                              >
-                                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Pendiente cliente</span>
-                              </span>
-                            )}
-
                             {isAccepted && (
                               <button
                                 type="button"
-                                onClick={() => onConvertToInvoice(doc)}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-600 transition-colors p-2 cursor-pointer"
-                                title="Convertir a factura"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onConvertToInvoice(doc);
+                                }}
+                                className="p-2 text-blue-700 hover:text-blue-800 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                                title="Convertir a Factura"
                               >
-                                <ArrowRight className="w-4 h-4" />
-                                <span>Facturar</span>
+                                <ArrowRight className="w-10 h-10" strokeWidth={1.8} />
                               </button>
                             )}
-                          </>
+                          </div>
                         )}
-
-                        <button
-                          type="button"
-                          onClick={() => onShareDoc(doc)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors p-2 cursor-pointer"
-                          title="Compartir"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          <span>Compartir</span>
-                        </button>
                       </div>
                     }
                   />
@@ -459,10 +698,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {(doc.expediente || doc.number) && onNavigateToExpediente && (
+                        {doc.type !== 'factura_recibida' && (doc.expediente || doc.type === 'presupuesto') && onNavigateToExpediente && (
                           <button
                             type="button"
-                            onClick={() => onNavigateToExpediente(doc.expediente || ('E' + doc.number.replace(/\D/g, '')))}
+                            onClick={() => onNavigateToExpediente(doc.expediente || ('E' + (doc.number || '').replace(/\D/g, '')))}
                             className="p-1.5 text-[#1E3A8A] hover:bg-blue-50 rounded transition-colors"
                             title="Ver expediente en Roadmap"
                           >

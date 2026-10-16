@@ -1,27 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff, Volume2, VolumeX, ShieldAlert, Sparkles, LogOut } from 'lucide-react';
-import { AppUser } from '../types';
+import { X, Mic, MicOff, Volume2, VolumeX, ShieldAlert, Sparkles, LogOut, Landmark } from 'lucide-react';
+import { AppUser, GestarianDocument, Client, Appointment } from '../types';
+import { getAeatFiscalAdvice } from '../data/aeatFiscalKnowledge';
 
 interface MetisVoiceAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: AppUser;
+  onNavigate?: (sectionId: string, tab?: 'emitidas' | 'recibidas') => void;
+  onToggleFullscreen?: () => void;
+  onOpenPlateScanner?: () => void;
+  onOpenNewBudget?: () => void;
+  onOpenNewClient?: () => void;
+  onOpenDetectedInvoices?: () => void;
+  documents?: GestarianDocument[];
+  clients?: Client[];
+  appointments?: Appointment[];
 }
 
 export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> = ({
   isOpen,
   onClose,
   currentUser,
+  onNavigate,
+  onToggleFullscreen,
+  onOpenPlateScanner,
+  onOpenNewBudget,
+  onOpenNewClient,
+  onOpenDetectedInvoices,
+  documents = [],
+  clients = [],
+  appointments = [],
 }) => {
   const [isActive, setIsActive] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [lastSpeech, setLastSpeech] = useState<string>('Conectando con Metis...');
   const [selectedRole, setSelectedRole] = useState<'jefe' | 'empleado'>('jefe');
+  const [micPermissionError, setMicPermissionError] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
 
   // Control de audio / síntesis de voz
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const recognitionRef = useRef<any>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const hasDetectedSpeechRef = useRef<boolean>(false);
+  const lastSoundDetectedAtRef = useRef<number>(0);
+  const animFrameRef = useRef<number | null>(null);
+  const isListeningRef = useRef<boolean>(false);
+  const latestTranscriptRef = useRef<string>('');
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const speechDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Escuchar tecla Escape para salir sin quedarse bloqueado
   useEffect(() => {
@@ -47,11 +81,12 @@ export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> =
   useEffect(() => {
     if (isOpen) {
       setIsActive(true);
+      setMicPermissionError(null);
       const timer = setTimeout(() => {
         speakResponse(
-          `Hola, te habla Metis. Estoy activa como tu compañera en el taller de ${currentUser.fullName || 'DM CAR'}. Puedes hablarme con las manos libres mientras reparas o trabajas con la chapa y pintura.`
+          `Hola, te habla Metis. Estoy activa en el taller de ${currentUser.fullName || 'DM CAR'}. Puedes hablarme con las manos libres.`
         );
-      }, 500);
+      }, 400);
       return () => clearTimeout(timer);
     } else {
       stopSpeaking();
@@ -59,126 +94,752 @@ export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> =
     }
   }, [isOpen]);
 
-  // Síntesis de voz (hablar al usuario)
-  const speakResponse = (text: string) => {
-    if (!synthRef.current) {
+  // Síntesis de voz (hablar al usuario) por el altavoz (motor dual: Web Speech nativo + Servidor TTS para compatibilidad total en Android Chrome)
+  const speakResponse = async (text: string) => {
+    stopSpeaking();
+    stopListening();
+
+    if (typeof window === 'undefined') {
       setLastSpeech(text);
+      if (isActive) startListening();
       return;
     }
 
-    try {
-      synthRef.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
+    // Limpiar texto de asteriscos y códigos para habla natural
+    const cleanText = text
+      .replace(/\[ACTION:[^\]]+\]/g, '')
+      .replace(/[*#_`~]/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/^[-*•]\s+/gm, '')
+      .replace(/\n{2,}/g, '. ')
+      .replace(/\n/g, ', ')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-      // Buscar voz en español
-      const voices = synthRef.current.getVoices();
-      const spanishVoice = voices.find((v) => v.lang.startsWith('es'));
-      if (spanishVoice) {
-        utterance.voice = spanishVoice;
-      }
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setLastSpeech(text);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        // Cuando Metis termina de hablar, escuchar al usuario si está activo
-        if (isActive) {
-          startListening();
-        }
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-      };
-
-      synthRef.current.speak(utterance);
-    } catch {
-      setIsSpeaking(false);
+    if (!cleanText) {
       setLastSpeech(text);
+      if (isActive) startListening();
+      return;
+    }
+
+    setIsSpeaking(true);
+    setLastSpeech(text);
+    let browserSpoke = false;
+
+    const finishSpeech = () => {
+      setIsSpeaking(false);
+      if (isActive) {
+        startListening();
+      }
+    };
+
+    // 1. Intentar con SpeechSynthesis del navegador
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'es-ES';
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const spanishVoice = voices.find((v) => v.lang.startsWith('es'));
+        if (spanishVoice) {
+          utterance.voice = spanishVoice;
+        }
+
+        utterance.onstart = () => {
+          browserSpoke = true;
+          setIsSpeaking(true);
+        };
+        utterance.onend = finishSpeech;
+        utterance.onerror = () => {
+          // Si falla en navegador, permitimos que el fallback de audio reproduzca
+        };
+
+        setTimeout(() => {
+          try {
+            window.speechSynthesis.speak(utterance);
+          } catch (e) {}
+        }, 50);
+      } catch (err) {
+        console.warn('SpeechSynthesis error:', err);
+      }
+    }
+
+    // 2. Fallback de audio por altavoz mediante endpoint TTS (fundamental en Android Chrome)
+    try {
+      const res = await fetch('/api/metis-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.audio) {
+          if (window.speechSynthesis && window.speechSynthesis.speaking && browserSpoke) {
+            return;
+          }
+
+          if (!audioPlayerRef.current) {
+            audioPlayerRef.current = new Audio();
+          }
+
+          const player = audioPlayerRef.current;
+          player.src = `data:${data.mimeType || 'audio/mpeg'};base64,${data.audio}`;
+          player.onplay = () => setIsSpeaking(true);
+          player.onended = finishSpeech;
+          player.onerror = finishSpeech;
+
+          await player.play().catch((playErr) => {
+            console.warn('Audio play error en altavoz:', playErr);
+            finishSpeech();
+          });
+          return;
+        }
+      }
+    } catch (ttsErr) {
+      console.warn('Error en TTS de MetisVoiceAssistantModal:', ttsErr);
     }
   };
 
   const stopSpeaking = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+    if (audioPlayerRef.current) {
+      try {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.currentTime = 0;
+      } catch (e) {}
     }
     setIsSpeaking(false);
   };
 
-  // Reconocimiento de voz por micrófono
-  const startListening = () => {
-    if (typeof window === 'undefined') return;
-    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) {
-      setIsListening(true);
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-      const recognition = new SpeechRec();
-      recognition.lang = 'es-ES';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setIsListening(false);
-        handleVoiceInput(transcript);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
-      setIsListening(false);
-    }
-  };
-
   const stopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    setAudioLevel(0);
+    if (speechDebounceTimerRef.current) {
+      clearTimeout(speechDebounceTimerRef.current);
+      speechDebounceTimerRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
-    setIsListening(false);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+      audioContextRef.current = null;
+    }
   };
 
-  // Procesamiento de voz según rol y consulta
-  const handleVoiceInput = (rawText: string) => {
-    const q = rawText.toLowerCase();
+  // Finalizar escucha y procesar la consulta por Web Speech o Gemini Multimodal
+  const finishAndSubmitVoice = async (immediateText?: string) => {
+    if (!isListeningRef.current) return;
+    const fastText = (immediateText || latestTranscriptRef.current).trim();
+    stopListening();
 
-    // Restricción a empleados de datos económicos
-    const economicKeywords = [
-      'factura', 'cobro', 'balance', 'beneficio', 'dinero', 'ingreso',
-      'cuanto cobramos', 'ganancia', 'iva', 'irpf', 'margen', 'rendimiento'
-    ];
+    if (fastText) {
+      latestTranscriptRef.current = '';
+      handleVoiceInput(fastText);
+      return;
+    }
 
-    if (selectedRole === 'empleado' && economicKeywords.some((k) => q.includes(k))) {
-      speakResponse(
-        'Acceso restringido. Por motivos de seguridad de DM CAR, los datos de facturación y balances están reservados exclusivamente al jefe de taller.'
-      );
+    // Si Web Speech API no capturó texto, usar el fallback de Gemini con MediaRecorder
+    if (audioChunksRef.current.length > 0 && hasDetectedSpeechRef.current) {
+      setIsTranscribing(true);
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: mediaRecorderRef.current?.mimeType || 'audio/webm',
+        });
+        audioChunksRef.current = [];
+
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(audioBlob);
+        });
+
+        const res = await fetch('/api/transcribe-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio: base64Data,
+            mimeType: audioBlob.type || 'audio/webm',
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success && data.text && data.text.trim()) {
+          handleVoiceInput(data.text.trim());
+        } else {
+          setLastSpeech('No pude escuchar con claridad. Por favor, habla de nuevo.');
+          if (isActive) {
+            startListening();
+          }
+        }
+      } catch (err: any) {
+        console.warn('Error en transcripción Gemini:', err);
+        if (isActive) {
+          startListening();
+        }
+      } finally {
+        setIsTranscribing(false);
+      }
+    } else {
+      if (isActive && !isSpeaking) {
+        startListening();
+      }
+    }
+  };
+
+  // Reconocimiento de voz por micrófono
+  const startListening = async () => {
+    if (typeof window === 'undefined') return;
+    if (isSpeaking) return;
+
+    // 1. Reanudar el altavoz si está en pausa
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }
+
+    // 2. Acceder al micro y mantener stream activo
+    let stream: MediaStream;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Navegador incompatible');
+      }
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      audioStreamRef.current = stream;
+      setMicPermissionError(null);
+    } catch (err: any) {
+      console.warn('Error micrófono:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMicPermissionError('Permiso de micrófono bloqueado. Haz clic en el candado para habilitarlo.');
+      } else {
+        setMicPermissionError('Error accediendo al micro: ' + (err.message || ''));
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // 3. AudioContext y AnalyserNode para nivel real
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+        audioContextRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.4;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+      }
+    } catch (e) {
+      console.warn('AudioContext error:', e);
+    }
+
+    // 4. MediaRecorder como respaldo
+    audioChunksRef.current = [];
+    try {
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+          else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
+          else mimeType = '';
+        }
+        const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        rec.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        rec.start(150);
+        mediaRecorderRef.current = rec;
+      }
+    } catch (e) {
+      console.warn('MediaRecorder error:', e);
+    }
+
+    // 5. Iniciar estados
+    isListeningRef.current = true;
+    setIsListening(true);
+    hasDetectedSpeechRef.current = false;
+    lastSoundDetectedAtRef.current = 0;
+    latestTranscriptRef.current = '';
+
+    // 6. Loop de nivel de audio y pausa breve de silencio
+    const checkLoop = () => {
+      if (!isListeningRef.current) return;
+      let currentLevel = 0;
+      if (analyserRef.current) {
+        const arr = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(arr);
+        let s = 0;
+        for (let i = 0; i < arr.length; i++) s += arr[i];
+        currentLevel = Math.min(100, Math.round(((s / arr.length) / 128) * 100));
+        setAudioLevel(currentLevel);
+      }
+
+      // Umbral 14 para evitar estática y ruidos de taller
+      if (currentLevel >= 14) {
+        hasDetectedSpeechRef.current = true;
+        lastSoundDetectedAtRef.current = Date.now();
+      } else if (hasDetectedSpeechRef.current && lastSoundDetectedAtRef.current > 0) {
+        const pauseTime = Date.now() - lastSoundDetectedAtRef.current;
+        if (pauseTime >= 800) {
+          finishAndSubmitVoice(latestTranscriptRef.current);
+          return;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(checkLoop);
+    };
+    animFrameRef.current = requestAnimationFrame(checkLoop);
+
+    // 7. Web Speech API en paralelo
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch {}
+        }
+        const recognition = new SpeechRec();
+        recognition.lang = 'es-ES';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+          }
+          transcript = transcript.trim();
+          if (transcript) {
+            hasDetectedSpeechRef.current = true;
+            lastSoundDetectedAtRef.current = Date.now();
+            latestTranscriptRef.current = transcript;
+            setLastSpeech(`"${transcript}"`);
+
+            // Autodetección rápida: si hay pausa de 800ms tras hablar, procesar de inmediato
+            if (speechDebounceTimerRef.current) {
+              clearTimeout(speechDebounceTimerRef.current);
+            }
+            speechDebounceTimerRef.current = setTimeout(() => {
+              if (isListeningRef.current && latestTranscriptRef.current.trim()) {
+                finishAndSubmitVoice(latestTranscriptRef.current);
+              }
+            }, 800);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('SpeechRec error:', event.error);
+          if (event.error === 'not-allowed') {
+            setMicPermissionError('Permiso de micrófono bloqueado en el navegador.');
+          }
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch (e) {
+        console.warn('SpeechRec start error:', e);
+      }
+    }
+  };
+
+  // Procesamiento de voz con IA Gemini y acceso a base de datos del taller
+  const handleVoiceInput = async (rawText: string) => {
+    const trimmed = rawText.trim();
+    if (!trimmed) return;
+
+    setLastSpeech(`"${trimmed}"`);
+
+    // Consultar a /api/metis-chat con Gemini
+    try {
+      const workshopContext = {
+        clients: clients.map(c => ({
+          id: c.id,
+          name: c.name,
+          cif: c.cif,
+          phone: c.phone,
+          email: c.email,
+          clientType: c.clientType,
+          plates: c.plates || []
+        })),
+        documentsSummary: {
+          totalDocuments: documents.length,
+          invoicesEmitidasCount: documents.filter(d => d.type === 'factura').length,
+          invoicesRecibidasCount: documents.filter(d => (d.type as any) === 'factura_recibida').length,
+          budgetsCount: documents.filter(d => d.type === 'presupuesto' || d.type === 'budget').length,
+          recentDocuments: documents.slice(-10).map(d => ({
+            number: d.number,
+            type: d.type,
+            clientName: d.clientName,
+            total: d.total,
+            status: d.status,
+            date: d.date
+          }))
+        },
+        appointments: appointments.slice(0, 10).map(a => ({
+          date: a.date,
+          time: a.time,
+          title: a.title,
+          clientName: a.clientName,
+          status: a.status
+        })),
+        reminders: []
+      };
+
+      const res = await fetch('/api/metis-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userQuery: trimmed,
+          history: [],
+          currentUser,
+          activeProfile: selectedRole,
+          employeeInfo: selectedRole === 'empleado' ? { name: 'Empleado', profession: 'Técnico Taller' } : null,
+          workshopContext
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.reply) {
+          const reply = data.reply;
+          // Acciones
+          if (reply.includes('[ACTION:fullscreen]')) {
+            if (onToggleFullscreen) onToggleFullscreen();
+          }
+          if (reply.includes('[ACTION:nav:facturacion:recibidas]')) {
+            if (onNavigate) {
+              onNavigate('page-facturacion', 'recibidas');
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+          if (reply.includes('[ACTION:nav:facturacion:emitidas]')) {
+            if (onNavigate) {
+              onNavigate('page-facturacion', 'emitidas');
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+          if (reply.includes('[ACTION:nav:clientes]')) {
+            if (onNavigate) {
+              onNavigate('page-clientes');
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+          if (reply.includes('[ACTION:new-client]')) {
+            if (onOpenNewClient) {
+              onOpenNewClient();
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+          if (reply.includes('[ACTION:new-budget]')) {
+            if (onOpenNewBudget) {
+              onOpenNewBudget();
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+          if (reply.includes('[ACTION:scanner]')) {
+            if (onOpenPlateScanner) {
+              onOpenPlateScanner();
+              setTimeout(() => onClose(), 1200);
+            }
+          }
+
+          const cleanReply = reply.replace(/\[ACTION:[^\]]+\]/g, '').trim();
+          speakResponse(cleanReply);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Error en /api/metis-chat desde modo voz:', err);
+    }
+
+    handleLocalFallbackVoice(trimmed);
+  };
+
+  // Procesamiento local de reserva (fallback offline)
+  const handleLocalFallbackVoice = (rawText: string) => {
+    const q = rawText.toLowerCase().trim();
+
+    // 0. CONSULTA SOBRE CLIENTES
+    if (q.includes('cliente') || q.includes('clientes')) {
+      if (q.includes('cuanto') || q.includes('cuánto') || q.includes('total') || q.includes('hay') || q.includes('tenemos') || q.includes('base de datos')) {
+        speakResponse(`Actualmente tenemos ${clients.length} clientes registrados en el sistema del taller.`);
+        return;
+      }
+    }
+
+    // 1. COMANDO: PANTALLA COMPLETA
+    if (q.includes('pantalla completa') || q.includes('pantalla grande') || q.includes('maximizar')) {
+      speakResponse('Activando modo de pantalla completa.');
+      if (onToggleFullscreen) {
+        onToggleFullscreen();
+      } else if (typeof document !== 'undefined') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 2. COMANDO: FACTURAS RECIBIDAS (De proveedores / compras / email)
+    if (
+      q.includes('facturas recibidas') ||
+      q.includes('factura recibida') ||
+      q.includes('recibidas') ||
+      q.includes('facturas de compras') ||
+      q.includes('facturas de proveedores') ||
+      q.includes('gastos recibidos')
+    ) {
+      if (selectedRole === 'empleado') {
+        speakResponse('Acceso restringido. Las facturas y gastos de proveedores están reservados al jefe de taller.');
+        return;
+      }
+      speakResponse('Abriendo la sección de Facturas Recibidas.');
+      if (onNavigate) {
+        onNavigate('page-facturacion', 'recibidas');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 3. COMANDO: FACTURAS EMITIDAS
+    if (
+      q.includes('facturas emitidas') ||
+      q.includes('factura emitida') ||
+      q.includes('emitidas') ||
+      q.includes('facturas a clientes')
+    ) {
+      if (selectedRole === 'empleado') {
+        speakResponse('Acceso restringido. La facturación a clientes está reservada al jefe de taller.');
+        return;
+      }
+      speakResponse('Abriendo la sección de Facturas Emitidas.');
+      if (onNavigate) {
+        onNavigate('page-facturacion', 'emitidas');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 4. COMANDO: FACTURAS DETECTADAS POR RASTREO / EMAIL
+    if (
+      q.includes('facturas detectadas') ||
+      q.includes('facturas por rastreo') ||
+      q.includes('facturas de email') ||
+      q.includes('facturas de gmail') ||
+      q.includes('rastreo de facturas')
+    ) {
+      if (selectedRole === 'empleado') {
+        speakResponse('Acceso restringido al jefe de taller.');
+        return;
+      }
+      speakResponse('Abriendo las facturas detectadas automáticamente por rastreo en tu email.');
+      if (onOpenDetectedInvoices) {
+        onOpenDetectedInvoices();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 5. COMANDO: FACTURAS GENERAL
+    if (q.includes('factura') || q.includes('facturas') || q.includes('facturacion') || q.includes('facturación')) {
+      if (selectedRole === 'empleado') {
+        speakResponse('Acceso restringido. Los datos de facturación están reservados al jefe de taller.');
+        return;
+      }
+      // Si pregunta cuántas hay
+      if (q.includes('cuantas') || q.includes('cuántas') || q.includes('hay') || q.includes('tengo')) {
+        const emitidasCount = documents.filter(d => d.type === 'factura').length;
+        const recibidasCount = documents.filter(d => (d.type as any) === 'factura_recibida').length;
+        speakResponse(`Tienes ${emitidasCount} facturas emitidas y ${recibidasCount} facturas recibidas de proveedores en el sistema.`);
+        return;
+      }
+
+      speakResponse('Abriendo la sección de Facturas.');
+      if (onNavigate) {
+        onNavigate('page-facturacion');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 6. COMANDO: ESCANEAR MATRÍCULA / CÁMARA
+    if (q.includes('escanear matrícula') || q.includes('escanear matricula') || q.includes('cámara') || q.includes('camara') || q.includes('escanear coche')) {
+      speakResponse('Iniciando escáner de matrículas por cámara OCR.');
+      if (onOpenPlateScanner) {
+        onOpenPlateScanner();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 7. COMANDO: NUEVO PRESUPUESTO
+    if (q.includes('nuevo presupuesto') || q.includes('crear presupuesto') || q.includes('hacer presupuesto')) {
+      speakResponse('Abriendo creación de nuevo presupuesto.');
+      if (onOpenNewBudget) {
+        onOpenNewBudget();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 8. COMANDO: PRESUPUESTOS (Navegación o Consulta)
+    if (q.includes('presupuesto') || q.includes('presupuestos')) {
+      if (q.includes('cuantos') || q.includes('cuántos') || q.includes('hay')) {
+        const budgetCount = documents.filter(d => d.type === 'presupuesto').length;
+        speakResponse(`Actualmente hay ${budgetCount} presupuestos registrados en el taller.`);
+        return;
+      }
+      speakResponse('Abriendo la sección de Presupuestos.');
+      if (onNavigate) {
+        onNavigate('page-presupuestos');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 9. COMANDO: CLIENTES
+    if (q.includes('nuevo cliente') || q.includes('alta cliente') || q.includes('crear cliente')) {
+      speakResponse('Abriendo formulario de alta de nuevo cliente.');
+      if (onOpenNewClient) {
+        onOpenNewClient();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    if (q.includes('cliente') || q.includes('clientes')) {
+      speakResponse('Abriendo la cartera de clientes.');
+      if (onNavigate) {
+        onNavigate('page-clientes');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 10. COMANDO: EXPEDIENTES / TALLER
+    if (q.includes('expediente') || q.includes('expedientes') || q.includes('taller') || q.includes('reparaciones') || q.includes('ordenes de trabajo')) {
+      speakResponse('Abriendo expedientes y taller.');
+      if (onNavigate) {
+        onNavigate('page-expedientes');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 11. COMANDO: PROVEEDORES
+    if (q.includes('proveedor') || q.includes('proveedores')) {
+      speakResponse('Abriendo la lista de proveedores.');
+      if (onNavigate) {
+        onNavigate('page-proveedores');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 12. COMANDO: INCIDENCIAS
+    if (q.includes('incidencia') || q.includes('incidencias')) {
+      speakResponse('Abriendo el panel de incidencias.');
+      if (onNavigate) {
+        onNavigate('page-incidencias');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 13. COMANDO: BALANCES
+    if (q.includes('balance') || q.includes('balances') || q.includes('informes')) {
+      if (selectedRole === 'empleado') {
+        speakResponse('Acceso restringido a los balances económicos del taller.');
+        return;
+      }
+      speakResponse('Abriendo balances e informes contables.');
+      if (onNavigate) {
+        onNavigate('page-balances');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+      return;
+    }
+
+    // 14. COMANDO: CONFIGURACIÓN
+    if (q.includes('configuracion') || q.includes('configuración') || q.includes('ajustes')) {
+      speakResponse('Abriendo configuración del taller.');
+      if (onNavigate) {
+        onNavigate('page-configuracion');
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1200);
       return;
     }
 
@@ -204,23 +865,32 @@ export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> =
       return;
     }
 
-    if (q.includes('presupuesto')) {
-      speakResponse(
-        'Para el presupuesto puedes escanear la matrícula con la cámara del inicio o entrar directamente en la sección de presupuestos.'
-      );
+    // Consultas Fiscales AEAT (Autónomos vs Sociedades Limitadas, Modelos 303, 130, 200, 115, plazos y deducciones)
+    const isSL = currentUser.businessType === 'empresa' ||
+                 currentUser.fiscalAddress?.toLowerCase().includes('s.l') || 
+                 currentUser.fullName?.toUpperCase().includes('S.L') || 
+                 currentUser.fullName?.toUpperCase().includes('SOCIEDAD') || 
+                 (currentUser.cif ? currentUser.cif.toUpperCase().startsWith('B') : false);
+
+    const fiscalAdvice = getAeatFiscalAdvice(rawText, { 
+      isEmployee: selectedRole === 'empleado', 
+      isSL 
+    });
+
+    if (fiscalAdvice) {
+      // Limpiar formato markdown para síntesis de voz natural
+      const cleanVocalText = fiscalAdvice
+        .replace(/[#*•_`]/g, '')
+        .replace(/💡|🏛️|📅|🧾|🛡️|📌|✅|⚠️|⛔/g, '')
+        .replace(/\n+/g, '. ')
+        .trim();
+      speakResponse(cleanVocalText);
       return;
     }
 
-    if (q.includes('cliente') || q.includes('portal')) {
-      speakResponse(
-        'El cliente puede consultar su reparación accediendo al portal de clientes desde gestarian punto com, o mediante el enlace de seguimiento y descarga de la app que le enviamos con su presupuesto por WhatsApp si es particular o por correo si es empresa.'
-      );
-      return;
-    }
-
-    // Respuesta general de compañero
+    // Respuesta adaptada inteligente
     speakResponse(
-      `Te he escuchado perfectamente. Estoy a tu lado para cualquier paso técnico o procedimiento de la empresa que necesites.`
+      `Entendido. Puedes pedirme abrir facturas recibidas, emitidas, presupuestos, clientes, poner pantalla completa, o consultarme dudas fiscales de la AEAT y procedimientos de taller.`
     );
   };
 
@@ -471,8 +1141,25 @@ export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> =
                   <div className="w-1.5 h-8 bg-white rounded-full animate-bounce [animation-delay:0.3s]" />
                   <div className="w-1.5 h-5 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
+              ) : isTranscribing ? (
+                <Sparkles className="w-10 h-10 text-amber-300 animate-spin" />
               ) : isListening ? (
-                <Mic className="w-10 h-10 text-white animate-pulse" />
+                audioLevel >= 8 ? (
+                  <div className="flex items-center gap-1">
+                    {[0.5, 0.9, 1.2, 0.7, 1.0].map((m, idx) => {
+                      const h = Math.max(6, Math.min(32, Math.round((audioLevel / 100) * 32 * m)));
+                      return (
+                        <div
+                          key={idx}
+                          className="w-1.5 bg-white rounded-full transition-all duration-75"
+                          style={{ height: `${h}px` }}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Mic className="w-10 h-10 text-white animate-pulse" />
+                )
               ) : (
                 <Sparkles className="w-9 h-9 text-white" />
               )}
@@ -480,20 +1167,41 @@ export const MetisVoiceAssistantModal: React.FC<MetisVoiceAssistantModalProps> =
           </div>
 
           {/* Subtítulo dinámico fluido */}
-          <div className="mt-8 text-center max-w-[280px]">
-            <p className="text-xs text-white/90 font-medium leading-relaxed drop-shadow-sm min-h-[40px] flex items-center justify-center">
-              {isActive ? (
-                isSpeaking ? (
-                  `« ${lastSpeech} »`
-                ) : isListening ? (
-                  <span className="text-[#38BDF8] animate-pulse">Te escucho... háblame</span>
+          <div className="mt-6 text-center max-w-[280px]">
+            {micPermissionError ? (
+              <div className="bg-rose-500/20 border border-rose-400/40 rounded-xl p-2.5 backdrop-blur-md animate-in fade-in">
+                <p className="text-[11px] text-rose-200 font-medium mb-1.5 leading-snug">
+                  {micPermissionError}
+                </p>
+                <button
+                  type="button"
+                  onClick={startListening}
+                  className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-sm transition-all cursor-pointer"
+                >
+                  Habilitar Micrófono
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-white/90 font-medium leading-relaxed drop-shadow-sm min-h-[40px] flex items-center justify-center">
+                {isActive ? (
+                  isSpeaking ? (
+                    `« ${lastSpeech} »`
+                  ) : isTranscribing ? (
+                    <span className="text-amber-300 font-bold animate-pulse">Procesando tu voz con IA...</span>
+                  ) : isListening ? (
+                    audioLevel >= 8 ? (
+                      <span className="text-emerald-300 font-bold animate-pulse">🎤 Detectando tu voz...</span>
+                    ) : (
+                      <span className="text-[#38BDF8] animate-pulse">Te escucho... háblame con las manos libres</span>
+                    )
+                  ) : (
+                    <span className="text-white/70">Habla con libertad o pulsa un botón rápido</span>
+                  )
                 ) : (
-                  <span className="text-white/70">Habla con libertad o pulsa un botón rápido</span>
-                )
-              ) : (
-                <span className="text-amber-200/80">Luz detenida. Pulsa reanudar para hablar con Metis</span>
-              )}
-            </p>
+                  <span className="text-amber-200/80">Luz detenida. Pulsa reanudar para hablar con Metis</span>
+                )}
+              </p>
+            )}
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle, Info
 } from 'lucide-react';
 import { Client, GestarianDocument, AppUser, InternalNotification, BudgetStatus, SolicitudItem } from '../types';
-import { addStoredSolicitud, getStoredSolicitudes, getNextSolicitudData } from '../services/storage';
+import { addStoredSolicitud, getStoredSolicitudes, saveStoredSolicitudes, getNextSolicitudData } from '../services/storage';
 
 interface ClientPortalModalProps {
   isOpen: boolean;
@@ -159,6 +159,29 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
       citaAcceptedAt: now,
     });
 
+    // Sincronizar solicitud vinculada a PRESUPUESTO_Y_FECHA_ACEPTADOS
+    try {
+      const allSols = getStoredSolicitudes();
+      const updatedSols = allSols.map((s) => {
+        if (
+          (doc.expediente && s.expediente === doc.expediente) ||
+          (doc.solicitudId && s.id === doc.solicitudId) ||
+          (doc.solicitudNumber && s.number === doc.solicitudNumber)
+        ) {
+          return {
+            ...s,
+            status: 'PRESUPUESTO_Y_FECHA_ACEPTADOS',
+            reviewedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          };
+        }
+        return s;
+      });
+      saveStoredSolicitudes(updatedSols);
+      window.dispatchEvent(new CustomEvent('gestarian_solicitudes_updated'));
+    } catch (e) {
+      console.error('Error sincronizando solicitud tras aceptar presupuesto:', e);
+    }
+
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,
       title: 'Presupuesto y Fecha de Entrega Aceptados',
@@ -200,10 +223,33 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
       citaAcceptedAt: now,
     });
 
+    // Sincronizar solicitud vinculada a PRESUPUESTO_ACEPTADO_FECHA_CLIENTE
+    try {
+      const allSols = getStoredSolicitudes();
+      const updatedSols = allSols.map((s) => {
+        if (
+          (doc.expediente && s.expediente === doc.expediente) ||
+          (doc.solicitudId && s.id === doc.solicitudId) ||
+          (doc.solicitudNumber && s.number === doc.solicitudNumber)
+        ) {
+          return {
+            ...s,
+            status: 'PRESUPUESTO_ACEPTADO_FECHA_CLIENTE',
+            reviewedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          };
+        }
+        return s;
+      });
+      saveStoredSolicitudes(updatedSols);
+      window.dispatchEvent(new CustomEvent('gestarian_solicitudes_updated'));
+    } catch (e) {
+      console.error('Error sincronizando solicitud tras proponer fecha alternativa:', e);
+    }
+
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,
       title: 'Presupuesto Aceptado - Nueva Fecha/Hora de Entrega Propuesta',
-      message: `El cliente ${loggedClient.name} ha aceptado el presupuesto ${doc.number}, proponiendo una nueva entrega para el ${newDate} a las ${newTime}. El taller puede revisarla en el Roadmap.`,
+      message: `El cliente ${loggedClient.name} ha aceptado el presupuesto ${doc.number}, proponiendo una nueva entrega para el ${newDate} a las ${newTime}. El taller puede aceptarla en la tarjeta de solicitud o Roadmap.`,
       timestamp: now,
       read: false,
       type: 'general',
@@ -219,6 +265,27 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
 
   const handleRejectBudget = (doc: GestarianDocument) => {
     onUpdateDocumentStatus(doc.id, 'rechazado');
+
+    // Sincronizar solicitud vinculada a RECHAZADA
+    try {
+      const allSols = getStoredSolicitudes();
+      const updatedSols = allSols.map((s) => {
+        if (
+          (doc.expediente && s.expediente === doc.expediente) ||
+          (doc.solicitudId && s.id === doc.solicitudId) ||
+          (doc.solicitudNumber && s.number === doc.solicitudNumber)
+        ) {
+          return {
+            ...s,
+            status: 'RECHAZADA',
+            reviewedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          };
+        }
+        return s;
+      });
+      saveStoredSolicitudes(updatedSols);
+      window.dispatchEvent(new CustomEvent('gestarian_solicitudes_updated'));
+    } catch (e) {}
 
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,

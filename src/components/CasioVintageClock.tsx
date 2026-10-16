@@ -95,19 +95,18 @@ export const CasioVintageClock: React.FC<CasioVintageClockProps> = ({
   const minutesStr = time.getMinutes().toString().padStart(2, '0');
   const secondsStr = time.getSeconds().toString().padStart(2, '0');
 
-  // Formato de fecha solicitado: Dia, número día, mes, últimos dos dígitos del año.
-  // Ejemplo: "Viernes, 18 de Septiembre 26"
+  // Formato de fecha solicitado: "Martes 29 SEP 26"
   const formatDateCasio = (d: Date) => {
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+      'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
     ];
     const dayName = days[d.getDay()];
     const dayNum = d.getDate();
-    const monthName = months[d.getMonth()];
+    const monthShort = months[d.getMonth()];
     const yearShort = d.getFullYear().toString().slice(-2);
-    return `${dayName}, ${dayNum} de ${monthName} ${yearShort}`;
+    return `${dayName} ${dayNum} ${monthShort} ${yearShort}`;
   };
 
   const tempColor = getTemperatureColor(weather.temperature);
@@ -127,7 +126,6 @@ export const CasioVintageClock: React.FC<CasioVintageClockProps> = ({
         .font-date-tall {
           font-family: 'Barlow Condensed', 'Oswald', 'Teko', 'Arial Narrow', sans-serif;
           letter-spacing: 0.08em;
-          text-transform: uppercase;
         }
       `}</style>
 
@@ -205,18 +203,18 @@ export const CasioVintageClock: React.FC<CasioVintageClockProps> = ({
       </div>
 
       {/* DEBAJO DE LA HORA:
-          - A la izquierda: Fecha en formato "Viernes, 18 de Septiembre 26", tamaño multiplicado x1.2
-          - A la derecha: Ciudad y Temperatura del código postal fiscal, tamaño multiplicado x1.2 con aire de 10px a la derecha
+          - A la izquierda: Fecha en formato "Viernes, 18 de Septiembre 26", tamaño aumentado x1.5 (+10% espacio dedicado)
+          - A la derecha: Solo Temperatura del código postal fiscal (sin municipio), con margen derecho de 10px
       */}
-      <div className="w-full max-w-4xl mx-auto mt-2 sm:mt-3 px-3 sm:px-6 flex items-end justify-between gap-3">
-        {/* Izquierda: Fecha con tipografía estilizada, tamaño de ancho x1.1 */}
-        <div className="text-left overflow-hidden">
+      <div className="w-full max-w-4xl mx-auto mt-[11px] sm:mt-[15px] px-3.5 sm:px-7 flex items-end justify-between gap-4">
+        {/* Izquierda: Fecha con tipografía estilizada, espacio aumentado un 10% */}
+        <div className="text-left flex-1 min-w-0 pr-3 sm:pr-5 py-1 overflow-visible">
           <span
-            className="block text-base sm:text-lg md:text-xl lg:text-2xl font-semibold font-date-tall tracking-wider uppercase whitespace-nowrap"
+            className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold font-date-tall tracking-wider whitespace-nowrap"
             style={{
               color: clockColor,
               textShadow: !isLightBackground ? `0 0 10px ${clockColor}40` : 'none',
-              letterSpacing: '0.06em',
+              letterSpacing: '0.07em',
               transform: 'scaleX(1.1)',
               transformOrigin: 'left',
             }}
@@ -225,16 +223,13 @@ export const CasioVintageClock: React.FC<CasioVintageClockProps> = ({
           </span>
         </div>
 
-        {/* Derecha: Ciudad y Temperatura del CP de los datos fiscales x1.2 */}
-        <div className="shrink-0 text-right pr-[10px]">
-          <span className="block text-[11px] sm:text-[12px] md:text-[13px] lg:text-[14px] font-extrabold uppercase tracking-widest text-[#94A3B8]">
-            {weather.cityName}
-          </span>
+        {/* Derecha: Solo Temperatura del CP de los datos fiscales (+30% tamaño de fuente) */}
+        <div className="shrink-0 text-right pr-[10px] pb-1">
           <span
-            className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold font-mono tracking-tight leading-none mt-0.5"
+            className="block text-[32px] sm:text-[40px] md:text-[48px] lg:text-[64px] font-extrabold font-mono tracking-tight leading-none"
             style={{
               color: tempColor,
-              textShadow: `0 0 12px ${tempColor}66`,
+              textShadow: `0 0 14px ${tempColor}66`,
             }}
           >
             {weather.temperature !== null ? `${Math.round(weather.temperature)}°` : '--°'}

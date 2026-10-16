@@ -1,6 +1,12 @@
 {
-  "name": "GESTARIAN",
-  "description": "Gestión minimalista de presupuestos y facturas para autónomos y pequeñas empresas con control fiscal e informes trimestrales.",
-  "requestFramePermissions": ["camera", "microphone"],
+  "name": "Gestarian-Pro",
+  "description": "Plataforma integral de gestión de expedientes de vehículos, clientes, facturación, citas, incidencias y trámites de gestoría automotriz.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "autoplay",
+    "speaker-selection",
+    "clipboard-write"
+  ],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -138,6 +138,17 @@ export function generateA3Report(report: QuarterlyReport): string {
 }
 
 /**
+ * Genera el Libro de Facturas Emitidas en formato CSV delimitado por comas
+ */
+export function generateCsvReport(report: QuarterlyReport): string {
+  const header = 'Numero,Fecha,NIF_Cliente,Nombre_Cliente,Base_Imponible,Tipo_IVA,Cuota_IVA,Tipo_IRPF,Retencion_IRPF,Total_Factura,Estado\n';
+  const rows = report.invoices.map((inv) => 
+    `"${inv.number}","${inv.date}","${inv.clientCif}","${inv.clientName.replace(/"/g, '""')}",${inv.subtotal.toFixed(2)},${inv.applyIva ? inv.ivaRate : 0},${inv.ivaAmount.toFixed(2)},${inv.applyIrpf ? inv.irpfRate : 0},${inv.irpfAmount.toFixed(2)},${inv.total.toFixed(2)},"${inv.status}"`
+  ).join('\n');
+  return header + rows;
+}
+
+/**
  * Descarga en el navegador cualquier cadena como archivo
  */
 export function downloadFile(filename: string, content: string, mimeType: string) {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { Client, ClientVehicle } from '../types';
 import { 
   X, Save, FileText, Building2, User, Phone, Mail, MapPin, 
@@ -253,11 +254,19 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
     resetForm();
   };
 
+  const formScrollRef = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll({ container: formScrollRef });
+
+  const yOrbSky = useTransform(scrollY, [0, 500], [0, -140]);
+  const yOrbIndigo = useTransform(scrollY, [0, 500], [0, -200]);
+  const yFiscalSection = useTransform(scrollY, [0, 400], [0, -18]);
+  const yContactSection = useTransform(scrollY, [0, 400], [0, -35]);
+
   const isEditing = !!initialClient;
 
   return (
     <div 
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-xs overflow-y-auto p-0 sm:p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm overflow-y-auto p-0 sm:p-4 select-none"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           resetForm();
@@ -265,42 +274,36 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
         }
       }}
     >
-      <div className="w-full max-w-3xl min-h-screen sm:min-h-[auto] bg-white sm:rounded-md sm:shadow-2xl sm:border border-[#E2E0D8] flex flex-col my-auto relative">
+      <div 
+        ref={formScrollRef}
+        className="w-full max-w-3xl min-h-screen sm:min-h-[auto] max-h-[95vh] overflow-y-auto bg-white sm:rounded-2xl sm:shadow-[0_25px_60px_rgba(0,0,0,0.5)] sm:border border-[#CBD5E1] flex flex-col my-auto relative overflow-x-hidden"
+      >
+        {/* Capas de Luz Parallax Ambiental en el fondo del formulario */}
+        <motion.div 
+          style={{ y: yOrbSky }} 
+          className="absolute top-10 -right-20 w-80 h-80 rounded-full bg-sky-400/20 blur-3xl pointer-events-none" 
+        />
+        <motion.div 
+          style={{ y: yOrbIndigo }} 
+          className="absolute bottom-10 -left-20 w-80 h-80 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" 
+        />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#E2E0D8] bg-[#F8F7F3] sticky top-0 z-10">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl font-bold text-[#0F172A] tracking-tight uppercase flex items-center gap-2">
-                <User className="w-5 h-5 text-[#1E3A8A]" />
-                {isEditing ? `Editar Cliente: ${initialClient.name}` : 'Alta de Nuevo Cliente'}
-              </h2>
-              {isEditing && (
-                <span className="font-mono font-black text-xs px-2.5 py-1 bg-[#0F2942] text-white rounded shadow-xs">
-                  ID #{initialClient.clientNumber ?? 1}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-[#64748B] mt-1">
-              {isEditing
-                ? `Actualiza los datos del cliente (ID #${initialClient.clientNumber ?? 1}) y administra los vehículos vinculados.`
-                : 'Introduce los datos obligatorios. Se asignará automáticamente el siguiente número correlativo de ID en la cartera y Supabase.'}
-            </p>
+        <div className="flex items-center justify-between p-6 border-b border-[#E2E0D8] bg-[#F8F7F3]/95 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-xl font-bold text-[#0F172A] tracking-tight uppercase">
+              {isEditing ? `Editar Cliente: ${initialClient.name}` : 'Nuevo cliente'}
+            </h2>
+            {isEditing && (
+              <span className="font-mono font-black text-xs px-2.5 py-1 bg-[#0F2942] text-white rounded shadow-xs">
+                ID #{initialClient.clientNumber ?? 1}
+              </span>
+            )}
           </div>
-          <button
-            onClick={() => {
-              resetForm();
-              onClose();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-rose-50 hover:text-rose-700 text-[#475569] border border-[#CBD5E1] rounded-sm text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-            title="Cerrar formulario"
-          >
-            <X className="w-4 h-4" />
-            <span>Cerrar</span>
-          </button>
         </div>
 
         {/* Form Body */}
-        <div className="p-6 md:p-8 space-y-6">
+        <div className="p-6 md:p-8 space-y-6 relative z-10">
           {error && (
             <div className="p-3 bg-red-50 text-red-700 text-sm font-semibold rounded-sm border border-red-200">
               {error}
@@ -308,52 +311,46 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-[#0F172A] uppercase border-b border-[#E2E0D8] pb-2 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#475569]" />
+            <motion.div style={{ y: yFiscalSection }} className="space-y-4">
+              <h3 className="text-base font-black text-[#0F2942] uppercase border-b border-[#E2E0D8] pb-2 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#0F2942]" />
                 Datos Fiscales
               </h3>
               
               <div>
-                <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase">
-                  Nombre / Razón Social <span className="text-red-500">*</span>
-                </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A]"
-                  placeholder="Ej: Talleres Martínez S.L."
+                  className="w-full px-5 py-4 text-xl sm:text-2xl font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
+                  placeholder="NOMBRE / RAZÓN SOCIAL *"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase">
-                  NIF / CIF <span className="text-red-500">*</span>
-                </label>
                 <input
                   type="text"
                   value={cif}
                   onChange={(e) => setCif(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2.5 text-sm uppercase bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A]"
-                  placeholder="Ej: B12345678 (SL) o 12345678Z (Particular/Autónomo)"
+                  className="w-full px-5 py-4 text-xl sm:text-2xl font-black uppercase bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent font-mono transition-all"
+                  placeholder="NIF / CIF *"
                 />
               </div>
 
               {/* Casilla Autónomo Profesional */}
               <div className="pt-1">
-                <label className="flex items-center gap-2.5 p-2 bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm cursor-pointer hover:bg-[#E2E8F0]/40 transition-colors">
+                <label className="flex items-center gap-3 p-4 bg-slate-500/[0.03] border-2 border-slate-300 rounded-3xl cursor-pointer hover:bg-slate-500/[0.06] transition-colors">
                   <input
                     type="checkbox"
                     checked={isAutonomo}
                     onChange={(e) => setIsAutonomo(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="w-6 h-6 rounded-xl text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                   />
                   <div>
-                    <span className="text-xs font-bold text-[#0F172A] uppercase">
-                      Autónomo Profesional
+                    <span className="text-base sm:text-lg font-black text-[#0F2942] uppercase">
+                      AUTÓNOMO PROFESIONAL
                     </span>
-                    <p className="text-[11px] text-[#64748B] leading-tight">
+                    <p className="text-xs sm:text-sm text-slate-600 font-semibold leading-tight">
                       Marcar si es un profesional autónomo (permite envío por WhatsApp y Email).
                     </p>
                   </div>
@@ -361,64 +358,52 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> Dirección <span className="text-red-500">*</span>
-                </label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A]"
-                  placeholder="Calle, Número, Ciudad, CP"
+                  className="w-full px-5 py-4 text-xl sm:text-2xl font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
+                  placeholder="DIRECCIÓN COMPLETA *"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-[#0F172A] uppercase border-b border-[#E2E0D8] pb-2 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#475569]" />
+            <motion.div style={{ y: yContactSection }} className="space-y-4">
+              <h3 className="text-base font-black text-[#0F2942] uppercase border-b border-[#E2E0D8] pb-2 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-[#0F2942]" />
                 Contacto y Notas
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5" /> Teléfono <span className="text-red-500">*</span>
-                  </label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A]"
-                    placeholder="Ej: 600 123 456"
+                    className="w-full px-5 py-4 text-xl sm:text-2xl font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent font-mono transition-all"
+                    placeholder="TELÉFONO *"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase">
-                    Email <span className="text-red-500">*</span>
-                  </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A]"
-                    placeholder="correo@ejemplo.com"
+                    className="w-full px-5 py-4 text-xl sm:text-2xl font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent transition-all"
+                    placeholder="EMAIL *"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#64748B] mb-1.5 uppercase">
-                  Notas Internas
-                </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm bg-[#F8F7F3] border border-[#CBD5E1] rounded-sm focus:outline-none focus:border-[#1E3A8A] resize-none h-24"
-                  placeholder="Observaciones de pago, horarios preferidos, personas de contacto..."
+                  className="w-full px-5 py-4 text-xl sm:text-2xl font-black bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent resize-none h-32 transition-all"
+                  placeholder="NOTAS INTERNAS"
                 />
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Sección de Vehículos del Cliente al final */}
@@ -536,66 +521,48 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
               </div>
             )}
 
-            {/* Añadir matrícula rápida */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[180px]">
-                <input
-                  type="text"
-                  value={newPlateInput}
-                  onChange={(e) => setNewPlateInput(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddPlate();
-                    }
-                  }}
-                  placeholder="Añadir matrícula rápida (ej: 1234-BBB)"
-                  className="w-full px-3 py-1.5 text-xs uppercase font-mono font-bold tracking-wider bg-white border border-[#CBD5E1] rounded-lg focus:outline-none focus:border-[#1E3A8A]"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleAddPlate}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-[#0F172A] text-xs font-medium rounded-lg transition-colors cursor-pointer"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Añadir</span>
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 border-t border-[#E2E0D8] bg-[#F1F0EB] flex flex-col-reverse sm:flex-row items-center justify-end gap-3 mt-auto">
+        {/* Footer Actions: Iconos flotantes limpios grandes (Guardar, +P Nuevo Presupuesto, X Salir) */}
+        <div className="p-4 sm:p-6 border-t border-[#E2E0D8] bg-[#F1F0EB] flex items-center justify-center gap-10 sm:gap-14 mt-auto">
+          {/* 1. GUARDAR */}
+          <button
+            type="button"
+            onClick={handleSave}
+            className="p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-emerald-600"
+            title={isEditing ? 'Guardar Cambios' : 'Guardar Cliente'}
+          >
+            <Save className="w-9 h-9 sm:w-10 sm:h-10" strokeWidth={2.2} />
+          </button>
+
+          {/* 2. HOJA DE NUEVO PRESUPUESTO CON +P DENTRO */}
+          <button
+            type="button"
+            onClick={handleSaveAndBudget}
+            className="p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-sky-600 relative flex items-center justify-center"
+            title="Guardar y Crear Nuevo Presupuesto (+P)"
+          >
+            <div className="relative flex items-center justify-center">
+              <FileText className="w-9 h-9 sm:w-10 sm:h-10 text-sky-600" strokeWidth={2.2} />
+              <span className="absolute top-2.5 sm:top-3 left-1/2 -translate-x-1/2 text-[10px] sm:text-[11px] font-black text-sky-950 font-mono tracking-tighter">
+                +P
+              </span>
+            </div>
+          </button>
+
+          {/* 3. X DE SALIR GRANDE */}
           <button
             type="button"
             onClick={() => {
               resetForm();
               onClose();
             }}
-            className="w-full sm:w-auto px-5 py-3 sm:py-2.5 text-xs font-bold text-[#475569] hover:text-[#0F172A] bg-gray-200 hover:bg-gray-300 rounded-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-slate-700 hover:text-rose-600"
+            title="Salir / Cancelar"
           >
-            <X className="w-4 h-4 text-gray-500" />
-            <span>Cancelar / Salir</span>
+            <X className="w-9 h-9 sm:w-10 sm:h-10" strokeWidth={2.2} />
           </button>
-          
-          <button
-            onClick={handleSave}
-            className="w-full sm:w-auto flex justify-center items-center gap-2 px-6 py-3 sm:py-2.5 bg-white border border-[#CBD5E1] hover:bg-[#F8F7F3] text-[#0F172A] text-xs font-bold uppercase tracking-wider transition-colors rounded-sm shadow-xs cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            {isEditing ? 'Guardar Cambios' : 'Guardar Cliente'}
-          </button>
-
-          {!isEditing && onSaveAndCreateBudget && (
-            <button
-              onClick={handleSaveAndBudget}
-              className="w-full sm:w-auto flex justify-center items-center gap-2 px-6 py-3 sm:py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white text-xs font-bold uppercase tracking-wider transition-colors rounded-sm shadow-sm cursor-pointer"
-            >
-              <FileText className="w-4 h-4" />
-              Guardar y Generar Presupuesto
-            </button>
-          )}
         </div>
       </div>
 

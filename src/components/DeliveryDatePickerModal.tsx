@@ -131,20 +131,20 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
                 <div key={group.monthLabel} className={gIdx > 0 ? 'mt-3 pt-2 border-t border-slate-200' : ''}>
                   {/* Mes arriba centrado */}
                   <div className="text-center mb-1.5">
-                    <span className="text-xs sm:text-sm font-black tracking-widest text-slate-700 uppercase">
+                    <span className="text-xs sm:text-sm font-black tracking-widest text-sky-600 uppercase">
                       {group.monthLabel}
                     </span>
                   </div>
 
                   {/* Fila única de cabecera de días: L M X J V S D */}
                   <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center mb-1">
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-600">L</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-600">M</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-600">X</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-600">J</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-600">V</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-blue-600">S</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-red-600">D</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-700">L</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-700">M</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-700">X</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-700">J</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-700">V</div>
+                    <div className="text-[10px] sm:text-xs font-black text-sky-500">S</div>
+                    <div className="text-[10px] sm:text-xs font-black text-red-500">D</div>
                   </div>
 
                   {/* Cuadrícula de 7 columnas para los días del mes */}
@@ -155,9 +155,9 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
                       const isSunday = dayOfWeek === 0;
                       const isSelected = isSameDay(d, selectedDate);
 
-                      let colorClass = 'text-slate-800';
-                      if (isSaturday) colorClass = 'text-blue-600';
-                      if (isSunday) colorClass = 'text-red-600';
+                      let colorClass = 'text-sky-950';
+                      if (isSaturday) colorClass = 'text-sky-600';
+                      if (isSunday) colorClass = 'text-red-500';
 
                       return (
                         <button
@@ -167,8 +167,8 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
                           onClick={() => setSelectedDate(d)}
                           className={`h-9 sm:h-10 rounded-xl transition-all cursor-pointer border flex items-center justify-center ${
                             isSelected
-                              ? 'bg-slate-900 text-white font-black border-slate-900 shadow-md scale-[1.03]'
-                              : `bg-white hover:bg-slate-100/90 border-slate-200/90 shadow-2xs font-bold ${colorClass}`
+                              ? 'bg-sky-500 text-white font-black border-sky-400 shadow-md shadow-sky-500/30 scale-[1.05]'
+                              : `bg-white hover:bg-sky-50 border-sky-200/90 shadow-2xs font-bold ${colorClass}`
                           }`}
                         >
                           <span className="text-sm sm:text-base font-black">
@@ -184,7 +184,7 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
           </div>
 
           {/* PARTE 2: SELECTOR DE HORA A INTERVALOS DE MEDIA HORA */}
-          <div className="shrink-0 pt-2 pb-1 border-t border-slate-200">
+          <div className="shrink-0 pt-2 pb-1 border-t border-sky-200">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
               {availableHours.map((h) => {
                 const isSelected = selectedHour === h;
@@ -195,8 +195,8 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
                     onClick={() => setSelectedHour(h)}
                     className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer border ${
                       isSelected
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                        : 'bg-white text-slate-800 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-sky-600 text-white border-sky-500 shadow-sm'
+                        : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-50'
                     }`}
                   >
                     {h}
@@ -211,7 +211,7 @@ export const DeliveryDatePickerModal: React.FC<DeliveryDatePickerModalProps> = (
             <button
               type="button"
               onClick={handleConfirm}
-              className="w-full py-2.5 sm:py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-sm sm:text-base tracking-wider uppercase transition-all shadow-lg active:scale-[0.99] cursor-pointer flex items-center justify-center"
+              className="w-full py-2.5 sm:py-3 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-black text-sm sm:text-base tracking-wider uppercase transition-all shadow-lg shadow-sky-600/20 active:scale-[0.99] cursor-pointer flex items-center justify-center border border-sky-400/30"
             >
               Aceptar
             </button>

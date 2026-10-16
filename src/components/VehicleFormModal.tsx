@@ -316,80 +316,65 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
 
             {/* SECCIÓN CAMPOS DEL VEHÍCULO: Matrícula, Marca, Modelo, Color, VIN */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <h3 className="text-base font-black uppercase tracking-wider text-[#0F2942]">
                 Datos del Vehículo
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Matrícula */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Matrícula <span className="text-red-500">*</span>
-                  </label>
                   <input
                     type="text"
                     required
                     value={plate}
                     onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                    placeholder="Ej. 1234-BBB"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-mono font-bold text-[#0F2942] focus:bg-white focus:border-blue-600 focus:outline-none uppercase"
+                    placeholder="MATRÍCULA *"
+                    className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-mono font-black text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent uppercase transition-all"
                   />
                 </div>
 
                 {/* Marca */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Marca
-                  </label>
                   <input
                     type="text"
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    placeholder="Ej. RENAULT, VOLKSWAGEN..."
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-[#0F2942] focus:bg-white focus:border-blue-600 focus:outline-none uppercase"
+                    placeholder="MARCA"
+                    className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-bold text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent uppercase transition-all"
                   />
                 </div>
 
                 {/* Modelo */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Modelo
-                  </label>
                   <input
                     type="text"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    placeholder="Ej. Megane E-Tech, Golf VII..."
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium text-[#0F2942] focus:bg-white focus:border-blue-600 focus:outline-none"
+                    placeholder="MODELO"
+                    className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-bold text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent transition-all"
                   />
                 </div>
 
                 {/* Color */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Color
-                  </label>
                   <input
                     type="text"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    placeholder="Ej. Blanco Puro, Negro Mitos..."
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium text-[#0F2942] focus:bg-white focus:border-blue-600 focus:outline-none"
+                    placeholder="COLOR"
+                    className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-bold text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent transition-all"
                   />
                 </div>
 
                 {/* VIN (Número de Bastidor) */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    VIN / Número de Bastidor (17 caracteres)
-                  </label>
                   <input
                     type="text"
                     maxLength={17}
                     value={vin}
                     onChange={(e) => setVin(e.target.value.toUpperCase())}
-                    placeholder="Ej. WVWZZZAUZHP123987"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-mono font-bold tracking-wider text-[#0F2942] focus:bg-white focus:border-blue-600 focus:outline-none uppercase"
+                    placeholder="NÚMERO DE BASTIDOR (VIN)"
+                    className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-mono font-black tracking-wider text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent uppercase transition-all"
                   />
                 </div>
               </div>

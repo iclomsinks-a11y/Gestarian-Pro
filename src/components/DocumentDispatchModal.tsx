@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { GestarianDocument, Client, AppUser } from '../types';
 import { buildDocumentDispatchPayload, DispatchResult, sendDocumentViaApi } from '../services/documentDispatchService';
+import { getStoredSolicitudes, saveStoredSolicitudes, getStoredDocuments, saveStoredDocuments } from '../services/storage';
 
 interface DocumentDispatchModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const DocumentDispatchModal: React.FC<DocumentDispatchModalProps> = ({
   onSentConfirmed,
 }) => {
   const [selectedChannel, setSelectedChannel] = useState<'whatsapp' | 'email' | null>(null);
+  const [useCustomSender, setUseCustomSender] = useState<boolean>(() => currentUser.useCustomSenderEmail ?? false);
   const [copied, setCopied] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -67,12 +69,52 @@ export const DocumentDispatchModal: React.FC<DocumentDispatchModalProps> = ({
     }
   };
 
+  const syncDocumentAndSolicitudesOnSend = () => {
+    try {
+      // 1. Marcar documento como enviado si estaba en borrador o presupuesto
+      const allDocs = getStoredDocuments();
+      const updatedDocs = allDocs.map((d) => {
+        if (d.id === doc.id || d.number === doc.number) {
+          return {
+            ...d,
+            status: d.status === 'borrador' ? ('enviado' as const) : d.status,
+            sentAt: d.sentAt || new Date().toISOString(),
+          };
+        }
+        return d;
+      });
+      saveStoredDocuments(updatedDocs);
+      window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+
+      // 2. Marcar solicitud vinculada como ATENDIDA
+      const allSols = getStoredSolicitudes();
+      const updatedSols = allSols.map((s) => {
+        if (
+          (doc.expediente && s.expediente === doc.expediente) ||
+          (doc.solicitudId && s.id === doc.solicitudId) ||
+          (doc.solicitudNumber && s.number === doc.solicitudNumber)
+        ) {
+          return {
+            ...s,
+            status: 'ATENDIDA',
+          };
+        }
+        return s;
+      });
+      saveStoredSolicitudes(updatedSols);
+      window.dispatchEvent(new CustomEvent('gestarian_solicitudes_updated'));
+    } catch (e) {
+      console.error('Error sincronizando al enviar documento:', e);
+    }
+  };
+
   const handleExecuteDispatch = async () => {
     if (isWhatsApp) {
       if (dispatch.actionUrl) {
         window.open(dispatch.actionUrl, '_blank', 'noopener,noreferrer');
       }
       setIsSent(true);
+      syncDocumentAndSolicitudesOnSend();
       const msg = `${docTypeLabel} ${doc.number} enviado por WhatsApp con enlace ultra corto.`;
       setStatusMessage(msg);
       if (onShowToast) onShowToast(msg, 4000);
@@ -83,9 +125,10 @@ export const DocumentDispatchModal: React.FC<DocumentDispatchModalProps> = ({
       setIsSendingEmail(true);
       setStatusMessage(null);
       try {
-        const result = await sendDocumentViaApi(dispatch, doc, currentUser);
+        const result = await sendDocumentViaApi(dispatch, doc, currentUser, { useCustomSenderEmail: useCustomSender });
         if (result.success) {
           setIsSent(true);
+          syncDocumentAndSolicitudesOnSend();
           const confirmMsg = `${docTypeLabel} ${doc.number} enviado por email a ${dispatch.recipient} con el documento adjunto correctamente.`;
           setStatusMessage(confirmMsg);
           if (onShowToast) {
@@ -191,11 +234,35 @@ export const DocumentDispatchModal: React.FC<DocumentDispatchModalProps> = ({
 
           {/* Información de Adjunto para Email */}
           {!isWhatsApp && (
-            <div className="p-2.5 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl flex items-center gap-2.5 text-[#166534]">
-              <Paperclip className="w-4 h-4 text-emerald-600 shrink-0" />
-              <div className="text-[11px] leading-snug">
-                <strong>Documento adjunto:</strong> <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-900">{docTypeLabel}_{doc.number}.pdf</code>
-                <span className="block text-[10px] text-emerald-700 mt-0.5">Se enviará en segundo plano directamente al buzón del cliente sin abrir la app de Gmail.</span>
+            <div className="space-y-2">
+              <div className="p-2.5 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl flex items-center gap-2.5 text-[#166534]">
+                <Paperclip className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="text-[11px] leading-snug">
+                  <strong>Documento adjunto:</strong> <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-900">{docTypeLabel}_{doc.number}.pdf</code>
+                  <span className="block text-[10px] text-emerald-700 mt-0.5">Se enviará en segundo plano directamente al buzón del cliente.</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-[#0F2942]">
+                    <input
+                      type="checkbox"
+                      checked={useCustomSender}
+                      onChange={(e) => setUseCustomSender(e.target.checked)}
+                      className="w-4 h-4 accent-[#0F2942] rounded cursor-pointer shrink-0"
+                    />
+                    <span>Acepto enviar usando mi dirección de email ({currentUser.email || 'mi_email@empresa.com'})</span>
+                  </label>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white text-[#0F2942] border border-blue-200 shrink-0">
+                    {useCustomSender ? 'Mi Correo' : 'notificaciones@gestarian.com'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-600 pl-6 leading-relaxed">
+                  {useCustomSender
+                    ? `Se solicitará el envío con tu dirección de correo (${currentUser.email}) como remitente.`
+                    : `Por defecto se enviará desde notificaciones@gestarian.com, configurando ${currentUser.email} como dirección de respuesta (reply-to) para que recibas todas las respuestas directamente.`}
+                </p>
               </div>
             </div>
           )}

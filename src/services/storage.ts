@@ -256,10 +256,58 @@ export const DEFAULT_USER: AppUser = {
   branch: 'Reparaciones',
   specialty: 'Chapa y Pintura',
   metisTechnicalAdviceEnabled: true,
+  enableVehicle: true,
+  enableLocation: false,
   bgPortraitUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop',
   bgLandscapeUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop',
   bgBentoMenuUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=2564&auto=format&fit=crop',
   employees: [
+    {
+      id: 'emp_00',
+      name: 'CARLOS MENDOZA',
+      dni: '47281920L',
+      phone: '+34 600 112 233',
+      email: 'c.mendoza@dmcar.es',
+      role: 'autorizado',
+      profession: 'Jefe de Taller y Peritación Técnica',
+      laborEncomendada: 'Coordinación global del taller, diagnosis electrónica compleja, control de calidad final de chapa y pintura, y peritación técnica de siniestros.',
+      epigrafeActividad: 'Epígrafe 691.2 / CNAE 4520 - Mantenimiento y reparación de vehículos de motor',
+      cnoCode: '3121',
+      cnoDescription: 'Técnicos en mecánica y jefes de taller',
+      cotizacionGroup: 'Grupo 2: Ingenieros Técnicos y Jefes de Taller',
+      accidentsEpigrafe: '45.20 (Reparación de vehículos)',
+      salaryMonthly: 2650,
+      irpfRate: 15,
+      ssEmployeeRate: 6.35,
+      ssEmployerRate: 31.4,
+      workHoursType: 'completa',
+      monthlyTargetHours: 160,
+      timeTrackingEnabled: true,
+      timeLogs: [
+        { id: 'tl_01', date: '2026-03-02', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_02', date: '2026-03-03', entryTime: '08:02', pauseStart: '13:10', pauseEnd: '14:10', exitTime: '17:05', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_03', date: '2026-03-04', entryTime: '07:58', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_04', date: '2026-03-05', entryTime: '08:00', pauseStart: '13:05', pauseEnd: '14:05', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+      ],
+      permissions: {
+        accessExpedientes: true,
+        accessSolicitudes: true,
+        accessClientes: true,
+        accessPresupuestos: true,
+        accessCitas: true,
+        accessTaller: true,
+        accessFacturacion: true,
+        accessBalances: true,
+        accessProveedores: true,
+        accessIncidencias: true,
+        manageWorkOrders: true,
+        createBudgets: true,
+        canSetPrices: true,
+        scanPlates: true,
+        viewAgenda: true,
+        viewReports: true,
+      },
+    },
     {
       id: 'emp_01',
       name: 'MIGUEL ÁNGEL TORRES',
@@ -267,11 +315,26 @@ export const DEFAULT_USER: AppUser = {
       phone: '+34 611 223 344',
       email: 'm.torres@dmcar.es',
       role: 'autorizado',
-      profession: 'Chapista de automoción (Carrocería y Bancada)',
+      profession: 'Oficial Mecánico y Chapista de Automoción',
+      laborEncomendada: 'Sustitución y estiraje estructural de carrocería en bancada electrónica, soldadura MIG/MAG, desabollado de chapa de aluminio y acero de alta resistencia.',
+      epigrafeActividad: 'Epígrafe 691.2 - Reparación y mantenimiento de vehículos de motor',
       cnoCode: '7313',
       cnoDescription: 'Chapistas y caldereros',
       cotizacionGroup: 'Grupo 8: Oficiales de primera y de segunda',
       accidentsEpigrafe: '45.20 (Reparación de vehículos)',
+      salaryMonthly: 1950,
+      irpfRate: 12,
+      ssEmployeeRate: 6.35,
+      ssEmployerRate: 31.4,
+      workHoursType: 'completa',
+      monthlyTargetHours: 160,
+      timeTrackingEnabled: true,
+      timeLogs: [
+        { id: 'tl_11', date: '2026-03-02', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_12', date: '2026-03-03', entryTime: '07:55', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_13', date: '2026-03-04', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_14', date: '2026-03-05', entryTime: '08:05', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:05', totalHours: 8, status: 'completado', type: 'ordinaria' },
+      ],
       permissions: {
         accessExpedientes: true,
         accessSolicitudes: false,
@@ -298,11 +361,25 @@ export const DEFAULT_USER: AppUser = {
       phone: '+34 622 334 455',
       email: 's.navarro@dmcar.es',
       role: 'autorizado',
-      profession: 'Pintor de vehículos (Preparación y Cabina)',
+      profession: 'Oficial Pintor de Vehículos en Cabina',
+      laborEncomendada: 'Preparación de imprimaciones y aparejos, ajuste colorimétrico computarizado con espectrofotómetro, aplicación de pintura al agua y barniz cerámico en cabina presurizada.',
+      epigrafeActividad: 'Epígrafe 691.2 - Reparación y mantenimiento de vehículos de motor',
       cnoCode: '7232',
       cnoDescription: 'Pintores en las industrias manufactureras y de vehículos',
       cotizacionGroup: 'Grupo 8: Oficiales de primera y de segunda',
       accidentsEpigrafe: '45.20 (Reparación de vehículos)',
+      salaryMonthly: 1900,
+      irpfRate: 11,
+      ssEmployeeRate: 6.35,
+      ssEmployerRate: 31.4,
+      workHoursType: 'completa',
+      monthlyTargetHours: 160,
+      timeTrackingEnabled: true,
+      timeLogs: [
+        { id: 'tl_21', date: '2026-03-02', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_22', date: '2026-03-03', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_23', date: '2026-03-04', entryTime: '08:00', pauseStart: '13:00', pauseEnd: '14:00', exitTime: '17:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+      ],
       permissions: {
         accessExpedientes: true,
         accessSolicitudes: false,
@@ -319,6 +396,96 @@ export const DEFAULT_USER: AppUser = {
         canSetPrices: false,
         scanPlates: true,
         viewAgenda: true,
+        viewReports: false,
+      },
+    },
+    {
+      id: 'emp_03',
+      name: 'LAURA GÓMEZ',
+      dni: '53819204J',
+      phone: '+34 633 445 566',
+      email: 'l.gomez@dmcar.es',
+      role: 'autorizado',
+      profession: 'Administrativa Contable y Facturación',
+      laborEncomendada: 'Gestión administrativa, emisión y custodia de facturas VeriFactu, conciliación de cobros bancarios, confección de remesas a gestoría y atención documental de clientes.',
+      epigrafeActividad: 'Epígrafe 844 / CNAE 6920 - Servicios de contabilidad, teneduría de libros y auditoría',
+      cnoCode: '4311',
+      cnoDescription: 'Empleados de contabilidad y cálculo de nóminas',
+      cotizacionGroup: 'Grupo 5: Oficiales Administrativos',
+      accidentsEpigrafe: '84.40 (Servicios administrativos de oficina)',
+      salaryMonthly: 1250,
+      irpfRate: 8,
+      ssEmployeeRate: 6.35,
+      ssEmployerRate: 31.4,
+      workHoursType: 'media',
+      monthlyTargetHours: 80,
+      timeTrackingEnabled: true,
+      timeLogs: [
+        { id: 'tl_31', date: '2026-03-02', entryTime: '09:00', exitTime: '13:00', totalHours: 4, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_32', date: '2026-03-03', entryTime: '09:00', exitTime: '13:00', totalHours: 4, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_33', date: '2026-03-04', entryTime: '08:58', exitTime: '13:00', totalHours: 4, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_34', date: '2026-03-05', entryTime: '09:00', exitTime: '13:02', totalHours: 4, status: 'completado', type: 'ordinaria' },
+      ],
+      permissions: {
+        accessExpedientes: true,
+        accessSolicitudes: true,
+        accessClientes: true,
+        accessPresupuestos: true,
+        accessCitas: true,
+        accessTaller: false,
+        accessFacturacion: true,
+        accessBalances: true,
+        accessProveedores: true,
+        accessIncidencias: true,
+        manageWorkOrders: false,
+        createBudgets: true,
+        canSetPrices: true,
+        scanPlates: false,
+        viewAgenda: true,
+        viewReports: true,
+      },
+    },
+    {
+      id: 'emp_04',
+      name: 'ROCÍO FERNÁNDEZ',
+      dni: '52910293X',
+      phone: '+34 644 556 677',
+      email: 'r.fernandez@dmcar.es',
+      role: 'autorizado',
+      profession: 'Limpiadora de Instalaciones y Vehículos',
+      laborEncomendada: 'Mantenimiento e higienización de la nave de taller, oficinas, acondicionamiento y limpieza interior/exterior de vehículos previa a la entrega.',
+      epigrafeActividad: 'Epígrafe 921 / CNAE 8121 - Limpieza general de edificios e instalaciones',
+      cnoCode: '9210',
+      cnoDescription: 'Personal de limpieza de oficinas y otros establecimientos',
+      cotizacionGroup: 'Grupo 10: Peones y Ayudantes de Limpieza',
+      accidentsEpigrafe: '81.21 (Servicios de limpieza)',
+      salaryMonthly: 1180,
+      irpfRate: 2,
+      ssEmployeeRate: 6.35,
+      ssEmployerRate: 31.4,
+      workHoursType: 'completa',
+      monthlyTargetHours: 160,
+      timeTrackingEnabled: true,
+      timeLogs: [
+        { id: 'tl_41', date: '2026-03-02', entryTime: '08:00', exitTime: '16:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+        { id: 'tl_42', date: '2026-03-03', entryTime: '08:00', exitTime: '16:00', totalHours: 8, status: 'completado', type: 'ordinaria' },
+      ],
+      permissions: {
+        accessExpedientes: false,
+        accessSolicitudes: false,
+        accessClientes: false,
+        accessPresupuestos: false,
+        accessCitas: false,
+        accessTaller: false,
+        accessFacturacion: false,
+        accessBalances: false,
+        accessProveedores: false,
+        accessIncidencias: true,
+        manageWorkOrders: false,
+        createBudgets: false,
+        canSetPrices: false,
+        scanPlates: false,
+        viewAgenda: false,
         viewReports: false,
       },
     },
@@ -622,10 +789,30 @@ export function getStoredUser(): AppUser {
       if (fullName.includes('CARLOS MENDOZA') || fullName.includes('TALLER DE CHAPA')) {
         fullName = 'DM CAR';
       }
+      
+      // Asegurar que los empleados tengan campos completos de nómina y control horario
+      const employees = (parsed.employees && parsed.employees.length > 0)
+        ? parsed.employees.map((emp: any) => {
+            const defaultMatch = DEFAULT_USER.employees?.find(de => de.id === emp.id || de.name.toUpperCase() === emp.name?.toUpperCase());
+            return {
+              ...(defaultMatch || {}),
+              ...emp,
+              permissions: { ...(defaultMatch?.permissions || {}), ...(emp.permissions || {}) },
+              timeTrackingEnabled: emp.timeTrackingEnabled !== undefined ? emp.timeTrackingEnabled : (defaultMatch?.timeTrackingEnabled ?? true),
+              timeLogs: (emp.timeLogs && emp.timeLogs.length > 0) ? emp.timeLogs : (defaultMatch?.timeLogs || []),
+              monthlyTargetHours: emp.monthlyTargetHours || (defaultMatch?.monthlyTargetHours ?? 160),
+              salaryMonthly: emp.salaryMonthly || (defaultMatch?.salaryMonthly ?? 1900),
+            };
+          })
+        : DEFAULT_USER.employees;
+
       return { 
         ...DEFAULT_USER, 
         ...parsed,
         fullName,
+        employees,
+        enableVehicle: parsed.enableVehicle !== undefined ? parsed.enableVehicle : true,
+        enableLocation: parsed.enableLocation !== undefined ? parsed.enableLocation : false,
       };
     }
   } catch {
@@ -687,6 +874,15 @@ export function getStoredDocuments(): GestarianDocument[] {
       const docs: GestarianDocument[] = JSON.parse(raw);
       // Migrar y sanitizar números, expedientes y matrículas existentes
       return docs.map((d) => {
+        // REGLA FUNDAMENTAL: Las facturas recibidas NUNCA tienen ni generan expediente
+        if (d.type === 'factura_recibida') {
+          return {
+            ...d,
+            expediente: undefined,
+            vehiclePlate: sanitizePlate(d.vehiclePlate),
+          };
+        }
+
         let number = d.number || '';
         const seq = extractSequentialDigits(number);
         const prefix = getDocumentPrefix(d.type || 'presupuesto');
@@ -698,9 +894,23 @@ export function getStoredDocuments(): GestarianDocument[] {
           number = `${prefix}${seq}`;
         }
 
+        // Los expedientes ÚNICAMENTE se generan a partir de los presupuestos (o facturas vinculadas a presupuestos)
         let expediente = d.expediente || '';
-        if (!expediente || expediente.startsWith('EXP-') || expediente.includes('266')) {
-          expediente = `E26${seq}`;
+        if (d.type === 'presupuesto' || (d.type as string) === 'budget') {
+          if (!expediente || expediente.startsWith('EXP-') || expediente.includes('266')) {
+            expediente = `E26${seq}`;
+          }
+        } else if (d.type === 'factura') {
+          // Facturas emitidas: heredan el expediente de su presupuesto vinculado
+          if (d.linkedBudgetId && !expediente) {
+            const linked = docs.find((b) => b.id === d.linkedBudgetId);
+            if (linked?.expediente) {
+              expediente = linked.expediente;
+            }
+          }
+        } else {
+          // Ningún otro tipo genera expediente
+          expediente = '';
         }
 
         let issuerName = d.issuerName;
@@ -711,7 +921,7 @@ export function getStoredDocuments(): GestarianDocument[] {
         return {
           ...d,
           number,
-          expediente,
+          expediente: expediente || undefined,
           issuerName,
           vehiclePlate: sanitizePlate(d.vehiclePlate),
         };
@@ -845,7 +1055,7 @@ export const INITIAL_SOLICITUDES: SolicitudItem[] = [
     type: 'Carrocería Flota - Puerta corredera',
     date: '17/09/2026',
     description: 'Descuadre y abolladura en puerta lateral corredera para furgoneta de reparto.',
-    status: 'PENDIENTE',
+    status: 'PRESUPUESTO_Y_FECHA_ACEPTADOS',
   },
   {
     id: 'S260006',
@@ -860,7 +1070,7 @@ export const INITIAL_SOLICITUDES: SolicitudItem[] = [
     type: 'Pintura Completa Techo y Capó',
     date: '16/09/2026',
     description: 'Desgaste por sol y granizo leve en techo y capó delantero.',
-    status: 'PENDIENTE',
+    status: 'CONFIRMADA',
   },
   {
     id: 'S260007',

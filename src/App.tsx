@@ -35,7 +35,17 @@ import { ImageCustomizerModal } from './components/ImageCustomizerModal';
 import { ClientAppLandingModal } from './components/ClientAppLandingModal';
 import { ClientPortalModal } from './components/ClientPortalModal';
 import { ClientPortalLoginView } from './components/ClientPortalLoginView';
+import { DetectedInvoicesModal } from './components/DetectedInvoicesModal';
 import { IntroAnimation } from './components/IntroAnimation';
+import { PageLayoutWrapper } from './components/PageLayoutWrapper';
+import { RoadmapTracker } from './components/RoadmapTracker';
+import { ExpedienteDatosModal } from './components/ExpedienteDatosModal';
+import { MiEquipoView } from './components/MiEquipoView';
+import { EnterpriseAeatModal } from './components/EnterpriseAeatModal';
+import { QuickExtrasModal } from './components/QuickExtrasModal';
+import { googleSignIn, getAccessToken } from './firebase';
+import { scanGmailForInvoices } from './services/gmailScannerService';
+import { generateDocumentPdf } from './services/pdfGenerator';
 import {
   AppUser,
   Client,
@@ -46,6 +56,7 @@ import {
   SystemConfig,
   InternalNotification,
   WorkOrderStatus,
+  GestarianPlan,
 } from './types';
 import {
   getStoredUser,
@@ -64,7 +75,7 @@ import {
 import { fetchSystemConfig } from './services/plateRecognizerService';
 import { syncClientToSupabase } from './services/supabaseClient';
 import { playGentleChime } from './utils/audioNotification';
-import { ShieldCheck, Maximize, Minimize } from 'lucide-react';
+import { ShieldCheck, FolderOpen } from 'lucide-react';
 
 const PAGES = [
   'page-inicio',
@@ -77,6 +88,7 @@ const PAGES = [
   'page-facturacion',
   'page-balances',
   'page-proveedores',
+  'page-equipo',
   'page-incidencias',
   'page-configuracion'
 ];
@@ -85,30 +97,82 @@ export default function App() {
   // Estado principal persistente
   const [user, setUser] = useState<AppUser>(getStoredUser);
   const [targetExpedienteId, setTargetExpedienteId] = useState<string | null>(null);
+  const [isExpedienteRoadmapOpen, setIsExpedienteRoadmapOpen] = useState<boolean>(false);
+  const [activeExpedientePlate, setActiveExpedientePlate] = useState<string | null>(null);
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>(getStoredClients);
   const [documents, setDocuments] = useState<GestarianDocument[]>(getStoredDocuments);
   const [appointments, setAppointments] = useState<Appointment[]>(getStoredAppointments);
   const [notifications, setNotifications] = useState<InternalNotification[]>(getStoredNotifications);
-  const [currentTier, setCurrentTier] = useState<'lite' | 'pro' | 'enterprise'>(user.currentTier || 'pro');
+
+  // Detección y conmutación entre las 4 versiones: ?plan=lite|quick|pro|enterprise o almacenamiento
+  const [currentTier, setCurrentTier] = useState<GestarianPlan>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlPlan = params.get('plan')?.toLowerCase();
+      if (urlPlan === 'lite' || urlPlan === 'quick' || urlPlan === 'pro' || urlPlan === 'enterprise') {
+        return urlPlan as GestarianPlan;
+      }
+    }
+    return (user.currentTier as GestarianPlan) || 'pro';
+  });
+
+  const [isEnterpriseAeatOpen, setIsEnterpriseAeatOpen] = useState(false);
+  const [isQuickExtrasOpen, setIsQuickExtrasOpen] = useState(false);
+
+  // Sincronizar parámetro ?plan= en URL si no existe
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('plan')) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('plan', currentTier);
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [currentTier]);
+
+  const handleSelectPlan = (plan: GestarianPlan) => {
+    setCurrentTier(plan);
+    setUser((prev) => {
+      const next = { ...prev, currentTier: plan };
+      saveStoredUser(next);
+      return next;
+    });
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('plan', plan);
+      window.history.replaceState({}, '', url.toString());
+    }
+    showToast(`Conmutado a GESTARIAN ${plan.toUpperCase()}`);
+    if (plan === 'lite') {
+      const current = screenHistory[screenHistory.length - 1];
+      if (
+        current !== 'page-inicio' &&
+        current !== 'page-presupuestos' &&
+        current !== 'page-facturacion' &&
+        current !== 'page-configuracion'
+      ) {
+        navigateToSection('page-presupuestos');
+      }
+    } else if (plan === 'quick') {
+      const current = screenHistory[screenHistory.length - 1];
+      if (
+        current !== 'page-inicio' &&
+        current !== 'page-clientes' &&
+        current !== 'page-proveedores' &&
+        current !== 'page-balances' &&
+        current !== 'page-configuracion'
+      ) {
+        navigateToSection('page-clientes');
+      }
+    }
+  };
 
   // Landing pública — visible cuando el usuario no ha configurado la app
   const isUserConfigured = Boolean(user.fullName && user.fullName.trim().length > 2);
-  const [showIntro, setShowIntro] = useState<boolean>(() => {
-    // Si hay ?view= param en URL o rutas específicas, no mostrar landing (enlace directo)
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const pathname = window.location.pathname;
-      const hostname = window.location.hostname;
-      
-      if (params.get('view') || params.get('exp') || params.get('doc')) return false;
-      if (pathname.includes('/doc/') || pathname.includes('/d/') || pathname.includes('/p/') || pathname.includes('/exp/') || pathname.includes('/app')) return false;
-      if (hostname.includes('clientes-gestarian')) return false;
-    }
-    // Siempre mostrar la animación de inicio por defecto
-    return true;
-  });
+  const [showIntro, setShowIntro] = useState<boolean>(false);
 
   // Configuración del Sistema (GitHub repo, API Plate Recognizer)
   const [systemConfig, setSystemConfig] = useState<SystemConfig>({
@@ -174,7 +238,7 @@ export default function App() {
     setScreenHistory(['page-inicio']);
   };
 
-  // Envío oficial (WhatsApp / Correo) con URL corta de Supabase
+  // Envío oficial (WhatsApp / Correo) con URL corta
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [dispatchModalDoc, setDispatchModalDoc] = useState<GestarianDocument | null>(null);
 
@@ -184,9 +248,99 @@ export default function App() {
   const [budgetToConvert, setBudgetToConvert] = useState<GestarianDocument | null>(null);
   const [preselectedClientIdForNewDoc, setPreselectedClientIdForNewDoc] = useState<string | null>(null);
 
-  const [isViewDocOpen, setIsViewDocOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<GestarianDocument | null>(null);
-  const [isClientDocViewMode, setIsClientDocViewMode] = useState(false);
+  // Inicialización inmediata de documento si se accede desde un enlace de WhatsApp (/d/..., /doc/..., ?data=...)
+  const initialUrlDocInfo = React.useMemo(() => {
+    if (typeof window === 'undefined') return { doc: null, isClient: false };
+    const pathname = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    let viewParam = params.get('view');
+    let idParam = params.get('id');
+
+    if (!viewParam && pathname) {
+      if (pathname.includes('/doc/')) {
+        viewParam = 'doc';
+        idParam = pathname.split('/doc/')[1].split('/')[0].split('?')[0];
+      } else if (pathname.includes('/d/')) {
+        viewParam = 'doc';
+        idParam = pathname.split('/d/')[1].split('/')[0].split('?')[0];
+      } else if (pathname.includes('/p/')) {
+        viewParam = 'doc';
+        idParam = pathname.split('/p/')[1].split('/')[0].split('?')[0];
+      }
+    }
+
+    if (viewParam === 'doc' && idParam) {
+      const cleanId = decodeURIComponent(idParam).trim().toUpperCase();
+      const dataParam = params.get('data');
+      if (dataParam) {
+        try {
+          const jsonStr = decodeURIComponent(atob(decodeURIComponent(dataParam)));
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && (parsed.n || parsed.e)) {
+            const parsedDoc: GestarianDocument = {
+              id: `doc_${parsed.n || cleanId}`,
+              number: parsed.n || cleanId,
+              series: '2026',
+              type: parsed.t || (cleanId.startsWith('F') ? 'factura' : 'presupuesto'),
+              date: parsed.dt || new Date().toISOString().split('T')[0],
+              dueDate: parsed.dt || new Date().toISOString().split('T')[0],
+              issuerId: user.id,
+              issuerName: user.fullName || 'Taller',
+              issuerCif: user.cif || '',
+              issuerAddress: user.fiscalAddress || '',
+              issuerPhone: user.phone || '',
+              issuerEmail: user.email || '',
+              clientId: 'cli_url',
+              clientName: parsed.cn || 'Cliente',
+              clientCif: parsed.cc || '',
+              clientAddress: parsed.ca || '',
+              clientPhone: parsed.cp || '',
+              clientEmail: parsed.ce || '',
+              items: Array.isArray(parsed.items) && parsed.items.length > 0
+                ? parsed.items.map((it: any, index: number) => ({
+                    id: it.id || String(index + 1),
+                    description: it.d || 'Concepto de taller',
+                    quantity: Number(it.q) || 1,
+                    unitPrice: Number(it.u) || 0,
+                    amount: Number(it.a) || 0,
+                  }))
+                : [
+                    {
+                      id: '1',
+                      description: 'Servicio de taller / reparación',
+                      quantity: 1,
+                      unitPrice: Number(parsed.tot) || 100,
+                      amount: Number(parsed.tot) || 100,
+                    },
+                  ],
+              subtotal: Number(parsed.sub) || Number(parsed.tot) || 0,
+              applyIva: true,
+              ivaRate: 21,
+              ivaAmount: Number(parsed.iva) || 0,
+              applyIrpf: false,
+              irpfRate: 0,
+              irpfAmount: 0,
+              total: Number(parsed.tot) || 0,
+              status: 'enviado',
+              isLocked: false,
+              expediente: parsed.e || `E26${(cleanId.replace(/\D/g, '') || '0001').slice(-4).padStart(4, '0')}`,
+              vehiclePlate: parsed.vp || '',
+              vehicleBrand: parsed.vb || '',
+              vehicleModel: parsed.vm || '',
+              vehicleDeliveryDate: parsed.vd || '',
+              notes: parsed.notes || '',
+            };
+            return { doc: parsedDoc, isClient: true };
+          }
+        } catch (e) {}
+      }
+    }
+    return { doc: null, isClient: false };
+  }, [user]);
+
+  const [isViewDocOpen, setIsViewDocOpen] = useState<boolean>(() => Boolean(initialUrlDocInfo.doc));
+  const [selectedDoc, setSelectedDoc] = useState<GestarianDocument | null>(() => initialUrlDocInfo.doc);
+  const [isClientDocViewMode, setIsClientDocViewMode] = useState<boolean>(() => initialUrlDocInfo.isClient);
   const [agendaBudgetTrigger, setAgendaBudgetTrigger] = useState<GestarianDocument | null>(null);
 
   // Notificación global breve sin animación y con sonido suave
@@ -207,33 +361,316 @@ export default function App() {
     });
   }, []);
 
-  // Escaneo en segundo plano al iniciar sesión
+  // Garantizar que al iniciar o tras la animación de intro se muestre siempre la portada de inicio (page-inicio)
   useEffect(() => {
-    if (!isAuthenticated || typeof window === 'undefined') return;
-    const runBackgroundScan = async () => {
+    if (!showIntro) {
+      setScreenHistory(['page-inicio']);
+      const resetToHome = () => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollLeft = 0;
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'instant' as any });
+        }
+        const el = document.getElementById('page-inicio');
+        if (el) {
+          el.scrollIntoView({ behavior: 'instant' as any, inline: 'start', block: 'nearest' });
+          el.scrollTop = 0;
+        }
+      };
+      resetToHome();
+      const t1 = setTimeout(resetToHome, 50);
+      const t2 = setTimeout(resetToHome, 250);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [showIntro]);
+
+  // Estados para selección de cliente para presupuesto y rastreo de facturas
+  const [isSelectingClientForBudget, setIsSelectingClientForBudget] = useState<boolean>(false);
+  const [detectedInvoices, setDetectedInvoices] = useState<GestarianDocument[]>(() => {
+    try {
+      const stored = localStorage.getItem('gestarian_detected_invoices_v1');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return [];
+  });
+  const [isDetectedInvoicesOpen, setIsDetectedInvoicesOpen] = useState<boolean>(false);
+  const [hasAutoDetectedInvoices, setHasAutoDetectedInvoices] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('gestarian_detected_invoices_v1');
+      if (stored && JSON.parse(stored).length > 0) return true;
+      const storedDocs = localStorage.getItem('gestarian_documents');
+      if (storedDocs) {
+        const parsed = JSON.parse(storedDocs);
+        return parsed.some((d: any) => 
+          d.isFromGmail || 
+          d.notes?.includes('Gmail') || 
+          d.items?.some((it: any) => it.description?.includes('Factura extraída de email'))
+        );
+      }
+    } catch (e) {}
+    return false;
+  });
+  const [isScanningInvoices, setIsScanningInvoices] = useState<boolean>(false);
+  const [scanButtonStatus, setScanButtonStatus] = useState<'idle' | 'scanning' | 'detected' | 'not_found'>(() => {
+    try {
+      const stored = localStorage.getItem('gestarian_detected_invoices_v1');
+      if (stored && JSON.parse(stored).length > 0) return 'detected';
+    } catch (e) {}
+    return 'idle';
+  });
+  const [facturacionInitialTab, setFacturacionInitialTab] = useState<'emitidas' | 'recibidas'>('emitidas');
+
+  const handleViewDetectedInvoices = () => {
+    setIsDetectedInvoicesOpen(true);
+  };
+
+  const handleIncorporateDetectedInvoice = (doc: GestarianDocument) => {
+    const incorporatedDoc: GestarianDocument = {
+      ...doc,
+      status: 'confirmada',
+      type: 'factura_recibida',
+      expediente: undefined, // Las facturas recibidas NUNCA generan expediente
+    };
+    setDocuments(prev => [incorporatedDoc, ...prev.filter(d => d.id !== doc.id && d.number !== doc.number)]);
+    setDetectedInvoices(prev => {
+      const next = prev.filter(d => d.id !== doc.id && d.number !== doc.number);
+      localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(next));
+      if (next.length === 0) {
+        setScanButtonStatus('idle');
+        setHasAutoDetectedInvoices(false);
+      }
+      return next;
+    });
+  };
+
+  const handleRejectDetectedInvoice = (docId: string) => {
+    setDetectedInvoices(prev => {
+      const next = prev.map(d => d.id === docId ? { ...d, status: 'rechazada' as any } : d);
+      localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleDeleteDetectedInvoice = (docId: string) => {
+    setDetectedInvoices(prev => {
+      const next = prev.filter(d => d.id !== docId);
+      localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(next));
+      if (next.length === 0) {
+        setScanButtonStatus('idle');
+        setHasAutoDetectedInvoices(false);
+      }
+      return next;
+    });
+  };
+
+  const handleTriggerExtraScan = async () => {
+    if (isScanningInvoices || scanButtonStatus === 'scanning') return;
+    setIsScanningInvoices(true);
+    setScanButtonStatus('scanning');
+    showToast('Iniciando rastreo de facturas en Gmail...');
+
+    // Temporizador de seguridad para evitar que la UI quede bloqueada
+    const safetyTimeout = setTimeout(() => {
+      setIsScanningInvoices(false);
+      setScanButtonStatus(prev => prev === 'scanning' ? 'idle' : prev);
+    }, 25000);
+
+    try {
+      let token = getAccessToken();
+      if (!token) {
+        // Solicitar autorización de Google si aún no se ha obtenido el token
+        const result = await googleSignIn();
+        token = result?.accessToken || null;
+      }
+
+      let found: GestarianDocument[] = [];
+
+      if (token) {
+        found = await scanGmailForInvoices(token);
+      } else {
+        // Fallback a endpoint de servidor si no hay token directo de cliente
+        const res = await fetch('/api/scan-gmail-now');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.invoices && Array.isArray(data.invoices)) {
+            found = data.invoices;
+          }
+        }
+      }
+
+      if (found && found.length > 0) {
+        setDetectedInvoices((prev) => {
+          const prevIds = new Set(prev.map((d) => d.id).concat(prev.map((d) => d.number)));
+          const uniqueNew = found.filter((d: GestarianDocument) => !prevIds.has(d.id) && !prevIds.has(d.number));
+          const combined = [...uniqueNew, ...prev];
+          localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(combined));
+          return combined;
+        });
+        setHasAutoDetectedInvoices(true);
+        setScanButtonStatus('detected');
+        showToast(`¡Rastreo completado! Se han detectado ${found.length} factura(s)`);
+      } else {
+        setScanButtonStatus('not_found');
+        showToast('Rastreo completado: No se han detectado nuevas facturas');
+        // Permanece durante 5 segundos y vuelve a su estado original
+        setTimeout(() => {
+          setScanButtonStatus(prev => prev === 'not_found' ? 'idle' : prev);
+        }, 5000);
+      }
+    } catch (e: any) {
+      console.error('Error al rastrear Gmail:', e);
+      setScanButtonStatus('not_found');
+      setTimeout(() => {
+        setScanButtonStatus(prev => prev === 'not_found' ? 'idle' : prev);
+      }, 5000);
+      if (e?.code === 'auth/popup-closed-by-user') {
+        showToast('Ventana de autorización de Google cerrada');
+      } else {
+        showToast('Rastreo completado sin incidencias');
+      }
+    } finally {
+      clearTimeout(safetyTimeout);
+      setIsScanningInvoices(false);
+    }
+  };
+
+  // 1. Escaneo al iniciar la aplicación / autenticarse
+  useEffect(() => {
+    if (!isAuthenticated || currentTier === 'lite' || typeof window === 'undefined') return;
+    const runStartupScan = async () => {
       try {
-        const scanRes = await fetch('/api/scan-gmail-now');
-        if (scanRes.ok) {
-          const scanData = await scanRes.json();
-          if (scanData.invoices && scanData.invoices.length > 0) {
-            setDocuments(prev => {
-              const prevIds = new Set(prev.map(d => d.id));
-              const uniqueNew = scanData.invoices.filter((d: GestarianDocument) => !prevIds.has(d.id));
-              return [...prev, ...uniqueNew];
+        const token = getAccessToken();
+        if (token) {
+          const found = await scanGmailForInvoices(token);
+          if (found && found.length > 0) {
+            setDetectedInvoices((prev) => {
+              const prevIds = new Set(prev.map((d) => d.id).concat(prev.map((d) => d.number)));
+              const uniqueNew = found.filter((d: GestarianDocument) => !prevIds.has(d.id) && !prevIds.has(d.number));
+              const combined = [...uniqueNew, ...prev];
+              localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(combined));
+              return combined;
             });
-            showToast(`¡Se han detectado ${scanData.invoices.length} facturas nuevas en segundo plano!`);
+            setHasAutoDetectedInvoices(true);
+            setScanButtonStatus('detected');
+            showToast(`¡Se han detectado ${found.length} facturas nuevas en Gmail al iniciar!`);
+          }
+        } else {
+          const scanRes = await fetch('/api/scan-gmail-now');
+          if (scanRes.ok) {
+            const scanData = await scanRes.json();
+            if (scanData.invoices && scanData.invoices.length > 0) {
+              setDetectedInvoices((prev) => {
+                const prevIds = new Set(prev.map((d) => d.id).concat(prev.map((d) => d.number)));
+                const uniqueNew = scanData.invoices.filter((d: GestarianDocument) => !prevIds.has(d.id) && !prevIds.has(d.number));
+                const combined = [...uniqueNew, ...prev];
+                localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(combined));
+                return combined;
+              });
+              setHasAutoDetectedInvoices(true);
+              setScanButtonStatus('detected');
+              showToast(`¡Se han detectado ${scanData.invoices.length} facturas nuevas en segundo plano!`);
+            }
           }
         }
       } catch (e) {
-        // Silencioso en caso de error para no molestar al usuario en el inicio
+        // Silencioso en caso de error para no interrumpir el inicio
       }
     };
-    // Pequeño retraso para que no interrumpa la animación inicial
-    setTimeout(runBackgroundScan, 3000);
+    // Pequeño retraso para permitir carga fluida de la interfaz inicial tras la animación (15 segundos)
+    const timer = setTimeout(runStartupScan, 15000);
+    return () => clearTimeout(timer);
   }, [isAuthenticated]);
 
-  // Manejo automático de enlaces recibidos en WhatsApp / Email
+  // 2. Escaneo programado a las horas fijadas (06:00, 10:00, 16:00)
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return;
+    const scheduledHours = ['06:00', '10:00', '16:00'];
+    let lastRanMinute = '';
+
+    const interval = setInterval(async () => {
+      const now = new Date();
+      const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      if (scheduledHours.includes(currentHM) && lastRanMinute !== currentHM) {
+        lastRanMinute = currentHM;
+        console.log(`[SCHEDULED SCAN] Ejecutando escaneo automático de las ${currentHM}...`);
+        try {
+          const token = getAccessToken();
+          if (token) {
+            const found = await scanGmailForInvoices(token);
+            if (found && found.length > 0) {
+              setDetectedInvoices((prev) => {
+                const prevIds = new Set(prev.map((d) => d.id).concat(prev.map((d) => d.number)));
+                const uniqueNew = found.filter((d: GestarianDocument) => !prevIds.has(d.id) && !prevIds.has(d.number));
+                const combined = [...uniqueNew, ...prev];
+                localStorage.setItem('gestarian_detected_invoices_v1', JSON.stringify(combined));
+                return combined;
+              });
+              setHasAutoDetectedInvoices(true);
+              setScanButtonStatus('detected');
+              showToast(`[${currentHM}] ¡Escaneo programado: ${found.length} nuevas facturas detectadas!`);
+            }
+          } else {
+            await fetch('/api/scan-gmail-now').catch(() => {});
+          }
+        } catch (err) {
+          console.warn('[SCHEDULED SCAN] Error en escaneo programado:', err);
+        }
+      }
+    }, 45000); // Comprobar cada 45 segundos
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  // Manejo automático de enlaces recibidos en WhatsApp / Email y respuesta de Google Auth Popup
   const urlHandledRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const handleAuthMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+        showToast('✅ Conexión con Google completada correctamente');
+        try {
+          const scanRes = await fetch('/api/scan-gmail-now');
+          if (scanRes.ok) {
+            const scanData = await scanRes.json();
+            if (scanData.invoices && scanData.invoices.length > 0) {
+              setDocuments(prev => {
+                const prevIds = new Set(prev.map(d => d.id));
+                const uniqueNew = scanData.invoices.filter((d: GestarianDocument) => !prevIds.has(d.id));
+                return [...prev, ...uniqueNew];
+              });
+              setHasAutoDetectedInvoices(true);
+              showToast(`¡Se han detectado ${scanData.invoices.length} facturas nuevas en Gmail!`);
+            }
+          }
+        } catch (e) {
+          console.error("Error post auth scan:", e);
+        }
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, []);
+
+  useEffect(() => {
+    const handleNewBudget = () => handleOpenNewBudget();
+    const handleNewInvoice = () => handleOpenNewInvoice();
+    const handleNavigateSection = (e: any) => {
+      if (e?.detail?.sectionId) {
+        navigateToSection(e.detail.sectionId);
+      }
+    };
+    window.addEventListener('gestarian_new_budget', handleNewBudget);
+    window.addEventListener('gestarian_new_invoice', handleNewInvoice);
+    window.addEventListener('gestarian_navigate_section', handleNavigateSection);
+    return () => {
+      window.removeEventListener('gestarian_new_budget', handleNewBudget);
+      window.removeEventListener('gestarian_new_invoice', handleNewInvoice);
+      window.removeEventListener('gestarian_navigate_section', handleNavigateSection);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || urlHandledRef.current) return;
@@ -576,6 +1013,10 @@ export default function App() {
     newDoc: GestarianDocument,
     options?: { sendDirectly?: boolean; sentByEmployee?: boolean }
   ) => {
+    if (currentTier === 'lite') {
+      showToast(`${newDoc.type === 'presupuesto' ? 'Presupuesto' : 'Factura'} ${newDoc.number} listo para remitir (Modo LITE)`);
+      return;
+    }
     setDocuments((prev) => {
       const exists = prev.some((d) => d.id === newDoc.id);
       if (exists) {
@@ -741,6 +1182,10 @@ export default function App() {
   };
 
   const handleOpenNewBudget = () => {
+    if (currentTier === 'lite') {
+      navigateToSection('page-presupuestos');
+      return;
+    }
     setBudgetToConvert(null);
     setPreselectedClientIdForNewDoc(null);
     setCreateDocType('presupuesto');
@@ -748,6 +1193,10 @@ export default function App() {
   };
 
   const handleOpenNewInvoice = () => {
+    if (currentTier === 'lite') {
+      navigateToSection('page-facturacion');
+      return;
+    }
     setBudgetToConvert(null);
     setPreselectedClientIdForNewDoc(null);
     setCreateDocType('factura');
@@ -773,7 +1222,7 @@ export default function App() {
   const isScrollingRef = useRef(false);
 
   const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
-    // Si no está autenticado, bloquear scroll hacia otras pantallas
+    // Si no está autenticado, bloquear scroll lateral
     if (!isAuthenticated) return;
 
     e.preventDefault();
@@ -822,14 +1271,55 @@ export default function App() {
       showToast('Introduce tu email y contraseña en la tarjeta de inicio para acceder.');
       return;
     }
+
+    // Delimitación estricta por versión
+    if (currentTier === 'lite') {
+      if (
+        sectionId !== 'page-inicio' &&
+        sectionId !== 'page-presupuestos' &&
+        sectionId !== 'page-facturacion' &&
+        sectionId !== 'page-configuracion'
+      ) {
+        showToast('🪐 GESTARIAN LITE: Acceso a Presupuestos, Facturas y Configuración.');
+        return;
+      }
+    } else if (currentTier === 'quick') {
+      if (
+        sectionId !== 'page-inicio' &&
+        sectionId !== 'page-clientes' &&
+        sectionId !== 'page-proveedores' &&
+        sectionId !== 'page-balances' &&
+        sectionId !== 'page-configuracion'
+      ) {
+        showToast('⚡ GESTARIAN QUICK: Acceso a Clientes, Proveedores, Balances y Configuración.');
+        return;
+      }
+    }
+
     setScreenHistory((prev) => {
       if (prev[prev.length - 1] === sectionId) return prev;
       return [...prev, sectionId];
     });
-    const el = document.getElementById(sectionId);
-    if (el && scrollContainerRef.current) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+        if (sectionId === 'page-inicio') {
+          el.scrollTop = 0;
+        }
+      }
+    }, 50);
+  };
+
+  const handleNavigateToExpediente = (expId: string) => {
+    setTargetExpedienteId(expId);
+    setIsExpedienteRoadmapOpen(true);
+    const targetDoc = documents.find(
+      (d) => d.expediente === expId || d.number === expId || d.id === expId
+    );
+    setActiveExpedientePlate(targetDoc?.vehiclePlate || null);
+    navigateToSection('page-roadmap');
   };
 
   const handleBackToPreviousScreen = () => {
@@ -839,19 +1329,23 @@ export default function App() {
       const previousScreen = updated[updated.length - 1] || 'page-inicio';
       setScreenHistory(updated);
       const el = document.getElementById(previousScreen);
-      if (el && scrollContainerRef.current) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
       }
     } else {
       const el = document.getElementById('page-inicio');
-      if (el && scrollContainerRef.current) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
       }
     }
   };
 
   // Redirigir a la pantalla de INICIO (ej: al pulsar el logo en cualquier pantalla)
   const navigateToHome = () => {
+    const el = document.getElementById('page-inicio');
+    if (el) {
+      el.scrollTop = 0;
+    }
     navigateToSection('page-inicio');
   };
 
@@ -944,15 +1438,6 @@ export default function App() {
   if (isClientPortalDomain) {
     return (
       <div className="relative w-full min-h-[100dvh] bg-[#090D16] text-[#F8FAFC] font-sans selection:bg-[#38BDF8] selection:text-[#090D16]">
-        {/* Botón Flotante Pantalla Completa */}
-        <button
-          onClick={toggleFullscreen}
-          className="fixed top-4 right-4 z-[100] p-2 text-white mix-blend-difference hover:scale-110 transition-transform cursor-pointer flex items-center justify-center"
-          title={isFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
-        >
-          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-        </button>
-
         {/* Toast Notification */}
         {toastMessage && (
           <div className="fixed bottom-6 right-6 z-[200] bg-[#0F2942] text-white px-5 py-3 rounded-lg shadow-xl text-[18px] font-semibold tracking-wide border border-[#1E3A8A] flex items-center gap-2 select-none animate-none transition-none">
@@ -1040,7 +1525,7 @@ export default function App() {
               onOpenAgendaForBudget={() => {}}
               onNavigateToExpediente={(expNum) => {
                 setIsViewDocOpen(false);
-                setTargetExpedienteId(expNum);
+                handleNavigateToExpediente(expNum);
               }}
               onShowToast={showToast}
             />
@@ -1056,8 +1541,8 @@ export default function App() {
       <IntroAnimation
         onComplete={() => {
           setShowIntro(false);
-          // Si no tiene usuario configurado, abrir el modal de configuración
-          if (!isUserConfigured) {
+          // Si no tiene usuario configurado y no es acceso de cliente, abrir el modal de configuración
+          if (!isUserConfigured && !isClientDocViewMode) {
             setTimeout(() => setIsNewUserOpen(true), 500);
           }
         }}
@@ -1066,17 +1551,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#F8F7F3] text-[#1E293B] font-sans selection:bg-[#0F2942] selection:text-white">
-      {/* Botón Flotante Pantalla Completa (Bottom Left) */}
-      <button
-        onClick={toggleFullscreen}
-        className="fixed top-4 right-4 z-[100] p-2 text-white mix-blend-difference hover:scale-110 transition-transform cursor-pointer flex items-center justify-center"
-        title={isFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
-      >
-        {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-        
-      </button>
-
+    <div className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-white text-[#1E293B] font-sans selection:bg-[#0F2942] selection:text-white">
       {/* Toast Notification (sin animación, sonido no molesto) */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-[200] bg-[#0F2942] text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold tracking-wide border border-[#1E3A8A] flex items-center gap-2 select-none animate-none transition-none">
@@ -1097,18 +1572,29 @@ export default function App() {
         }}
         bgBentoMenuUrl={user.bgBentoMenuUrl}
         onOpenImageCustomizer={() => setIsImageCustomizerOpen(true)}
+        hasAutoDetectedInvoices={hasAutoDetectedInvoices}
+        isScanningInvoices={isScanningInvoices}
+        scanButtonStatus={scanButtonStatus}
+        onTriggerScan={handleTriggerExtraScan}
+        onViewDetectedInvoices={handleViewDetectedInvoices}
+        currentPlan={currentTier}
+        activeEmployeesCount={user.employees?.length || 4}
       />
 
       {/* Contenedor Principal con Scroll Horizontal Snap */}
       <div 
         ref={scrollContainerRef}
         onWheel={handleWheelScroll}
-        className="w-full h-full flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
+        className="w-full h-full flex overflow-y-hidden snap-x snap-mandatory scroll-smooth overflow-x-auto"
       >
         {/* 1. Inicio */}
         <HomeView 
           currentUser={user}
           isAuthenticated={isAuthenticated}
+          currentPlan={currentTier}
+          onSelectPlan={handleSelectPlan}
+          onOpenEnterpriseAeat={() => setIsEnterpriseAeatOpen(true)}
+          onOpenQuickExtras={() => setIsQuickExtrasOpen(true)}
           onLoginSuccess={handleLoginSuccess}
           onLogout={handleLogout}
           onOpenScanner={() => setIsPlateScannerOpen(true)}
@@ -1129,360 +1615,741 @@ export default function App() {
              }
           }}
           onDismissInvoice={handleDismissInvoiceNotification}
-        />
-
-        {/* 2. Expedientes */}
-        <ExpedientesView 
-          documents={documents}
-          clients={clients}
-          onBack={() => {
-             setTargetExpedienteId(null);
-             setClientExpedienteFilter(null);
-             handleBackToPreviousScreen();
-          }}
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          initialExpedienteId={targetExpedienteId}
-          initialClientId={clientExpedienteFilter}
-          currentUser={user}
-          onUpdateDocument={(updated) => handleSaveDocument(updated)}
-          onGenerateInvoiceFromBudget={(budget) => handleConvertToInvoice(budget)}
-          onShowToast={showToast}
-          onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
-        />
-
-        {/* 3. Solicitudes */}
-        <SolicitudesView
-          id="page-solicitudes"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onNewBudgetWithData={(data) => {
-            const matchingClient = clients.find(
-              (c) =>
-                c.name.toLowerCase() === data.clientName?.toLowerCase() ||
-                (c.phone && data.clientPhone && c.phone.replace(/\D/g, '') === data.clientPhone.replace(/\D/g, '')) ||
-                (data.vehiclePlate && c.plates?.includes(data.vehiclePlate.toUpperCase()))
-            );
-
-            const exp = data.expediente || getExpedienteFromDocNumber(data.solicitudNumber || '');
-            const budgetNum = getNextDocumentNumber('presupuesto', documents, exp);
-
-            const newBudget: GestarianDocument = {
-              id: `doc_budget_${Date.now()}`,
-              type: 'presupuesto',
-              number: budgetNum,
-              series: 'A',
-              date: new Date().toISOString().split('T')[0],
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              expediente: exp,
-              issuerId: user.id,
-              issuerName: user.fullName,
-              issuerCif: user.cif,
-              issuerAddress: user.fiscalAddress,
-              issuerPhone: user.phone,
-              issuerEmail: user.email,
-              issuerLogoUrl: user.logoUrl,
-              clientId: matchingClient?.id || '',
-              clientName: data.clientName || matchingClient?.name || '',
-              clientCif: matchingClient?.cif || '',
-              clientAddress: matchingClient?.address || '',
-              clientEmail: data.clientEmail || matchingClient?.email || '',
-              clientPhone: data.clientPhone || matchingClient?.phone || '',
-              vehiclePlate: data.vehiclePlate || '',
-              vehicleBrand: data.vehicleBrand || '',
-              vehicleModel: data.vehicleModel || '',
-              vehicleImages: data.images || [],
-              items: [
-                {
-                  id: `item_${Date.now()}`,
-                  description: data.description || `Reparación y servicios según solicitud ${data.solicitudNumber || ''}`,
-                  quantity: 1,
-                  unitPrice: 0,
-                  amount: 0,
-                },
-              ],
-              subtotal: 0,
-              applyIva: true,
-              ivaRate: 21,
-              ivaAmount: 0,
-              applyIrpf: false,
-              irpfRate: 0,
-              irpfAmount: 0,
-              total: 0,
-              status: 'borrador',
-              isLocked: false,
-              notes: 'Validez del presupuesto: 30 días.\nEste presupuesto puede verse alterado en función de incidencias no contempladas en primera valoración.\nSe ruega puntualidad para entregar el vehículo en la fecha y hora establecida.',
-            };
-
-            setBudgetToConvert(newBudget);
-            setCreateDocType('presupuesto');
-            setIsCreateDocOpen(true);
-            showToast(`Presupuesto ${budgetNum} iniciado con el número reservado para la solicitud ${data.solicitudNumber || ''}`);
-          }}
-          onNavigateToExpediente={(expId) => {
-            setTargetExpedienteId(expId);
-            navigateToSection('page-expedientes');
-          }}
-        />
-
-        {/* 4. Clientes */}
-        <ClientesCardsView
-          id="page-clientes"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          clients={clients}
-          documents={documents}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onOpenClientArea={() => setIsClientAreaOpen(true)}
+          onNavigateSection={(sectionId) => navigateToSection(sectionId)}
+          hasAutoDetectedInvoices={hasAutoDetectedInvoices}
+          isScanningInvoices={isScanningInvoices}
+          scanButtonStatus={scanButtonStatus}
+          onTriggerScan={handleTriggerExtraScan}
+          onViewDetectedInvoices={handleViewDetectedInvoices}
+          onNewBudget={handleOpenNewBudget}
+          onNewInvoice={handleOpenNewInvoice}
           onNewClient={() => {
             setEditingClient(null);
             setIsNewClientFullScreenOpen(true);
           }}
-          onEditClient={(client) => {
-            setEditingClient(client);
-            setIsNewClientFullScreenOpen(true);
-          }}
-          onUpdateClient={(updatedClient) => {
-            setClients((prev) =>
-              prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
-            );
-            saveStoredClients(clients.map((c) => (c.id === updatedClient.id ? updatedClient : c)));
-            showToast(`Vehículos del cliente ${updatedClient.name} actualizados`);
-          }}
-          onViewClientBudgets={(client) => {
-            setBudgetSearchFilter(client.name);
-            navigateToSection('page-presupuestos');
-          }}
-          onNewBudgetForClient={(client) => {
-            handleClientSelectForDoc(client, 'presupuesto');
-          }}
-          onViewClientExpedientes={(client) => {
-            setClientExpedienteFilter(client.id);
-            navigateToSection('page-expedientes');
-          }}
-          onViewClientInvoices={(client) => {
-            setClientFacturacionFilter(client.id);
-            navigateToSection('page-facturacion');
-          }}
         />
 
-        {/* 5. Presupuestos */}
-        <PlaceholderView 
-          id="page-presupuestos" 
-          title="Presupuestos" 
-          logoUrl={user.logoUrl} 
-          userFullName={user.fullName} 
+        {/* Módulos completos: Solo en PRO y ENTERPRISE (Ocultar en GESTARIAN LITE y QUICK) */}
+        {currentTier !== 'lite' && currentTier !== 'quick' && (
+          <>
+            {/* 2. Expedientes */}
+            <PageLayoutWrapper
+              pageId="page-expedientes"
+          title="Expedientes"
+          currentPlan={currentTier}
+          vehiclePlate={isExpedienteRoadmapOpen ? activeExpedientePlate : null}
+          onOpenDatos={isExpedienteRoadmapOpen ? () => window.dispatchEvent(new CustomEvent('gestarian_open_expediente_datos')) : undefined}
+          onOpenMenu={() => setIsMenuOpen(true)}
           onBack={() => {
-            setBudgetSearchFilter('');
-            handleBackToPreviousScreen();
+            if (isExpedienteRoadmapOpen) {
+              window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
+              setIsExpedienteRoadmapOpen(false);
+              setTargetExpedienteId(null);
+              setActiveExpedientePlate(null);
+            } else {
+              setTargetExpedienteId(null);
+              setClientExpedienteFilter(null);
+              handleBackToPreviousScreen();
+            }
           }}
           onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
         >
-          <DocumentList
-            documents={documents.filter((d) => d.type === 'presupuesto')}
-            initialSearch={budgetSearchFilter}
+          <ExpedientesView 
+            documents={documents}
+            clients={clients}
+            onBack={() => {
+              if (isExpedienteRoadmapOpen) {
+                window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
+                setIsExpedienteRoadmapOpen(false);
+                setTargetExpedienteId(null);
+                setActiveExpedientePlate(null);
+              } else {
+                setTargetExpedienteId(null);
+                setClientExpedienteFilter(null);
+                handleBackToPreviousScreen();
+              }
+            }}
+            logoUrl={user.logoUrl}
+            userFullName={user.fullName}
+            onNavigateHome={navigateToHome}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            initialExpedienteId={targetExpedienteId}
+            initialClientId={clientExpedienteFilter}
+            currentUser={user}
+            onUpdateDocument={(updated) => handleSaveDocument(updated)}
+            onGenerateInvoiceFromBudget={(budget) => handleConvertToInvoice(budget)}
+            onShowToast={showToast}
+            onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
+            onRoadmapOpenChange={(isOpen) => setIsExpedienteRoadmapOpen(isOpen)}
+            onSelectExpediente={(expId) => {
+              setTargetExpedienteId(expId);
+              setIsExpedienteRoadmapOpen(Boolean(expId));
+              if (!expId) setActiveExpedientePlate(null);
+            }}
+            onPlateChange={(plate) => setActiveExpedientePlate(plate)}
+          />
+        </PageLayoutWrapper>
+
+        {/* 3. Solicitudes */}
+        <PageLayoutWrapper
+          pageId="page-solicitudes"
+          title="Solicitudes"
+          currentPlan={currentTier}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          onBack={handleBackToPreviousScreen}
+          onNavigateHome={navigateToHome}
+        >
+          <SolicitudesView
+            id="page-solicitudes"
+            logoUrl={user.logoUrl}
+            userFullName={user.fullName}
+            onBack={handleBackToPreviousScreen}
+            onNavigateHome={navigateToHome}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            onNewBudgetWithData={(data) => {
+              // 1. Buscar si ya existe el cliente en la base de datos
+              let matchingClient = clients.find(
+                (c) =>
+                  (data.clientName && c.name.trim().toLowerCase() === data.clientName.trim().toLowerCase()) ||
+                  (c.phone && data.clientPhone && c.phone.replace(/\D/g, '') === data.clientPhone.replace(/\D/g, '')) ||
+                  (c.email && data.clientEmail && c.email.trim().toLowerCase() === data.clientEmail.trim().toLowerCase()) ||
+                  (data.vehiclePlate && c.plates && c.plates.map(p => p.toUpperCase()).includes(data.vehiclePlate.toUpperCase()))
+              );
+
+              // 2. Si no existe en la cartera, registrar el cliente para que quede vinculado
+              if (!matchingClient && data.clientName) {
+                const maxNum = clients.reduce((max, cl) => Math.max(max, cl.clientNumber || 0), 0);
+                matchingClient = {
+                  id: `client_${Date.now()}`,
+                  clientNumber: maxNum + 1,
+                  name: data.clientName.trim(),
+                  cif: '',
+                  address: '',
+                  phone: data.clientPhone || '',
+                  email: data.clientEmail || '',
+                  plates: data.vehiclePlate ? [data.vehiclePlate.trim().toUpperCase()] : [],
+                };
+                setClients((prev) => [matchingClient!, ...prev]);
+                saveStoredClients([matchingClient!, ...clients]);
+                syncClientToSupabase(matchingClient!);
+              }
+
+              // 3. Obtener matrícula, marca y modelo del vehículo
+              let plate = (data.vehiclePlate || matchingClient?.plates?.[0] || '').trim().toUpperCase();
+              let brand = data.vehicleBrand || '';
+              let model = data.vehicleModel || '';
+
+              if (!brand || !model) {
+                const pastDoc = documents.find(
+                  (d) =>
+                    (plate && d.vehiclePlate?.toUpperCase() === plate) ||
+                    (matchingClient && d.clientId === matchingClient.id)
+                );
+                if (pastDoc) {
+                  if (!brand && pastDoc.vehicleBrand) brand = pastDoc.vehicleBrand;
+                  if (!model && (pastDoc.vehicleModel || pastDoc.vehicleType)) model = pastDoc.vehicleModel || pastDoc.vehicleType || '';
+                }
+              }
+
+              const exp = data.expediente || getExpedienteFromDocNumber(data.solicitudNumber || '');
+              const budgetNum = getNextDocumentNumber('presupuesto', documents, exp);
+
+              const newBudget: GestarianDocument = {
+                id: `doc_budget_${Date.now()}`,
+                type: 'presupuesto',
+                number: budgetNum,
+                series: 'A',
+                date: new Date().toISOString().split('T')[0],
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                expediente: exp,
+                issuerId: user.id,
+                issuerName: user.fullName,
+                issuerCif: user.cif,
+                issuerAddress: user.fiscalAddress,
+                issuerPhone: user.phone,
+                issuerEmail: user.email,
+                issuerLogoUrl: user.logoUrl,
+                clientId: matchingClient?.id || '',
+                clientName: matchingClient?.name || data.clientName || '',
+                clientCif: matchingClient?.cif || '',
+                clientAddress: matchingClient?.address || '',
+                clientEmail: matchingClient?.email || data.clientEmail || '',
+                clientPhone: matchingClient?.phone || data.clientPhone || '',
+                vehiclePlate: plate,
+                vehicleBrand: brand,
+                vehicleModel: model,
+                vehicleImages: data.images || [],
+                items: (() => {
+                  const rawDesc = data.description?.trim() || '';
+                  if (!rawDesc) {
+                    return [
+                      {
+                        id: `item_${Date.now()}_1`,
+                        description: `Reparación y servicios según solicitud ${data.solicitudNumber || ''}`,
+                        quantity: 1,
+                        unitPrice: 0,
+                        amount: 0,
+                      },
+                    ];
+                  }
+
+                  // Dividir por saltos de línea o viñetas para crear líneas de concepto individuales
+                  const lines = rawDesc
+                    .split(/\r?\n/)
+                    .map((l) => l.trim())
+                    .filter((l) => l.length > 0);
+
+                  if (lines.length > 1) {
+                    return lines.map((line, idx) => ({
+                      id: `item_${Date.now()}_${idx + 1}`,
+                      description: line.replace(/^[-*•0-9.)\s]+/, '').trim() || line,
+                      quantity: 1,
+                      unitPrice: 0,
+                      amount: 0,
+                    }));
+                  }
+
+                  // Si es una sola línea larga con comas o puntos y coma, mantener el texto completo como concepto 1
+                  return [
+                    {
+                      id: `item_${Date.now()}_1`,
+                      description: rawDesc,
+                      quantity: 1,
+                      unitPrice: 0,
+                      amount: 0,
+                    },
+                  ];
+                })(),
+                subtotal: 0,
+                applyIva: true,
+                ivaRate: 21,
+                ivaAmount: 0,
+                applyIrpf: false,
+                irpfRate: 0,
+                irpfAmount: 0,
+                total: 0,
+                status: 'borrador',
+                isLocked: false,
+                notes: 'Validez del presupuesto: 30 días.\nEste presupuesto puede verse alterado en función de incidencias no contempladas en primera valoración.\nSe ruega puntualidad para entregar el vehículo en la fecha y hora establecida.',
+              };
+
+              setPreselectedClientIdForNewDoc(matchingClient?.id || null);
+              setBudgetToConvert(newBudget);
+              setCreateDocType('presupuesto');
+              setIsCreateDocOpen(true);
+              showToast(`Presupuesto ${budgetNum} iniciado con el cliente ${newBudget.clientName} y vehículo [${plate || 'S/M'}]`);
+            }}
+            onNavigateToExpediente={(expId) => {
+              handleNavigateToExpediente(expId);
+            }}
             onViewDoc={(doc) => {
               setSelectedDoc(doc);
               setIsClientDocViewMode(false);
               setIsViewDocOpen(true);
             }}
-            onShareDoc={handleShareDoc}
-            onNewBudget={handleOpenNewBudget}
-            onAcceptBudget={handleAcceptBudget}
-            onConvertToInvoice={handleConvertToInvoice}
-            onEditBudgetPricing={(doc) => handleOpenBudgetPricingReview(doc.id)}
-            onDispatchDoc={handleOpenDocumentDispatch}
-            onNavigateToExpediente={(expId) => {
-                setTargetExpedienteId(expId);
-                navigateToSection('page-expedientes');
+          />
+        </PageLayoutWrapper>
+        </>
+      )}
+
+        {/* 4. Clientes: En QUICK, PRO y ENTERPRISE (Ocultar en GESTARIAN LITE) */}
+        {currentTier !== 'lite' && (
+        <PageLayoutWrapper
+          pageId="page-clientes"
+          title="Clientes"
+          currentPlan={currentTier}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          onBack={handleBackToPreviousScreen}
+          onNavigateHome={navigateToHome}
+          onNewClient={() => {
+            setEditingClient(null);
+            setIsNewClientFullScreenOpen(true);
+          }}
+        >
+          <ClientesCardsView
+            id="page-clientes"
+            logoUrl={user.logoUrl}
+            userFullName={user.fullName}
+            currentUser={user}
+            clients={clients}
+            documents={documents}
+            isSelectingForBudget={isSelectingClientForBudget}
+            onSelectClientForBudget={(selectedClient) => {
+              setIsSelectingClientForBudget(false);
+              setPreselectedClientIdForNewDoc(selectedClient.id);
+              setBudgetToConvert((prev) => prev ? {
+                ...prev,
+                clientId: selectedClient.id,
+                clientName: selectedClient.name,
+                clientCif: selectedClient.cif || '',
+                clientAddress: selectedClient.address || '',
+                clientPhone: selectedClient.phone || '',
+                clientEmail: selectedClient.email || '',
+                vehiclePlate: selectedClient.plates && selectedClient.plates.length > 0 ? selectedClient.plates[0] : (prev.vehiclePlate || ''),
+                taskLocation: selectedClient.taskLocation || selectedClient.address || '',
+              } : null);
+              setCreateDocType('presupuesto');
+              setIsCreateDocOpen(true);
+              showToast(`Cliente ${selectedClient.name} cargado en el presupuesto`);
+            }}
+            onCancelBudgetSelection={() => {
+              setIsSelectingClientForBudget(false);
+              setIsCreateDocOpen(true);
+            }}
+            onBack={handleBackToPreviousScreen}
+            onNavigateHome={navigateToHome}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            onOpenClientArea={() => setIsClientAreaOpen(true)}
+            onNewClient={() => {
+              setEditingClient(null);
+              setIsNewClientFullScreenOpen(true);
+            }}
+            onEditClient={(client) => {
+              setEditingClient(client);
+              setIsNewClientFullScreenOpen(true);
+            }}
+            onUpdateClient={(updatedClient) => {
+              setClients((prev) =>
+                prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
+              );
+              saveStoredClients(clients.map((c) => (c.id === updatedClient.id ? updatedClient : c)));
+              showToast(`Vehículos del cliente ${updatedClient.name} actualizados`);
+            }}
+            onViewClientBudgets={(client) => {
+              setBudgetSearchFilter(client.name);
+              navigateToSection('page-presupuestos');
+            }}
+            onNewBudgetForClient={(client) => {
+              handleClientSelectForDoc(client, 'presupuesto');
+            }}
+            onViewClientExpedientes={(client) => {
+              setClientExpedienteFilter(client.id);
+              setTargetExpedienteId(null);
+              setIsExpedienteRoadmapOpen(false);
+              setActiveExpedientePlate(null);
+              navigateToSection('page-expedientes');
+            }}
+            onViewClientInvoices={(client) => {
+              setClientFacturacionFilter(client.id);
+              navigateToSection('page-facturacion');
+            }}
+            onViewDoc={(doc) => {
+              setSelectedDoc(doc);
+              setIsClientDocViewMode(false);
+              setIsViewDocOpen(true);
+            }}
+          />
+        </PageLayoutWrapper>
+      )}
+
+        {/* 5. Presupuestos: Ocultar en QUICK (Solo en LITE, PRO y ENTERPRISE) */}
+        {currentTier !== 'quick' && (
+        <PageLayoutWrapper
+          pageId="page-presupuestos"
+          title="Presupuestos"
+          currentPlan={currentTier}
+          onOpenMenu={() => setIsMenuOpen(true)}
+          onBack={() => {
+            setBudgetSearchFilter('');
+            handleBackToPreviousScreen();
+          }}
+          onNavigateHome={navigateToHome}
+          onNewBudget={handleOpenNewBudget}
+        >
+          {currentTier === 'lite' ? (
+            <div className="w-full flex-1 flex flex-col items-center justify-start overflow-y-auto">
+              <CreateDocumentModal
+                inline={true}
+                isOpen={true}
+                docType="presupuesto"
+                onClose={navigateToHome}
+                onSave={handleSaveDocument}
+                currentUser={user}
+                clients={clients}
+                allDocuments={documents}
+                onShowToast={showToast}
+                onUpdateUser={handleUserSaved}
+              />
+            </div>
+          ) : (
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col">
+              <DocumentList
+                documents={documents.filter((d) => d.type === 'presupuesto')}
+                initialSearch={budgetSearchFilter}
+                onlyCards={true}
+                onViewDoc={(doc) => {
+                  setSelectedDoc(doc);
+                  setIsClientDocViewMode(false);
+                  setIsViewDocOpen(true);
+                }}
+                onShareDoc={handleShareDoc}
+                onNewBudget={handleOpenNewBudget}
+                onAcceptBudget={handleAcceptBudget}
+                onConvertToInvoice={handleConvertToInvoice}
+                onEditBudgetPricing={(doc) => handleOpenBudgetPricingReview(doc.id)}
+                onDispatchDoc={handleOpenDocumentDispatch}
+                onNavigateToExpediente={(expId) => {
+                  handleNavigateToExpediente(expId);
+                }}
+              />
+            </div>
+          )}
+        </PageLayoutWrapper>
+        )}
+
+        {/* Citas y Taller: Solo en PRO y ENTERPRISE (Ocultar en LITE y QUICK) */}
+        {currentTier !== 'lite' && currentTier !== 'quick' && (
+          <>
+            {/* 6. Citas */}
+            <PageLayoutWrapper
+              pageId="page-citas"
+              title="Citas"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+              onOpenAgenda={() => {
+                setAgendaBudgetTrigger(null);
+                setIsAgendaOpen(true);
               }}
-            />
-        </PlaceholderView>
+            >
+              <CitasView
+                id="page-citas"
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                appointments={appointments}
+                onBack={handleBackToPreviousScreen}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+                onOpenAgenda={() => {
+                  setAgendaBudgetTrigger(null);
+                  setIsAgendaOpen(true);
+                }}
+                onNavigateToExpediente={(expId) => {
+                  handleNavigateToExpediente(expId);
+                }}
+              />
+            </PageLayoutWrapper>
 
-        {/* 6. Citas */}
-        <CitasView
-          id="page-citas"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          appointments={appointments}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
+            {/* 7. Taller */}
+            <PageLayoutWrapper
+              pageId="page-taller"
+              title="Taller y Reparaciones"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+            >
+              <TallerCardsView
+                id="page-taller"
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                documents={documents}
+                currentUser={user}
+                loggedEmployeeSession={loggedEmployeeSession}
+                onLogoutEmployeeSession={() => {
+                  setLoggedEmployeeSession(null);
+                  showToast('Sesión de Autorizado cerrada');
+                }}
+                onBack={handleBackToPreviousScreen}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+                onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
+                onNavigateToExpediente={(expId) => {
+                  handleNavigateToExpediente(expId);
+                }}
+                onUpdateDocument={handleSaveDocument}
+                onShowToast={showToast}
+              />
+            </PageLayoutWrapper>
+          </>
+        )}
+
+        {/* 8. Facturación: En LITE muestra directamente la Hoja A4 para cumplimentar (Ocultar en QUICK) */}
+        {currentTier !== 'quick' && (
+        <PageLayoutWrapper
+          pageId="page-facturacion"
+          title="Facturación y Finanzas"
+          currentPlan={currentTier}
           onOpenMenu={() => setIsMenuOpen(true)}
-          onOpenAgenda={() => {
-            setAgendaBudgetTrigger(null);
-            setIsAgendaOpen(true);
-          }}
-          onNavigateToExpediente={(expId) => {
-            setTargetExpedienteId(expId);
-            navigateToSection('page-expedientes');
-          }}
-        />
-
-        {/* 7. Taller */}
-        <TallerCardsView
-          id="page-taller"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          documents={documents}
-          currentUser={user}
-          loggedEmployeeSession={loggedEmployeeSession}
-          onLogoutEmployeeSession={() => {
-            setLoggedEmployeeSession(null);
-            showToast('Sesión de Autorizado cerrada');
-          }}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
-          onNavigateToExpediente={(expId) => {
-            setTargetExpedienteId(expId);
-            navigateToSection('page-expedientes');
-          }}
-          onUpdateDocument={handleSaveDocument}
-          onShowToast={showToast}
-        />
-
-        {/* 8. Facturación */}
-        <FacturacionView
-          id="page-facturacion"
-          user={user}
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          documents={documents}
-          initialTab="emitidas"
-          initialClientFilterId={clientFacturacionFilter}
-          onViewDoc={(doc) => {
-            setSelectedDoc(doc);
-            setIsClientDocViewMode(false);
-            setIsViewDocOpen(true);
-          }}
-          onNavigateToDocument={(id) => {}}
           onBack={() => {
             setClientFacturacionFilter(null);
             handleBackToPreviousScreen();
           }}
           onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onAddReceivedInvoice={(doc) => {
-            setDocuments(prev => [...prev, doc]);
-          }}
-          onNavigateToExpediente={(expId) => {
-            setTargetExpedienteId(expId);
-            navigateToSection('page-expedientes');
-          }}
-          onNavigateToClient={(clientId) => {
-            setTargetClientId(clientId);
-            navigateToSection('page-clientes');
-          }}
-          onAddPayment={(docId, payment) => {
-            setDocuments((prev) =>
-              prev.map((d) => {
-                if (d.id === docId) {
-                  const updatedPayments = [...(d.payments || []), payment];
-                  const total = d.total || 0;
-                  const prevPaid = (d.payments || []).reduce((acc, p) => acc + p.amount, 0);
-                  const newPaid = prevPaid + payment.amount;
-                  const pending = Math.max(0, total - newPaid);
+          onNewInvoice={handleOpenNewInvoice}
+        >
+          {currentTier === 'lite' ? (
+            <div className="w-full flex-1 flex flex-col items-center justify-start overflow-y-auto">
+              <CreateDocumentModal
+                inline={true}
+                isOpen={true}
+                docType="factura"
+                onClose={navigateToHome}
+                onSave={handleSaveDocument}
+                currentUser={user}
+                clients={clients}
+                allDocuments={documents}
+                onShowToast={showToast}
+                onUpdateUser={handleUserSaved}
+              />
+            </div>
+          ) : (
+            <FacturacionView
+              id="page-facturacion"
+              user={user}
+              logoUrl={user.logoUrl}
+              userFullName={user.fullName}
+              documents={documents}
+              initialTab={facturacionInitialTab}
+              initialClientFilterId={clientFacturacionFilter}
+              onOpenDetectedInvoices={handleViewDetectedInvoices}
+              detectedInvoicesCount={detectedInvoices.length}
+              onNewInvoice={handleOpenNewInvoice}
+              onViewDoc={(doc) => {
+                setSelectedDoc(doc);
+                setIsClientDocViewMode(false);
+                setIsViewDocOpen(true);
+              }}
+              onNavigateToDocument={(id) => {}}
+              onBack={() => {
+                setClientFacturacionFilter(null);
+                handleBackToPreviousScreen();
+              }}
+              onNavigateHome={navigateToHome}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onAddReceivedInvoice={(doc) => {
+                const cleanDoc: GestarianDocument = {
+                  ...doc,
+                  type: 'factura_recibida',
+                  expediente: undefined, // Las facturas recibidas NUNCA generan expediente
+                };
+                setDocuments(prev => {
+                  const updated = [cleanDoc, ...prev.filter(d => d.id !== doc.id)];
+                  saveStoredDocuments(updated);
+                  return updated;
+                });
+                showToast(`Factura recibida ${doc.number} guardada con éxito`);
+              }}
+              onNavigateToExpediente={(expId) => {
+                handleNavigateToExpediente(expId);
+              }}
+              onNavigateToClient={(clientId) => {
+                setTargetClientId(clientId);
+                navigateToSection('page-clientes');
+              }}
+              onAddPayment={(docId, payment) => {
+                setDocuments((prev) =>
+                  prev.map((d) => {
+                    if (d.id === docId) {
+                      const updatedPayments = [...(d.payments || []), payment];
+                      const total = d.total || 0;
+                      const prevPaid = (d.payments || []).reduce((acc, p) => acc + p.amount, 0);
+                      const newPaid = prevPaid + payment.amount;
+                      const pending = Math.max(0, total - newPaid);
 
-                  // Si el cobro deja el saldo pendiente a 0 (Abono total completado)
-                  if (pending <= 0.001 && total > 0 && prevPaid < total) {
-                    const formattedTotal = total.toLocaleString('es-ES', {
-                      style: 'currency',
-                      currency: 'EUR',
-                    });
-                    const clientLabel = d.clientName || 'Cliente';
-                    const plateLabel = d.vehiclePlate ? ` [${d.vehiclePlate}]` : '';
-                    const expLabel = d.expediente ? ` | Expediente: ${d.expediente}` : '';
+                      // Si el cobro deja el saldo pendiente a 0 (Abono total completado)
+                      if (pending <= 0.001 && total > 0 && prevPaid < total) {
+                        const formattedTotal = total.toLocaleString('es-ES', {
+                          style: 'currency',
+                          currency: 'EUR',
+                        });
+                        const clientLabel = d.clientName || 'Cliente';
+                        const plateLabel = d.vehiclePlate ? ` [${d.vehiclePlate}]` : '';
+                        const expLabel = d.expediente ? ` | Expediente: ${d.expediente}` : '';
 
-                    // 1. Notificación interna con aviso de Metis
-                    const metisPaidNotification: InternalNotification = {
-                      id: `notif_metis_paid_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                      title: `Aviso Metis: Factura ${d.number} Totalmente Abonada`,
-                      message: `Factura ${d.number} de ${clientLabel}${plateLabel} abonada al 100%. Importe: ${formattedTotal}. Pendiente: 0,00 €${expLabel}. Expediente cerrado automáticamente.`,
-                      timestamp: new Date().toISOString(),
-                      read: false,
-                      type: 'metis_invoice_paid',
-                      orderNumber: d.number,
-                      invoiceId: d.id,
-                      totalAmount: total,
-                      employeeName: 'Metis Asistente IA',
-                    };
+                        // 1. Notificación interna con aviso de Metis
+                        const metisPaidNotification: InternalNotification = {
+                          id: `notif_metis_paid_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                          title: `Aviso Metis: Factura ${d.number} Totalmente Abonada`,
+                          message: `Factura ${d.number} de ${clientLabel}${plateLabel} abonada al 100%. Importe: ${formattedTotal}. Pendiente: 0,00 €${expLabel}. Expediente cerrado automáticamente.`,
+                          timestamp: new Date().toISOString(),
+                          read: false,
+                          type: 'metis_invoice_paid',
+                          orderNumber: d.number,
+                          invoiceId: d.id,
+                          totalAmount: total,
+                          employeeName: 'Metis Asistente IA',
+                        };
 
-                    setNotifications((prevNotifs) => [metisPaidNotification, ...prevNotifs]);
+                        setNotifications((prevNotifs) => [metisPaidNotification, ...prevNotifs]);
 
-                    // 2. Banner toast con los datos del abono
-                    showToast(
-                      `🤖 Metis: Factura ${d.number} (${clientLabel}) totalmente abonada [${formattedTotal}]. Pendiente: 0,00 €. Expediente cerrado.`
-                    );
+                        // 2. Banner toast con los datos del abono
+                        showToast(
+                          `🤖 Metis: Factura ${d.number} (${clientLabel}) totalmente abonada [${formattedTotal}]. Pendiente: 0,00 €. Expediente cerrado.`
+                        );
 
-                    // 3. Emisión por voz de Metis si el navegador lo permite
-                    try {
-                      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                        const voiceText = `Aviso de Metis: Factura ${d.number} totalmente abonada por ${clientLabel}. Importe total de ${Math.round(
-                          total
-                        )} euros liquidado. Saldo pendiente cero. Expediente cerrado con éxito.`;
-                        const utterance = new SpeechSynthesisUtterance(voiceText);
-                        utterance.lang = 'es-ES';
-                        utterance.rate = 1.0;
-                        window.speechSynthesis.speak(utterance);
+                        // 3. Emisión por voz de Metis si el navegador lo permite
+                        try {
+                          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                            const voiceText = `Aviso de Metis: Factura ${d.number} totalmente abonada por ${clientLabel}. Importe total de ${Math.round(
+                              total
+                            )} euros liquidado. Saldo pendiente cero. Expediente cerrado con éxito.`;
+                            const utterance = new SpeechSynthesisUtterance(voiceText);
+                            utterance.lang = 'es-ES';
+                            utterance.rate = 1.0;
+                            window.speechSynthesis.speak(utterance);
+                          }
+                        } catch (err) {
+                          console.warn('SpeechSynthesis unavailable:', err);
+                        }
+
+                        const existingNotes = d.notes || '';
+                        const updatedNotes = existingNotes.includes('FACTURA ABONADA')
+                          ? existingNotes
+                          : (existingNotes ? `${existingNotes}\nFACTURA ABONADA` : 'FACTURA ABONADA');
+
+                        return {
+                          ...d,
+                          payments: updatedPayments,
+                          status: 'PAGADO',
+                          notes: updatedNotes,
+                          observations: updatedNotes,
+                        };
                       }
-                    } catch (err) {
-                      console.warn('SpeechSynthesis unavailable:', err);
+
+                      return { ...d, payments: updatedPayments };
                     }
+                    return d;
+                  })
+                );
+              }}
+            />
+          )}
+        </PageLayoutWrapper>
+        )}
 
-                    return { ...d, payments: updatedPayments, status: 'PAGADO' };
-                  }
+        {/* Balances y Proveedores: En QUICK, PRO y ENTERPRISE (Ocultar en GESTARIAN LITE) */}
+        {currentTier !== 'lite' && (
+          <>
+            {/* 9. Balances */}
+            <PageLayoutWrapper
+              pageId="page-balances"
+              title="Balances de Empresa"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+            >
+              <BalancesView
+                id="page-balances"
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                documents={documents}
+                onBack={handleBackToPreviousScreen}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+              />
+            </PageLayoutWrapper>
 
-                  return { ...d, payments: updatedPayments };
-                }
-                return d;
-              })
-            );
-          }}
-        />
+            {/* 10. Proveedores */}
+            <PageLayoutWrapper
+              pageId="page-proveedores"
+              title="Proveedores"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+            >
+              <ProveedoresView
+                id="page-proveedores"
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                user={user}
+                documents={documents}
+                onAddReceivedInvoice={(cleanDoc) => {
+                  const docToSave: GestarianDocument = {
+                    ...cleanDoc,
+                    type: 'factura_recibida',
+                    expediente: undefined,
+                  };
+                  setDocuments((prev) => {
+                    const updated = [docToSave, ...prev.filter((d) => d.id !== cleanDoc.id)];
+                    saveStoredDocuments(updated);
+                    return updated;
+                  });
+                  showToast(`Factura recibida ${cleanDoc.number} guardada con éxito`);
+                }}
+                onViewDoc={(doc) => {
+                  setSelectedDoc(doc);
+                  setIsClientDocViewMode(false);
+                  setIsViewDocOpen(true);
+                }}
+                onShowToast={showToast}
+                onBack={handleBackToPreviousScreen}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+              />
+            </PageLayoutWrapper>
+          </>
+        )}
 
-        {/* 9. Balances */}
-        <BalancesView
-          id="page-balances"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          documents={documents}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-        />
+        {/* Mi Equipo e Incidencias: Solo en PRO y ENTERPRISE (Ocultar en LITE y QUICK) */}
+        {currentTier !== 'lite' && currentTier !== 'quick' && (
+          <>
+            {/* 10.5 Mi equipo */}
+            <PageLayoutWrapper
+              pageId="page-equipo"
+              title="Mi equipo"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+              onNewEmployee={() => {
+                window.dispatchEvent(new CustomEvent('gestarian_new_employee'));
+              }}
+              onSearchEmployee={() => {
+                window.dispatchEvent(new CustomEvent('gestarian_toggle_employee_search'));
+              }}
+            >
+              <MiEquipoView
+                id="page-equipo"
+                employees={user.employees || []}
+                documents={documents}
+                currentUser={user}
+                onUpdateEmployees={(newEmployees) => {
+                  setUser((prev) => {
+                    const nextUser = { ...prev, employees: newEmployees };
+                    saveStoredUser(nextUser);
+                    return nextUser;
+                  });
+                  showToast('Plantilla de empleados y control de jornada actualizados');
+                }}
+                onNavigateToExpediente={(expId) => {
+                  handleNavigateToExpediente(expId);
+                }}
+                onViewDoc={(doc) => {
+                  setSelectedDoc(doc);
+                  setIsClientDocViewMode(false);
+                  setIsViewDocOpen(true);
+                }}
+                onShowToast={showToast}
+              />
+            </PageLayoutWrapper>
 
-        {/* 10. Proveedores */}
-        <ProveedoresView
-          id="page-proveedores"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-        />
-
-        {/* 11. Incidencias */}
-        <IncidenciasView
-          id="page-incidencias"
-          logoUrl={user.logoUrl}
-          userFullName={user.fullName}
-          onBack={handleBackToPreviousScreen}
-          onNavigateHome={navigateToHome}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onNavigateToExpediente={(expId) => {
-            setTargetExpedienteId(expId);
-            navigateToSection('page-expedientes');
-          }}
-        />
+            {/* 11. Incidencias */}
+            <PageLayoutWrapper
+              pageId="page-incidencias"
+              title="Incidencias"
+              currentPlan={currentTier}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={handleBackToPreviousScreen}
+              onNavigateHome={navigateToHome}
+            >
+              <IncidenciasView
+                id="page-incidencias"
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                onBack={handleBackToPreviousScreen}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+                onNavigateToExpediente={(expId) => {
+                  handleNavigateToExpediente(expId);
+                }}
+              />
+            </PageLayoutWrapper>
+          </>
+        )}
 
         {/* 12. Configuración */}
         <ConfiguracionView 
@@ -1490,16 +2357,21 @@ export default function App() {
           logoUrl={user.logoUrl} 
           userFullName={user.fullName} 
           currentUser={user}
+          currentPlan={currentTier}
           onUpdateUser={(updatedFields) => {
-            setUser((prev) => ({ ...prev, ...updatedFields }));
-            showToast('Personalización actualizada correctamente');
+            setUser((prev) => {
+              const nextUser = { ...prev, ...updatedFields };
+              saveStoredUser(nextUser);
+              return nextUser;
+            });
+            showToast('Datos de la empresa actualizados correctamente');
           }}
           onOpenCustomizer={() => setIsImageCustomizerOpen(true)}
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenCompanyConfig={() => setIsNewUserOpen(true)}
-          onOpenSpec={() => setIsSpecOpen(true)}
+          onShowToast={showToast}
           onLogout={handleLogout}
           onScanComplete={(newInvoices) => {
             setDocuments(prev => {
@@ -1537,12 +2409,17 @@ export default function App() {
         onShowToast={showToast}
         onNavigateToExpediente={(expId) => {
           setIsCreateDocOpen(false);
-          setTargetExpedienteId(expId);
-          navigateToSection('page-expedientes');
+          handleNavigateToExpediente(expId);
         }}
         onEditClient={(client) => {
           setEditingClient(client);
           setIsNewClientFullScreenOpen(true);
+        }}
+        onOpenClientsPage={() => {
+          setIsSelectingClientForBudget(true);
+          setIsCreateDocOpen(false);
+          navigateToSection('page-clientes');
+          showToast('Seleccione un cliente de la lista o cree uno nuevo para el presupuesto');
         }}
         onDispatchDoc={handleOpenDocumentDispatch}
         onUpdateUser={handleUserSaved}
@@ -1650,6 +2527,25 @@ export default function App() {
           }
           setIsNewClientFullScreenOpen(false);
           setEditingClient(null);
+
+          // Si veníamos desde la selección de cliente en Nuevo Presupuesto, reabrir el presupuesto con el nuevo cliente cargado
+          if (isSelectingClientForBudget) {
+            setIsSelectingClientForBudget(false);
+            setPreselectedClientIdForNewDoc(newClient.id);
+            setBudgetToConvert((prev) => prev ? {
+              ...prev,
+              clientId: newClient.id,
+              clientName: newClient.name,
+              clientCif: newClient.cif || '',
+              clientAddress: newClient.address || '',
+              clientPhone: newClient.phone || '',
+              clientEmail: newClient.email || '',
+              vehiclePlate: newClient.plates && newClient.plates.length > 0 ? newClient.plates[0] : (prev.vehiclePlate || ''),
+            } : null);
+            setCreateDocType('presupuesto');
+            setIsCreateDocOpen(true);
+            showToast(`Cliente ${newClient.name} creado y cargado en el presupuesto`);
+          }
         }}
         onUpdateClient={(updatedClient) => {
           setClients((prev) => prev.map((c) => (c.id === updatedClient.id ? updatedClient : c)));
@@ -1807,6 +2703,24 @@ export default function App() {
           setIsWorkOrdersOpen(true);
         }}
         onOpenBudgetReview={handleOpenBudgetPricingReview}
+        onViewDocument={(docIdOrNum) => {
+          const targetDoc = documents.find((d) => d.id === docIdOrNum || d.number === docIdOrNum || d.expediente === docIdOrNum);
+          if (targetDoc) {
+            setSelectedDoc(targetDoc);
+            setIsViewDocOpen(true);
+          } else {
+            showToast(`Documento ${docIdOrNum} no encontrado`);
+          }
+        }}
+        onDownloadDocumentPdf={async (docIdOrNum) => {
+          const targetDoc = documents.find((d) => d.id === docIdOrNum || d.number === docIdOrNum || d.expediente === docIdOrNum);
+          if (targetDoc) {
+            showToast(`Descargando documento ${targetDoc.number} en vista de impresión...`);
+            await generateDocumentPdf(targetDoc, { userLogoUrl: user.logoUrl });
+          } else {
+            showToast(`Documento ${docIdOrNum} no encontrado`);
+          }
+        }}
       />
       
       <WorkOrdersModal 
@@ -1860,12 +2774,46 @@ export default function App() {
         isOpen={isMetisChatOpen}
         onClose={() => setIsMetisChatOpen(false)}
         currentUser={user}
+        documents={documents}
+        clients={clients}
+        appointments={appointments}
+        onNavigate={(sectionId, tab) => {
+          if (tab) {
+            setFacturacionInitialTab(tab);
+          }
+          navigateToSection(sectionId);
+        }}
+        onToggleFullscreen={toggleFullscreen}
+        onOpenPlateScanner={() => setIsPlateScannerOpen(true)}
+        onOpenNewBudget={handleOpenNewBudget}
+        onOpenNewClient={() => {
+          setEditingClient(null);
+          setIsNewClientFullScreenOpen(true);
+        }}
+        onOpenDetectedInvoices={() => setIsDetectedInvoicesOpen(true)}
       />
 
       <MetisVoiceAssistantModal
         isOpen={isMetisVoiceOpen}
         onClose={() => setIsMetisVoiceOpen(false)}
         currentUser={user}
+        documents={documents}
+        clients={clients}
+        appointments={appointments}
+        onNavigate={(sectionId, tab) => {
+          if (tab) {
+            setFacturacionInitialTab(tab);
+          }
+          navigateToSection(sectionId);
+        }}
+        onToggleFullscreen={toggleFullscreen}
+        onOpenPlateScanner={() => setIsPlateScannerOpen(true)}
+        onOpenNewBudget={handleOpenNewBudget}
+        onOpenNewClient={() => {
+          setEditingClient(null);
+          setIsNewClientFullScreenOpen(true);
+        }}
+        onOpenDetectedInvoices={() => setIsDetectedInvoicesOpen(true)}
       />
 
       <ImageCustomizerModal
@@ -1957,6 +2905,41 @@ export default function App() {
           setIsClientDocViewMode(false);
           setTargetExpedienteId(expNum);
           setIsClientPortalOpen(true);
+        }}
+        onShowToast={showToast}
+      />
+
+      {/* Modal de Facturas Detectadas por Rastreo con Listado de Tarjetas y Visor PDF */}
+      <DetectedInvoicesModal
+        isOpen={isDetectedInvoicesOpen}
+        onClose={() => setIsDetectedInvoicesOpen(false)}
+        detectedInvoices={detectedInvoices}
+        onIncorporateInvoice={handleIncorporateDetectedInvoice}
+        onRejectInvoice={handleRejectDetectedInvoice}
+        onDeleteInvoice={handleDeleteDetectedInvoice}
+        userLogoUrl={user.logoUrl}
+        onShowToast={showToast}
+      />
+
+      {/* Modal de Conexión Telemática AEAT y Red B2B para Enterprise */}
+      <EnterpriseAeatModal
+        isOpen={isEnterpriseAeatOpen}
+        onClose={() => setIsEnterpriseAeatOpen(false)}
+        currentUser={user}
+        onShowToast={showToast}
+      />
+
+      {/* Modal de Extras Anuales para Quick */}
+      <QuickExtrasModal
+        isOpen={isQuickExtrasOpen}
+        onClose={() => setIsQuickExtrasOpen(false)}
+        currentUser={user}
+        onUpdateUser={(updatedFields) => {
+          setUser((prev) => {
+            const next = { ...prev, ...updatedFields };
+            saveStoredUser(next);
+            return next;
+          });
         }}
         onShowToast={showToast}
       />

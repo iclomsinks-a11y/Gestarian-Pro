@@ -10,11 +10,13 @@ interface AssignEmployeeModalProps {
   onConfirmAssignment: (docId: string, employeeId: string, employeeName: string) => void;
 }
 
-const DEFAULT_EMPLOYEES: { id: string; name: string; profession: string }[] = [
-  { id: 'emp_default_1', name: 'Carlos García', profession: 'Oficial Mecánica' },
-  { id: 'emp_default_2', name: 'Juan Pérez', profession: 'Especialista Chapa y Pintura' },
-  { id: 'emp_default_3', name: 'Manuel López', profession: 'Técnico Electromecánica' },
-  { id: 'emp_default_4', name: 'Antonio Fernández', profession: 'Jefe de Taller / Asesor' },
+const DEFAULT_EMPLOYEES: { id: string; name: string; profession: string; laborEncomendada?: string }[] = [
+  { id: 'emp_default_1', name: 'Carlos García', profession: 'Oficial Mecánica', laborEncomendada: 'Mecánica general' },
+  { id: 'emp_default_2', name: 'Juan Pérez', profession: 'Especialista Chapa y Pintura', laborEncomendada: 'Carrocería y pintado' },
+  { id: 'emp_default_3', name: 'Manuel López', profession: 'Técnico Electromecánica', laborEncomendada: 'Diagnóstico eléctrico' },
+  { id: 'emp_default_4', name: 'Antonio Fernández', profession: 'Jefe de Taller / Asesor', laborEncomendada: 'Gestión de taller' },
+  { id: 'emp_default_5', name: 'María Sánchez', profession: 'Administrativa / Contable', laborEncomendada: 'Facturación y contabilidad' },
+  { id: 'emp_default_6', name: 'Lucía Gómez', profession: 'Limpiadora de Instalaciones', laborEncomendada: 'Limpieza de taller' },
 ];
 
 export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
@@ -28,10 +30,24 @@ export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
   const [customName, setCustomName] = useState<string>('');
   const [isCustom, setIsCustom] = useState<boolean>(false);
 
-  // Lista combinada de empleados
-  const availableEmployees = (currentUser.employees && currentUser.employees.length > 0)
+  // Lista combinada de todos los empleados
+  const rawEmployees = (currentUser.employees && currentUser.employees.length > 0)
     ? currentUser.employees
     : DEFAULT_EMPLOYEES;
+
+  // Filtro estricto de roles: para tareas operativas de taller (chapa, pintura, mecánica, electromecánica),
+  // EXCLUIR personal no operativo como limpiadoras/limpiadores y administrativos/contables.
+  const availableEmployees = rawEmployees.filter((emp) => {
+    const p = (emp.profession || '').toLowerCase();
+    const l = (emp.laborEncomendada || '').toLowerCase();
+    const isNonOperational =
+      p.includes('limpia') || l.includes('limpia') ||
+      p.includes('administrativ') || l.includes('administrativ') ||
+      p.includes('contable') || l.includes('contable') ||
+      p.includes('oficina') || l.includes('oficina') ||
+      p.includes('facturación') || l.includes('facturación');
+    return !isNonOperational;
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,10 +57,10 @@ export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
 
     // Preseleccionar empleado asignado previamente o el primero disponible
-    if (doc?.assignedEmployeeId) {
+    if (doc?.assignedEmployeeId && availableEmployees.some((e) => e.id === doc.assignedEmployeeId)) {
       setSelectedId(doc.assignedEmployeeId);
       setIsCustom(false);
-    } else if (doc?.createdByName && !availableEmployees.some(e => e.name === doc.createdByName)) {
+    } else if (doc?.createdByName && !availableEmployees.some((e) => e.name === doc.createdByName)) {
       setCustomName(doc.createdByName);
       setIsCustom(true);
     } else if (availableEmployees.length > 0) {
@@ -131,8 +147,19 @@ export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
           </div>
         </div>
 
+        {/* Banner Informativo de Filtro de Rol */}
+        <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2.5 text-xs text-amber-900 font-bold flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-amber-900">
+            <Wrench className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Filtro de Rol Activo: Operarios de Taller</span>
+          </div>
+          <span className="text-[11px] font-normal text-amber-800">
+            Al ser una tarea operativa de taller (chapa y pintura o mecánica), se excluye automáticamente a la limpiadora y al personal administrativo.
+          </span>
+        </div>
+
         <p className="text-xs text-[#334155] leading-relaxed">
-          Seleccione el empleado que se encargará de ejecutar la reparación en taller para esta orden de trabajo:
+          Seleccione el operario especialista que ejecutará la reparación en taller:
         </p>
 
         {/* Lista de Empleados disponibles */}

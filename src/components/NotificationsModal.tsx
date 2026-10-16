@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Bell, CheckCheck, Clock, Wrench, CheckCircle2, Trash2, Sparkles, Send, ArrowRight, Check, AlertTriangle } from 'lucide-react';
+import { X, Bell, CheckCheck, Clock, Wrench, CheckCircle2, Trash2, Sparkles, Send, ArrowRight, Check, AlertTriangle, FileText, Download, Eye, Printer } from 'lucide-react';
 import { InternalNotification } from '../types';
 
 interface NotificationsModalProps {
@@ -12,6 +12,8 @@ interface NotificationsModalProps {
   onDeleteNotification?: (id: string) => void;
   onViewOrder: (orderId?: string) => void;
   onOpenBudgetReview?: (budgetId?: string) => void;
+  onViewDocument?: (docIdOrNumber: string) => void;
+  onDownloadDocumentPdf?: (docIdOrNumber: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -24,6 +26,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onDeleteNotification,
   onViewOrder,
   onOpenBudgetReview,
+  onViewDocument,
+  onDownloadDocumentPdf,
 }) => {
   const [showConfirmClearHistory, setShowConfirmClearHistory] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -227,6 +231,58 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Adjunto de documento oficial en vista de impresión descargable */}
+                  {(n.type === 'budget_sent_client' || n.budgetId || n.documentNumber) && (
+                    <div className="mt-3 p-2.5 bg-white/95 border border-blue-200 rounded-lg flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-2 bg-[#0F2942] text-white rounded-lg shrink-0 shadow-xs">
+                          <FileText className="w-4 h-4 text-sky-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-[#0F172A] block truncate">
+                            {n.documentNumber ? `Presupuesto ${n.documentNumber}` : 'Presupuesto Oficial'}
+                          </span>
+                          <span className="text-[10px] text-blue-800 font-mono block truncate font-medium">
+                            notificaciones.gestarian • Documento adjunto
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {onViewDocument && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDocument(n.budgetId || n.documentNumber || '');
+                              onClose();
+                            }}
+                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Abrir vista de impresión"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Ver Hoja</span>
+                          </button>
+                        )}
+
+                        {onDownloadDocumentPdf && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDownloadDocumentPdf(n.budgetId || n.documentNumber || '');
+                            }}
+                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Descargar PDF en vista de impresión"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Descargar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {isBudgetReview && (
                     <div className="mt-2.5 pt-2 border-t border-amber-200 flex justify-end">

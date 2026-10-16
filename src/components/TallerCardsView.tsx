@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PageHeader } from './PageHeader';
 import { StandardCard } from './StandardCard';
 import { AppUser, Employee, GestarianDocument } from '../types';
-import { Search, Wrench, FolderKanban, Play, UserCheck, CheckCircle2, Users, Filter, Check, LogOut } from 'lucide-react';
+import { Search, Wrench, FolderKanban, Play, UserCheck, CheckCircle2, Users, Filter, Check, LogOut, MessageCircle, Phone } from 'lucide-react';
 import { AssignEmployeeModal } from './AssignEmployeeModal';
 
 interface TallerCardsViewProps {
@@ -113,8 +113,9 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
   };
 
   return (
-    <div id={id} className="min-h-screen bg-[#FDFBF7] flex flex-col snap-start shrink-0 w-full overflow-y-auto">
+    <div id={id} className="w-screen h-screen shrink-0 snap-start flex flex-col bg-white overflow-y-auto">
       <PageHeader
+        pageId={id || 'page-taller'}
         title="Taller"
         onBack={onBack}
         onNavigateHome={onNavigateHome}
@@ -123,7 +124,7 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
         userFullName={userFullName}
       />
 
-      <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 md:p-8 flex flex-col gap-6">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8 flex flex-col gap-6">
         {/* Banner de Autorizado Activo */}
         {loggedEmployeeSession && (
           <div className="bg-gradient-to-r from-[#0F2942] to-[#1E3A8A] text-white rounded-xl p-4 shadow-md flex flex-wrap items-center justify-between gap-3 border border-sky-400/30">
@@ -218,16 +219,16 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
               const isFinalizado = doc.tallerStatus === 'reparacion_finalizada' || doc.workOrderStatus === 'finalizada';
 
               let statusText = 'PENDIENTE';
-              let statusColor = 'border-[3px] border-amber-500 bg-amber-50/20';
+              let statusColor = 'border-[3px] border-amber-500';
               let statusTextColor = 'text-amber-600 font-bold';
 
               if (isEnProceso) {
                 statusText = 'EN PROCESO';
-                statusColor = 'border-[3px] border-blue-600 bg-blue-50/20';
+                statusColor = 'border-[3px] border-blue-600';
                 statusTextColor = 'text-blue-600 font-black';
               } else if (isFinalizado) {
                 statusText = 'REPARACIÓN FINALIZADA';
-                statusColor = 'border-[3px] border-emerald-500 bg-emerald-50/20';
+                statusColor = 'border-[3px] border-emerald-500';
                 statusTextColor = 'text-emerald-600 font-bold';
               }
 
@@ -249,7 +250,7 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
                   isExpandable={true}
                   actions={
                     <div className="flex flex-col gap-3">
-                      <div className="text-xs text-[#64748B] flex items-center justify-between">
+                      <div className="text-xs text-[#64748B] flex items-center justify-between pb-1 border-b border-gray-200/80">
                         <span>
                           Operario: <strong className="text-[#0F2942] font-bold">{employeeName}</strong>
                           {isAssignedToCurrentSession && (
@@ -261,50 +262,104 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
                         <span>F. Entrega: <strong>{doc.vehicleDeliveryDate || doc.date}</strong></span>
                       </div>
 
-                      {/* Botón destacado para Finalizar Reparación si está en proceso */}
-                      {isEnProceso && (
+                      {/* Iconos de acción desplegados con el mismo diseño exacto de la tarjeta extendida */}
+                      <div className="grid grid-cols-4 gap-3 items-center justify-items-center">
+                        {/* 1. Asignar / Cambiar Operario */}
                         <button
                           type="button"
-                          onClick={() => handleFinishRepair(doc)}
-                          className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssigningDoc(doc);
+                          }}
+                          className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                          title={isEnProceso ? `Cambiar Operario (actual: ${employeeName})` : 'Asignar Operario / En Proceso'}
+                          aria-label="Asignar operario"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Finalizar Reparación</span>
+                          <Users className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                         </button>
-                      )}
 
-                      <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                        {/* 2. Gestionar Orden de Trabajo */}
                         <button
                           type="button"
-                          onClick={() => setAssigningDoc(doc)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors p-2 cursor-pointer"
-                          title="Asignar o Cambiar Operario"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenWorkOrdersModal();
+                          }}
+                          className="p-2 text-amber-600 hover:text-amber-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                          title="Gestionar Órdenes de Trabajo del Taller"
+                          aria-label="Gestionar OT"
                         >
-                          <Users className="w-4 h-4" />
-                          <span>{isEnProceso ? 'Cambiar Operario' : 'Asignar / En Proceso'}</span>
+                          <Wrench className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                         </button>
 
+                        {/* 3. Finalizar Reparación / Marcar Completado */}
                         <button
                           type="button"
-                          onClick={onOpenWorkOrdersModal}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[#0F2942] hover:text-[#1E3A8A] transition-colors p-2 cursor-pointer"
-                          title="Gestionar Orden"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFinishRepair(doc);
+                          }}
+                          className={`p-2 ${
+                            isEnProceso
+                              ? 'text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95'
+                              : 'text-slate-400 hover:text-slate-600 hover:scale-105'
+                          } transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative`}
+                          title={isEnProceso ? 'Finalizar Reparación (Marcar como lista para entrega)' : 'Reparación Finalizada / Estado Listo'}
+                          aria-label="Finalizar Reparación"
                         >
-                          <Wrench className="w-4 h-4" />
-                          <span>Gestionar OT</span>
+                          <CheckCircle2 className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                         </button>
 
-                        {onNavigateToExpediente && doc.expediente && (
+                        {/* 4. Ver Roadmap del Expediente */}
+                        {onNavigateToExpediente && doc.expediente ? (
                           <button
                             type="button"
-                            onClick={() => onNavigateToExpediente(doc.expediente!)}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-[#38BDF8] hover:text-[#0284C7] transition-colors p-2 cursor-pointer"
-                            title="Ver Roadmap de Reparación"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToExpediente(doc.expediente!);
+                            }}
+                            className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                            title={`Ver Roadmap del Expediente ${doc.expediente}`}
+                            aria-label="Ver Roadmap"
                           >
-                            <FolderKanban className="w-4 h-4" />
-                            <span>Roadmap</span>
+                            <FolderKanban className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                           </button>
+                        ) : (
+                          <div className="w-12 h-12 sm:w-14 sm:h-14" />
                         )}
+
+                        {/* 5. WhatsApp al cliente */}
+                        {doc.clientPhone ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cleanPhone = doc.clientPhone!.replace(/\D/g, '');
+                              window.open(`https://wa.me/34${cleanPhone}?text=${encodeURIComponent(`Hola ${doc.clientName}, le contactamos del taller respecto a su vehículo ${doc.vehiclePlate || ''}.`)}`, '_blank');
+                            }}
+                            className="p-2 text-emerald-600 hover:text-emerald-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                            title={`WhatsApp a ${doc.clientName} (${doc.clientPhone})`}
+                            aria-label="WhatsApp"
+                          >
+                            <MessageCircle className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                          </button>
+                        ) : null}
+
+                        {/* 6. Teléfono del cliente */}
+                        {doc.clientPhone ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `tel:${doc.clientPhone}`;
+                            }}
+                            className="p-2 text-blue-600 hover:text-blue-700 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
+                            title={`Llamar a ${doc.clientName} (${doc.clientPhone})`}
+                            aria-label="Llamar"
+                          >
+                            <Phone className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   }
