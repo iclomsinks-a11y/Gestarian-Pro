@@ -176,7 +176,7 @@ export default function App() {
 
   // Configuración del Sistema (GitHub repo, API Plate Recognizer)
   const [systemConfig, setSystemConfig] = useState<SystemConfig>({
-    githubRepoUrl: 'https://github.com/iclomsinks-a11y/GESTARIAN-AIS',
+    githubRepoUrl: 'https://github.com/iclomsinks-a11y/Gestarian-Pro.git',
     hasPlateRecognizerKey: false,
     hasResendKey: false,
   });
@@ -675,13 +675,23 @@ export default function App() {
         navigateToSection(e.detail.sectionId);
       }
     };
+    const handleCloseBudget = () => {
+      setIsCreateDocOpen(false);
+      setBudgetToConvert(null);
+      setPreselectedClientIdForNewDoc(null);
+      if (currentTier === 'lite') {
+        navigateToHome();
+      }
+    };
     window.addEventListener('gestarian_new_budget', handleNewBudget);
     window.addEventListener('gestarian_new_invoice', handleNewInvoice);
     window.addEventListener('gestarian_navigate_section', handleNavigateSection);
+    window.addEventListener('gestarian_close_budget', handleCloseBudget);
     return () => {
       window.removeEventListener('gestarian_new_budget', handleNewBudget);
       window.removeEventListener('gestarian_new_invoice', handleNewInvoice);
       window.removeEventListener('gestarian_navigate_section', handleNavigateSection);
+      window.removeEventListener('gestarian_close_budget', handleCloseBudget);
     };
   }, []);
 
@@ -1347,12 +1357,35 @@ export default function App() {
     });
     setIsMenuOpen(false);
     setTimeout(() => {
+      if (sectionId === 'page-inicio') {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+          scrollContainerRef.current.scrollLeft = 0;
+        }
+        const el = document.getElementById('page-inicio');
+        if (el) {
+          el.scrollTop = 0;
+          el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+        }
+        setScreenHistory(['page-inicio']);
+        // Refuerzo para asegurar el snap en dispositivos móviles
+        setTimeout(() => {
+          if (scrollContainerRef.current && scrollContainerRef.current.scrollLeft !== 0) {
+            scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+          }
+        }, 120);
+        return;
+      }
+
       const el = document.getElementById(sectionId);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-        if (sectionId === 'page-inicio') {
-          el.scrollTop = 0;
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            left: el.offsetLeft,
+            behavior: 'smooth',
+          });
         }
+        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
       }
     }, 50);
   };
@@ -1375,22 +1408,39 @@ export default function App() {
       setScreenHistory(updated);
       const el = document.getElementById(previousScreen);
       if (el) {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            left: el.offsetLeft,
+            behavior: 'smooth',
+          });
+        }
         el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
       }
     } else {
-      const el = document.getElementById('page-inicio');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-      }
+      navigateToHome();
     }
   };
 
-  // Redirigir a la pantalla de INICIO (ej: al pulsar el logo en cualquier pantalla)
+  // Redirigir a la pantalla de INICIO (ej: al pulsar la casita del footer, logo o cerrar modal)
   const navigateToHome = () => {
-    const el = document.getElementById('page-inicio');
-    if (el) {
-      el.scrollTop = 0;
-    }
+    setIsCreateDocOpen(false);
+    setBudgetToConvert(null);
+    setPreselectedClientIdForNewDoc(null);
+    setIsExpedienteRoadmapOpen(false);
+    setTargetExpedienteId(null);
+    setActiveExpedientePlate(null);
+    setIsViewDocOpen(false);
+    setIsClientPortalOpen(false);
+    setIsAgendaOpen(false);
+    setIsPlateScannerOpen(false);
+    setIsNotificationsOpen(false);
+    setIsMetisChatOpen(false);
+    setIsMetisVoiceOpen(false);
+    setIsEnterpriseAeatOpen(false);
+    setIsQuickExtrasOpen(false);
+    setIsNewClientFullScreenOpen(false);
+    setIsNewUserOpen(false);
+    setIsMenuOpen(false);
     navigateToSection('page-inicio');
   };
 
@@ -2456,6 +2506,7 @@ export default function App() {
         onClose={() => {
           setIsCreateDocOpen(false);
           setPreselectedClientIdForNewDoc(null);
+          setBudgetToConvert(null);
         }}
         onSave={handleSaveDocument}
         currentUser={user}

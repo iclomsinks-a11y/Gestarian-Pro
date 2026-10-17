@@ -722,17 +722,19 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                 )}
 
                 {/* Botón de Inicio en forma de dibujo de casita flotante (x1.5) */}
-                {onNavigateHome && (
-                  <button
-                    id="btn-footer-home"
-                    type="button"
-                    onClick={onNavigateHome}
-                    className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
-                    title="Ir a Inicio"
-                  >
-                    <Home className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
-                  </button>
-                )}
+                <button
+                  id="btn-footer-home"
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateHome) onNavigateHome();
+                    window.dispatchEvent(new CustomEvent('gestarian_navigate_section', { detail: { sectionId: 'page-inicio' } }));
+                  }}
+                  className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center shrink-0"
+                  title="Ir a Inicio"
+                  aria-label="Ir a pantalla de inicio"
+                >
+                  <Home className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                </button>
               </div>
             </div>
         )}

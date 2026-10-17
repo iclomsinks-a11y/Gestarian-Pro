@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenEnterpriseAeat,
   onOpenQuickExtras,
   unreadNotificationsCount = 0,
-  githubRepoUrl = 'https://github.com/gestarian/gestarian-core',
+  githubRepoUrl = 'https://github.com/iclomsinks-a11y/Gestarian-Pro.git',
   hasPlateRecognizerKey = false,
 }) => {
   const [isPlanDropdownOpen, setIsPlanDropdownOpen] = useState(false);

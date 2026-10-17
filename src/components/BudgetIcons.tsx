@@ -49,3 +49,28 @@ export const SheetPlusPIcon: React.FC<{ className?: string }> = ({ className = "
     </text>
   </svg>
 );
+
+/**
+ * Icono de Guardar: Disquete clásico de 3,5 pulgadas (sin recuadro, sin relleno, trazo vectorial de precisión)
+ */
+export const FloppyDisk35Icon: React.FC<{ className?: string }> = ({ className = "w-7 h-7 sm:w-9 sm:h-9" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {/* Contorno del disquete 3.5" con esquina biselada superior derecha */}
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    {/* Corredera / obturador metálico superior de 3,5 pulgadas */}
+    <path d="M7 3v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V3" />
+    {/* Ranura del obturador metálico */}
+    <line x1="10" y1="5.5" x2="10" y2="7.5" strokeWidth="2" />
+    {/* Etiqueta y muesca inferior */}
+    <path d="M7 21v-7a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v7" />
+  </svg>
+);
+

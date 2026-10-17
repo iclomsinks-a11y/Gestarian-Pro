@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
@@ -40,7 +41,7 @@ async function startServer() {
   // Configuración pública del sistema (sin exponer claves privadas)
   app.get('/api/config', (req, res) => {
     const githubRepoUrl =
-      process.env.GITHUB_REPO_URL || 'https://github.com/iclomsinks-a11y/GESTARIAN-AIS';
+      process.env.GITHUB_REPO_URL || 'https://github.com/iclomsinks-a11y/Gestarian-Pro.git';
     const hasPlateRecognizerKey = Boolean(
       process.env.PLATE_RECOGNIZER_API_KEY &&
         process.env.PLATE_RECOGNIZER_API_KEY !== 'your_platerecognizer_token_here'
@@ -1293,6 +1294,21 @@ Para tareas técnicas, procedimientos de reparación, tiempos de secado, manuale
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    app.use('*', async (req, res, next) => {
+      if (req.originalUrl.startsWith('/api')) {
+        return next();
+      }
+      try {
+        const url = req.originalUrl;
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

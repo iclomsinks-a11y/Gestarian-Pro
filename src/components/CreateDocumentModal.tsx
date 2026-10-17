@@ -30,7 +30,7 @@ import {
   DocumentPayment,
   getDefaultIvaRate,
 } from "../types";
-import { SheetPlusPIcon } from "./BudgetIcons";
+import { SheetPlusPIcon, FloppyDisk35Icon } from "./BudgetIcons";
 import { playGentleChime } from "../utils/audioNotification";
 import { ExpedienteImagesModal } from "./ExpedienteImagesModal";
 import { DeliveryDatePickerModal } from "./DeliveryDatePickerModal";
@@ -138,9 +138,27 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   onUpdateUser,
   onOpenClientsPage,
 }) => {
+  const handleClose = (e?: React.SyntheticEvent | Event | KeyboardEvent) => {
+    if (e) {
+      if ('preventDefault' in e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+      if ('stopPropagation' in e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
+    }
+    setDateWarningMsg("");
+    setErrorMsg("");
+    setShowReviewToast(false);
+    if (onClose) {
+      onClose();
+    }
+    window.dispatchEvent(new CustomEvent('gestarian_close_budget'));
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose(e);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -751,28 +769,41 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     const clientAddress = (selectedClient?.address || quickAddress.trim());
 
     if (!clientName || !clientCif || !clientAddress) {
-      const msg = "Faltan datos obligatorios del cliente: debe completar Nombre, CIF/DNI y Domicilio.";
+      const missing: string[] = [];
+      if (!clientName) missing.push("Nombre");
+      if (!clientCif) missing.push("CIF/DNI");
+      if (!clientAddress) missing.push("Domicilio / Dirección");
+      const msg = `Faltan datos del cliente (${missing.join(", ")}). Complete estos datos antes de guardar.`;
       setDateWarningMsg(msg);
       setErrorMsg(msg);
       if (onShowToast) onShowToast(msg);
       return;
     }
 
-    // 2. Al menos un concepto con descripción, cantidad y precio
-    const validItems = items.filter(
-      (it) => it.description && it.description.trim() !== "" && Number(it.quantity) > 0 && Number(it.unitPrice) > 0
+    // 2. Comprobar conceptos (si faltan conceptos o no hay descripción)
+    const validConcepts = items.filter(
+      (it) => it.description && it.description.trim() !== ""
     );
 
-    if (validItems.length === 0) {
-      const msg = "Debe incluir al menos un concepto con cantidad y precio.";
+    if (items.length === 0 || validConcepts.length === 0) {
+      const msg = "Faltan conceptos: debe añadir al menos una línea con la descripción del servicio o producto.";
       setDateWarningMsg(msg);
       setErrorMsg(msg);
       if (onShowToast) onShowToast(msg);
       return;
     }
 
-    // 3. Fecha de entrega obligatoria para presupuestos (excepto en GESTARIAN LITE)
-    if (currentUser.currentTier !== 'lite' && docType === "presupuesto" && (!vehicleDeliveryDate || !vehicleDeliveryDate.trim())) {
+    // 3. Comprobar si el importe total del presupuesto es cero
+    if (total <= 0) {
+      const msg = "El importe total del presupuesto es 0,00 €. Asigne cantidad y precio a los conceptos para poder guardar.";
+      setDateWarningMsg(msg);
+      setErrorMsg(msg);
+      if (onShowToast) onShowToast(msg);
+      return;
+    }
+
+    // 4. Fecha de entrega obligatoria para presupuestos (excepto en GESTARIAN LITE y QUICK)
+    if (currentUser.currentTier !== 'lite' && currentUser.currentTier !== 'quick' && docType === "presupuesto" && (!vehicleDeliveryDate || !vehicleDeliveryDate.trim())) {
       const msg = "La fecha propuesta de entrega es obligatoria para poder guardar el presupuesto.";
       setDateWarningMsg(msg);
       setErrorMsg(msg);
@@ -1136,10 +1167,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     <div
       className={inline
         ? "w-full h-full flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-slate-100/90 overflow-y-auto"
-        : "create-document-modal-backdrop fixed inset-0 z-50 flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-white overflow-y-auto"
+        : "create-document-modal-backdrop fixed inset-0 z-[120] flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-white overflow-y-auto"
       }
       onClick={(e) => {
-        if (!inline && e.target === e.currentTarget) onClose();
+        if (!inline && e.target === e.currentTarget) handleClose(e);
       }}
     >
       {/* Toast no animado de 5 segundos al generar la factura (Oculto en Lite) */}
@@ -1172,7 +1203,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       {/* HOJA DEL PRESUPUESTO / FACTURA: ANCHO TOTAL EN PANTALLA COMPLETA, RELLENO COLOR BLANCO */}
       <div
         id="printable-create-sheet"
-        className="w-full max-w-5xl my-1 sm:my-3 bg-white text-blue-950 rounded-2xl border border-sky-100 shadow-xl flex flex-col relative p-4 sm:p-8 md:p-10 font-sans select-none"
+        className="w-full max-w-5xl my-1 sm:my-3 bg-white text-blue-950 rounded-2xl border border-sky-100 shadow-xl flex flex-col relative p-2.5 sm:p-8 md:p-10 font-sans select-none overflow-x-hidden"
         style={{
           minHeight: "1050px",
         }}
@@ -1180,7 +1211,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         {/* PRIMERA LÍNEA: INPUT NÚMERO DE FACTURA Y CALENDARIO DE FECHA (80% DEL ANCHO EN MÓVIL Y TABLET PORTRAIT) */}
         <div className="relative flex flex-col md:flex-row items-center justify-between pb-4 mb-5 border-b-2 border-blue-950 gap-4 w-full">
           {/* GRUPO DE INPUTS PRINCIPALES: NÚMERO Y FECHA (80% DE ANCHO EN MÓVIL Y TABLET PORTRAIT) */}
-          <div className="w-[80%] max-w-2xl mx-auto md:w-auto md:max-w-none md:mx-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
+          <div className="w-full max-w-2xl mx-auto md:w-auto md:max-w-none md:mx-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
             {/* Input Número de Factura / Presupuesto con teclado alfanumérico por defecto en móvil/tablet */}
             <div className="flex-1 flex flex-col justify-center">
               <label className="text-[11px] font-black uppercase text-blue-900 tracking-wider mb-1 block">
@@ -1242,19 +1273,6 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               </span>
             </div>
           )}
-
-          {/* Botón cerrar a la derecha */}
-          <div className="flex items-center shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs sm:text-sm font-black rounded-xl transition-all cursor-pointer print:hidden flex items-center gap-1.5 border border-blue-200"
-              title="Cerrar y volver"
-            >
-              <X className="w-4 h-4" />
-              <span>Cerrar</span>
-            </button>
-          </div>
         </div>
 
         {/* Notificación de bloqueo si el documento está cerrado */}
@@ -1656,41 +1674,43 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
           </div>
         )}
 
-        {/* 4. TABLA DE CONCEPTOS DEL PRESUPUESTO (SOLO: CONCEPTO, UD. PRECIO, IMPORTE - TIPOGRAFÍA X1.5) */}
-        <div className="flex-1 flex flex-col mb-6">
-          <table className="w-full border-collapse">
+        {/* 4. TABLA DE CONCEPTOS DEL PRESUPUESTO (SOLO: CONCEPTO, UD. PRECIO, IMPORTE - AJUSTE RESPONSIVE SIN SCROLL LATERAL EN MÓVIL) */}
+        <div className="flex-1 flex flex-col mb-6 overflow-x-hidden">
+          <table className="w-full table-fixed border-collapse">
             <thead>
-              <tr className="border-b-2 border-blue-950 text-blue-950 font-black uppercase tracking-wider text-base sm:text-lg">
-                <th className="py-3 px-2 text-left w-3/5">Concepto</th>
-                <th className="py-3 px-2 text-center w-24">Ud.</th>
-                <th className="py-3 px-2 text-right w-32">Precio</th>
-                <th className="py-3 px-2 text-right w-36">Importe</th>
+              <tr className="border-b-2 border-blue-950 text-blue-950 font-black uppercase tracking-wider text-xs sm:text-base">
+                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-left">Concepto</th>
+                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-center w-12 sm:w-20">Ud.</th>
+                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-right w-16 sm:w-28">Precio</th>
+                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-right w-20 sm:w-32">Importe</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-100">
               {items.map((it, idx) => (
                 <tr key={it.id || idx} className="group hover:bg-blue-50/50 transition-colors">
-                  <td className="py-3 px-2 relative">
-                    <input
-                      type="text"
-                      value={it.description}
-                      readOnly={isLocked}
-                      placeholder="Pulsar para escribir concepto o trabajo..."
-                      onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                      className="w-full bg-transparent outline-none font-bold text-base sm:text-xl text-blue-950 placeholder-blue-300"
-                    />
-                    {!isLocked && items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        className="absolute -left-3 top-1/2 -translate-y-1/2 text-blue-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity print:hidden cursor-pointer"
-                        title="Eliminar fila"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                  <td className="py-2 sm:py-3 px-1 sm:px-2">
+                    <div className="flex items-center gap-1 w-full min-w-0">
+                      <input
+                        type="text"
+                        value={it.description}
+                        readOnly={isLocked}
+                        placeholder="Pulsar para escribir concepto..."
+                        onChange={(e) => handleItemChange(idx, "description", e.target.value)}
+                        className="w-full min-w-0 bg-transparent outline-none font-bold text-xs sm:text-lg text-blue-950 placeholder-blue-300"
+                      />
+                      {!isLocked && items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(idx)}
+                          className="shrink-0 text-slate-300 hover:text-red-500 transition-colors print:hidden cursor-pointer p-0.5"
+                          title="Eliminar fila"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">
                     <input
                       type="number"
                       min="0.1"
@@ -1698,10 +1718,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                       value={it.quantity}
                       readOnly={isLocked}
                       onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
-                      className="w-full bg-transparent outline-none text-center font-mono font-bold text-base sm:text-xl text-blue-950"
+                      className="w-full bg-transparent outline-none text-center font-mono font-bold text-xs sm:text-base text-blue-950 px-0.5"
                     />
                   </td>
-                  <td className="py-3 px-2 text-right">
+                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-right">
                     {canSetPrices ? (
                       <input
                         type="number"
@@ -1710,13 +1730,13 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                         value={it.unitPrice}
                         readOnly={isLocked}
                         onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value)}
-                        className="w-full bg-transparent outline-none text-right font-mono font-bold text-base sm:text-xl text-blue-950"
+                        className="w-full bg-transparent outline-none text-right font-mono font-bold text-xs sm:text-base text-blue-950 px-0.5"
                       />
                     ) : (
-                      <span className="italic text-amber-700 text-sm">A valorar</span>
+                      <span className="italic text-amber-700 text-xs">A valorar</span>
                     )}
                   </td>
-                  <td className="py-3 px-2 text-right font-mono font-black text-base sm:text-xl text-blue-950">
+                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-right font-mono font-black text-xs sm:text-base text-blue-950 whitespace-nowrap overflow-hidden text-ellipsis">
                     {canSetPrices ? `${it.amount.toFixed(2)} €` : "-"}
                   </td>
                 </tr>
@@ -1801,59 +1821,42 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         </div>
 
         {/* 6. BOTONES DEL FOOTER CONVERTIDOS EN ICONOS FLOTANTES LIMPIOS SIN DESCRIPCIÓN EN UNA SOLA FILA */}
-        {/* 6. BOTÓN PRINCIPAL DE GUARDAR Y ACCIONES DEL FOOTER */}
-        <div className="mt-auto pt-6 border-t-2 border-blue-950 flex flex-col items-center justify-center gap-4 print:hidden">
+        <div className="mt-auto pt-6 border-t-2 border-blue-950 flex flex-col items-center justify-center gap-3 print:hidden">
           
-          {/* Botón principal de Guardar Presupuesto / Factura */}
-          <div className="w-full flex flex-col items-center justify-center gap-2">
+          {isSaved && (
+            <div className="w-full flex items-center justify-center text-xs sm:text-sm font-bold px-1 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-mono text-xs sm:text-sm">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {(currentUser.currentTier === 'lite' || currentUser.currentTier === 'quick')
+                    ? `${docType === 'factura' ? 'FACTURA' : 'PRESUPUESTO'} LISTO PARA REMITIR`
+                    : `EXPEDIENTE [${savedExpedienteId || expediente}] GUARDADO Y ACTIVADO`}
+                </span>
+              </span>
+            </div>
+          )}
+
+          {/* Iconos limpios de acción al final del documento (adaptables a móvil sin desborde) */}
+          <div className="w-full flex flex-wrap items-center justify-around sm:justify-center gap-2 sm:gap-7 py-2 px-1">
+            {/* 1. GUARDAR (Disquete 3.5" azul, sin recuadro, sin relleno, siempre activado para guardar) */}
             <button
               type="button"
               onClick={handleSaveDocument}
-              disabled={isLocked}
-              className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-base sm:text-lg uppercase tracking-wider transition-all flex items-center justify-center gap-3 shadow-xl ${
-                isLocked
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
-                  : isSaved
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-emerald-600/30"
-                  : "bg-blue-900 hover:bg-blue-800 text-white cursor-pointer shadow-blue-900/40 hover:scale-102 active:scale-95"
-              }`}
+              className="p-1.5 sm:p-2 transition-all flex flex-col items-center gap-1 cursor-pointer hover:scale-125 active:scale-95 text-blue-600 hover:text-blue-800 bg-transparent border-0"
+              title={isSaved ? "Presupuesto guardado (Pulsar para volver a guardar)" : `Guardar ${docType === 'factura' ? 'Factura' : 'Presupuesto'}`}
             >
-              <Save className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.5} />
-              <span>
-                {isSaved
-                  ? `${docType === 'factura' ? 'Factura Guardada' : 'Presupuesto Guardado'}`
-                  : `Guardar ${docType === 'factura' ? 'Factura' : 'Presupuesto'}`}
+              <FloppyDisk35Icon className="w-7 h-7 sm:w-9 sm:h-9" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                {isSaved ? "Guardado" : "Guardar"}
               </span>
             </button>
 
-            {!isSaved && (
-              <p className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200 mt-1">
-                Presione "Guardar {docType === 'factura' ? 'Factura' : 'Presupuesto'}" para activar el envío por WhatsApp, Email e Impresión.
-              </p>
-            )}
-
-            {isSaved && (
-              <div className="w-full flex items-center justify-center text-xs sm:text-sm font-bold px-1 mt-1">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-mono text-xs sm:text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>
-                    {(currentUser.currentTier === 'lite' || currentUser.currentTier === 'quick')
-                      ? `${docType === 'factura' ? 'FACTURA' : 'PRESUPUESTO'} LISTO PARA REMITIR`
-                      : `EXPEDIENTE [${savedExpedienteId || expediente}] GUARDADO Y ACTIVADO`}
-                  </span>
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Iconos flotantes limpios de acción en una sola fila */}
-          <div className="w-full flex flex-row items-center justify-between sm:justify-center gap-2 sm:gap-8 py-2 px-1">
-            {/* 1. EMAIL (activado al guardar) */}
+            {/* 2. EMAIL (activado al guardar) */}
             <button
               type="button"
               onClick={handleSendEmail}
               disabled={!isSaved || !Boolean(quickEmail || selectedClient?.email)}
-              className={`p-2 transition-all flex flex-col items-center gap-1 ${
+              className={`p-1.5 sm:p-2 transition-all flex flex-col items-center gap-1 ${
                 isSaved && Boolean(quickEmail || selectedClient?.email)
                   ? "cursor-pointer hover:scale-125 active:scale-95 text-sky-600"
                   : "opacity-30 cursor-not-allowed text-slate-400"
@@ -1864,12 +1867,12 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               <span className="text-[10px] font-bold uppercase tracking-wider">Email</span>
             </button>
 
-            {/* 2. WHATSAPP (activado al guardar) */}
+            {/* 3. WHATSAPP (activado al guardar) */}
             <button
               type="button"
               onClick={handleSendWhatsApp}
               disabled={!isSaved}
-              className={`p-2 transition-all flex flex-col items-center gap-1 ${
+              className={`p-1.5 sm:p-2 transition-all flex flex-col items-center gap-1 ${
                 isSaved
                   ? "cursor-pointer hover:scale-125 active:scale-95 text-emerald-600"
                   : "opacity-30 cursor-not-allowed text-slate-400"
@@ -1880,12 +1883,12 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               <span className="text-[10px] font-bold uppercase tracking-wider">WhatsApp</span>
             </button>
 
-            {/* 3. IMÁGENES DEL VEHÍCULO (Ocultar en GESTARIAN LITE y QUICK) */}
+            {/* 4. IMÁGENES DEL VEHÍCULO (Ocultar en GESTARIAN LITE y QUICK) */}
             {currentUser.currentTier !== 'lite' && currentUser.currentTier !== 'quick' && (
               <button
                 type="button"
                 onClick={() => setIsExpedienteImagesOpen(true)}
-                className="p-2 cursor-pointer transition-all hover:scale-125 active:scale-95 text-sky-600 relative flex flex-col items-center gap-1"
+                className="p-1.5 sm:p-2 cursor-pointer transition-all hover:scale-125 active:scale-95 text-sky-600 relative flex flex-col items-center gap-1"
                 title={`Ver imágenes del vehículo (${vehicleImages.length})`}
               >
                 <div className="relative">
@@ -1900,12 +1903,12 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               </button>
             )}
 
-            {/* 4. IMPRIMIR (activado al guardar) */}
+            {/* 5. IMPRIMIR (activado al guardar) */}
             <button
               type="button"
               onClick={handlePrint}
               disabled={!isSaved}
-              className={`p-2 transition-all flex flex-col items-center gap-1 ${
+              className={`p-1.5 sm:p-2 transition-all flex flex-col items-center gap-1 ${
                 isSaved
                   ? "cursor-pointer hover:scale-125 active:scale-95 text-blue-800"
                   : "opacity-30 cursor-not-allowed text-slate-400"
@@ -1916,7 +1919,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
               <span className="text-[10px] font-bold uppercase tracking-wider">Imprimir</span>
             </button>
 
-            {/* 5. EXPEDIENTE (Ocultar en GESTARIAN LITE y QUICK) */}
+            {/* 6. EXPEDIENTE (Ocultar en GESTARIAN LITE y QUICK) */}
             {currentUser.currentTier !== 'lite' && currentUser.currentTier !== 'quick' && (
               <button
                 type="button"
@@ -1928,12 +1931,26 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                     onShowToast(`Expediente: ${expNum}`);
                   }
                 }}
-                className="p-1 sm:p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-blue-950"
+                className="p-1.5 sm:p-2 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-blue-950 flex flex-col items-center gap-1"
                 title="Ver expediente del presupuesto"
               >
                 <FolderKanban className="w-7 h-7 sm:w-9 sm:h-9" strokeWidth={2} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Expediente</span>
               </button>
             )}
+
+            {/* 7. CERRAR (X al final del documento, sin recuadro, sin relleno, mismo tamaño, SIEMPRE activo aunque no se haya guardado) */}
+            <button
+              id="btn-close-budget-sheet-bottom"
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 sm:p-2 transition-all flex flex-col items-center gap-1 cursor-pointer hover:scale-125 active:scale-95 text-slate-700 hover:text-rose-600 bg-transparent border-0 shrink-0"
+              title="Cerrar presupuesto y volver (sin guardar)"
+              aria-label="Cerrar presupuesto sin guardar"
+            >
+              <X className="w-7 h-7 sm:w-9 sm:h-9 text-slate-700 hover:text-rose-600 transition-colors" strokeWidth={2.2} />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Cerrar</span>
+            </button>
           </div>
         </div>
 
@@ -2186,6 +2203,18 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Botón X flotante para cerrar el presupuesto en cualquier momento aunque no se haya guardado */}
+      <button
+        id="btn-floating-close-budget"
+        type="button"
+        onClick={handleClose}
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[160] p-2.5 sm:p-3 text-slate-700 hover:text-rose-600 hover:scale-125 active:scale-90 transition-all cursor-pointer bg-white/95 backdrop-blur-xs rounded-full shadow-2xl border-2 border-slate-300 flex items-center justify-center print:hidden group"
+        title="Cerrar presupuesto (sin guardar)"
+        aria-label="Cerrar presupuesto sin guardar"
+      >
+        <X className="w-7 h-7 sm:w-9 sm:h-9 text-slate-700 group-hover:text-rose-600 transition-colors" strokeWidth={2.4} />
+      </button>
     </div>
   );
 };

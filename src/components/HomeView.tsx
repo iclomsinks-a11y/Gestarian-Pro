@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Camera, Bell, Lock, LogOut, FileText, CheckCircle2,
   Users, Truck, Settings, Plus, Sparkles, AlertCircle,
@@ -9,13 +9,73 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CasioVintageClock } from './CasioVintageClock';
 import { AppUser, Client, GestarianDocument, GestarianPlan } from '../types';
 import { LoginCard } from './LoginCard';
+import { MoreInfoModal } from './MoreInfoModal';
+import { DownloadAppModal } from './DownloadAppModal';
 
 // Iconos minimalistas en líneas de 1px sin relleno para las 4 versiones
 const PLAN_OUTLINE_ICONS: Record<GestarianPlan, React.ReactNode> = {
-  lite: <Globe className="w-8 h-8 text-slate-200" strokeWidth={1} />,
-  quick: <Zap className="w-8 h-8 text-sky-400" strokeWidth={1} />,
-  pro: <Gem className="w-8 h-8 text-emerald-400" strokeWidth={1} />,
-  enterprise: <Building2 className="w-8 h-8 text-indigo-400" strokeWidth={1} />
+  lite: <Globe className="w-8 h-8 text-slate-300" strokeWidth={1.2} />,
+  quick: <Zap className="w-8 h-8 text-sky-400" strokeWidth={1.2} />,
+  pro: <Gem className="w-8 h-8 text-emerald-400" strokeWidth={1.2} />,
+  enterprise: <Building2 className="w-8 h-8 text-indigo-400" strokeWidth={1.2} />
+};
+
+// Estilos de tarjetas con tonalidades oscuras diferenciadas para contrastar con el fondo negro
+const PLAN_CARD_THEMES: Record<GestarianPlan, {
+  cardBg: string;
+  borderColor: string;
+  activeBorderColor: string;
+  ringColor: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  btnActiveBg: string;
+  titleColor: string;
+}> = {
+  lite: {
+    cardBg: 'bg-[#0c131d]',
+    borderColor: 'border-slate-700/80 hover:border-slate-500',
+    activeBorderColor: 'border-slate-400 shadow-[0_0_24px_rgba(203,213,225,0.15)]',
+    ringColor: 'ring-1 ring-slate-400/50',
+    badgeBg: 'bg-slate-800/80',
+    badgeText: 'text-slate-200',
+    badgeBorder: 'border-slate-600',
+    btnActiveBg: 'bg-slate-200 text-slate-950 font-black',
+    titleColor: 'text-slate-100',
+  },
+  quick: {
+    cardBg: 'bg-[#061829]',
+    borderColor: 'border-sky-800/80 hover:border-sky-500',
+    activeBorderColor: 'border-sky-400 shadow-[0_0_24px_rgba(56,189,248,0.25)]',
+    ringColor: 'ring-1 ring-sky-400/50',
+    badgeBg: 'bg-sky-950/80',
+    badgeText: 'text-sky-300',
+    badgeBorder: 'border-sky-700',
+    btnActiveBg: 'bg-sky-400 text-slate-950 font-black',
+    titleColor: 'text-sky-100',
+  },
+  pro: {
+    cardBg: 'bg-[#061a14]',
+    borderColor: 'border-emerald-800/80 hover:border-emerald-500',
+    activeBorderColor: 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.25)]',
+    ringColor: 'ring-1 ring-emerald-400/50',
+    badgeBg: 'bg-emerald-950/80',
+    badgeText: 'text-emerald-300',
+    badgeBorder: 'border-emerald-700',
+    btnActiveBg: 'bg-emerald-400 text-slate-950 font-black',
+    titleColor: 'text-emerald-100',
+  },
+  enterprise: {
+    cardBg: 'bg-[#120c2b]',
+    borderColor: 'border-purple-900/80 hover:border-purple-500',
+    activeBorderColor: 'border-indigo-400 shadow-[0_0_24px_rgba(167,139,250,0.25)]',
+    ringColor: 'ring-1 ring-indigo-400/50',
+    badgeBg: 'bg-indigo-950/80',
+    badgeText: 'text-indigo-300',
+    badgeBorder: 'border-indigo-700',
+    btnActiveBg: 'bg-indigo-400 text-slate-950 font-black',
+    titleColor: 'text-purple-100',
+  },
 };
 
 // Icono personalizado para conversación bidireccional / ondas de voz
@@ -86,7 +146,7 @@ export const PLANS_CONFIG: {
 }[] = [
   { 
     id: 'lite', 
-    label: 'LITE', 
+    label: 'Lite', 
     icon: '🪐', 
     desc: 'Emisión directa de presupuestos y facturas en smartphone o PC. Hoja A4 oficial con código QR Veri*Factu según normativa AEAT. Envío por WhatsApp sin guardar contactos. 100% gratuito sin base de datos ni servidor.', 
     badge: '100% Gratuito',
@@ -99,7 +159,7 @@ export const PLANS_CONFIG: {
   },
   { 
     id: 'quick', 
-    label: 'QUICK', 
+    label: 'Quick', 
     icon: '⚡', 
     desc: 'Facturación ultrarrápida y base de datos completa de Clientes y Proveedores. Custodia gratuita durante el 1er año (+10€/año de 1 a 4 años, +15€/año de 4 a 8 años). Opcional: Rastreo email + Captura cámara OCR (+19€/año).', 
     badge: 'BD + Custodia 1er Año',
@@ -113,7 +173,7 @@ export const PLANS_CONFIG: {
   },
   { 
     id: 'pro', 
-    label: 'PRO', 
+    label: 'Pro', 
     icon: '💎', 
     desc: 'Suite integral para talleres y profesionales. Expedientes con Roadmap de estados interactivos en tiempo real, presupuestos, facturas, órdenes de trabajo, escáner OCR ALPR de matrículas, portal de clientes con fotos y Asistente Metis IA con voz.', 
     badge: 'Recomendado',
@@ -128,7 +188,7 @@ export const PLANS_CONFIG: {
   },
   { 
     id: 'enterprise', 
-    label: 'ENTERPRISE', 
+    label: 'Enterprise', 
     icon: '🏢', 
     desc: 'Solución corporativa multisede y grandes flotas. Conexión certificada con Sede Electrónica AEAT, Business Intelligence predictivo, red B2B, capacidad ilimitada y soporte prioritario 24/7.', 
     badge: 'Corporativo',
@@ -176,17 +236,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onClientLogin,
 }) => {
   const [isPlanDropdownOpen, setIsPlanDropdownOpen] = useState(false);
-  const [selectedPlanDetails, setSelectedPlanDetails] = useState<GestarianPlan | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isClientLoginModalOpen, setIsClientLoginModalOpen] = useState(false);
+  const [isMoreInfoModalOpen, setIsMoreInfoModalOpen] = useState(false);
+  const [isDownloadAppModalOpen, setIsDownloadAppModalOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   const [clientEmailInput, setClientEmailInput] = useState('');
   const [clientIdInput, setClientIdInput] = useState('');
   const [clientLoginError, setClientLoginError] = useState('');
 
+  // Capturar evento de instalación PWA si está disponible
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
   const activePlanConfig = PLANS_CONFIG.find(p => p.id === currentPlan) || PLANS_CONFIG[2];
-  const usernameOnly = currentUser.email 
+
+  // Nombre de usuario antes de la @ de su email (minimalista, sin recuadro ni relleno)
+  const usernameBeforeAt = currentUser.email 
     ? currentUser.email.split('@')[0] 
-    : (currentUser.fullName ? currentUser.fullName.split(' ')[0] : 'Usuario');
+    : (currentUser.fullName ? currentUser.fullName.split(' ')[0].toLowerCase() : 'usuario');
+
+  // Cálculo de facturas/recibos detectados para la campanita del footer
+  const totalDetectedAlerts = (hasAutoDetectedInvoices ? 1 : 0) + pendingInvoices.length + unreadNotificationsCount;
 
   const defaultSampleClients: Client[] = clients.length > 0 
     ? clients.slice(0, 4) 
@@ -256,7 +334,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setClientEmailInput('');
       setClientIdInput('');
     } else {
-      // Cliente invitado o de paso
       const guestClient: Client = {
         id: `cli_${Date.now()}`,
         clientNumber: 999,
@@ -278,9 +355,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
+  // Manejador del clic en la campanita del footer (rastreo de facturas / avisos)
+  const handleBellFooterClick = () => {
+    if (hasAutoDetectedInvoices && onViewDetectedInvoices) {
+      onViewDetectedInvoices();
+    } else if (onOpenNotifications) {
+      onOpenNotifications();
+    }
+  };
+
   return (
     <div
-      className="relative w-screen min-w-full min-h-[100dvh] bg-[#090D16] text-slate-100 overflow-y-auto overflow-x-hidden"
+      className="relative w-screen h-screen shrink-0 snap-start bg-[#06080D] text-slate-100 overflow-y-auto overflow-x-hidden select-none"
       id="page-inicio"
     >
       {/* Fondo de Pantalla Personalizado si está habilitado en Configuración */}
@@ -302,508 +388,591 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </>
       )}
 
-      {/* CONTENIDO PRINCIPAL EN LANDING ÚNICA Y DIRECTA */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-6 sm:gap-8">
+      {/* CONTENEDOR PRINCIPAL */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 flex flex-col gap-5 sm:gap-7">
         
         {/* =========================================================================
-            HEADER LIMPIO Y MINIMALISTA: GESTARIAN + ACCESO CLIENTES + LOGIN + REGISTRO
+            ESTADO 1: USUARIO AUTENTICADO / HA ACCEDIDO CON SU CUENTA
            ========================================================================= */}
-        <header className="w-full flex items-center justify-between pb-3 border-b border-slate-800/80 gap-3 flex-wrap sm:flex-nowrap">
-          
-          {/* Logo y Selector de Plan Directo */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <button
-                id="btn-home-plan-switcher"
-                type="button"
-                onClick={() => setIsPlanDropdownOpen(!isPlanDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-white cursor-pointer transition-all"
-                title="Cambiar versión activa de GESTARIAN"
-              >
-                <span className="text-sm sm:text-base font-black tracking-[0.2em] uppercase text-white font-mono">
-                  GESTARIAN
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold tracking-wider px-2 py-0.5 rounded-md uppercase bg-sky-500/20 text-sky-300 border border-sky-400/30">
+        {isAuthenticated ? (
+          <>
+            {/* CABECERA AUTENTICADA:
+                - Arriba a la izquierda: SOLO la versión (Lite, Quick, Pro o Enterprise), minimalista sin recuadro ni relleno.
+                - Arriba a la derecha: SOLO el nombre del usuario antes de la @, minimalista sin recuadro ni relleno.
+            */}
+            <header className="w-full flex items-center justify-between pt-1 pb-2">
+              {/* Arriba izquierda: Solo versión, minimalista, sin recuadro ni relleno */}
+              <div className="text-left">
+                <span className="text-sm sm:text-base font-bold tracking-wider text-slate-300 font-sans uppercase">
                   {activePlanConfig.label}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
+              </div>
 
-              {/* Menú desplegable para cambiar plan */}
-              {isPlanDropdownOpen && (
-                <div 
-                  className="absolute left-0 top-full mt-2 w-72 bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 backdrop-blur-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="px-3.5 py-1.5 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Cambiar Versión de GESTARIAN
-                  </div>
-                  {PLANS_CONFIG.map((p) => {
-                    const isSelected = p.id === currentPlan;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          onSelectPlan?.(p.id);
-                          setIsPlanDropdownOpen(false);
-                        }}
-                        className={`w-full px-3.5 py-2.5 text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                          isSelected ? 'bg-sky-500/20 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-base shrink-0 mt-0.5">{p.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black">{p.label}</span>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                              isSelected ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400'
-                            }`}>
-                              {p.badge}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-400 leading-tight mt-0.5 line-clamp-2">{p.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* BOTONES DIRECTOS: ACCESO CLIENTES | INICIAR SESIÓN | REGISTRO */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
-            
-            {/* 1. Botón Acceso a Clientes */}
-            <button
-              id="btn-landing-clientes"
-              type="button"
-              onClick={() => setIsClientLoginModalOpen(true)}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-indigo-400/40 text-indigo-300 hover:text-indigo-200 text-xs font-semibold tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
-              title="Acceso exclusivo para Clientes del taller"
-            >
-              <Globe className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Área Clientes</span>
-            </button>
-
-            {/* 2. Botón Iniciar Sesión / Usuario */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-sky-300 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl select-none flex items-center gap-1.5">
-                  <Lock className="w-3 h-3 text-emerald-400" />
-                  <span>{usernameOnly}</span>
+              {/* Arriba derecha: Solo nombre antes de @, minimalista, sin recuadro ni relleno */}
+              <div className="flex items-center gap-2.5 text-right">
+                <span className="text-sm sm:text-base font-medium tracking-wide text-slate-300 font-sans">
+                  {usernameBeforeAt}
                 </span>
-
-                {unreadNotificationsCount > 0 && (
-                  <button
-                    onClick={onOpenNotifications}
-                    className="relative p-2 bg-slate-900 rounded-xl border border-rose-500/50 text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer"
-                    title="Avisos pendientes"
-                  >
-                    <Bell className="w-3.5 h-3.5" />
-                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full">
-                      {unreadNotificationsCount}
-                    </span>
-                  </button>
-                )}
-
                 <button
                   onClick={onLogout}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950/40 border border-slate-700 hover:border-rose-500/50 text-slate-400 hover:text-rose-400 transition-all cursor-pointer"
-                  title="Cerrar Sesión"
+                  className="text-slate-500 hover:text-rose-400 transition-colors p-1 cursor-pointer"
+                  title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            ) : (
-              <button
-                id="btn-landing-login"
-                type="button"
-                onClick={() => setIsLoginModalOpen(true)}
-                className="px-3 sm:px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-sky-400/40 text-sky-300 hover:text-white text-xs font-semibold tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
-                title="Acceso para usuarios registrados"
-              >
-                <LogIn className="w-3.5 h-3.5 text-sky-400" />
-                <span>Iniciar Sesión</span>
-              </button>
-            )}
+            </header>
 
-            {/* 3. Botón Registro */}
-            <button
-              id="btn-landing-registro"
-              type="button"
-              onClick={() => {
-                if (onOpenNewUser) {
-                  onOpenNewUser();
-                } else {
-                  setIsLoginModalOpen(true);
-                }
-              }}
-              className="px-3.5 sm:px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-sky-500/20"
-              title="Crear nueva cuenta / Registro de empresa o autónomo"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Registro</span>
-            </button>
-          </div>
-        </header>
+            {/* A CONTINUACIÓN: LA HORA Y LA FECHA (Reloj Casio Vintage digital) */}
+            <section className="w-full flex flex-col items-center justify-center pt-1 pb-2">
+              <div className="w-full max-w-2xl mx-auto">
+                <CasioVintageClock 
+                  isLightBackground={false} 
+                  fiscalAddress={currentUser.fiscalAddress} 
+                />
+              </div>
 
-        {/* =========================================================================
-            BARRA DE TRABAJO DIRECTA: RELOJ CASIO + ACCIONES RÁPIDAS SEGÚN EL PLAN
-           ========================================================================= */}
-        <section className="w-full flex flex-col items-center justify-center gap-4 py-2">
-          {/* Reloj Casio Vintage */}
-          <div className="w-full max-w-2xl mx-auto">
-            <CasioVintageClock 
-              isLightBackground={false} 
-              fiscalAddress={currentUser.fiscalAddress} 
-            />
-          </div>
-
-          {/* Avisos de Presupuestos / Notificaciones si existen */}
-          {isAuthenticated && pendingBudgetReviews.length > 0 && (
-            <div className="w-full max-w-lg mx-auto space-y-2">
-              {pendingBudgetReviews.map((budget) => (
-                <div
-                  key={budget.id}
-                  onClick={() => onOpenBudgetReview && onOpenBudgetReview(budget.id)}
-                  className="cursor-pointer bg-slate-900/95 border-2 border-sky-400 text-white p-3 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.4)] flex items-center justify-between gap-3 hover:scale-[1.02] transition-transform"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-slate-800 border border-sky-400 flex items-center justify-center text-sky-400 font-bold text-xs shrink-0">
-                      AI
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">
-                        Presupuesto pendiente de {budget.createdByName || 'operario'}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {budget.vehiclePlate ? `Matrícula: ${budget.vehiclePlate}` : budget.number}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider bg-sky-500/20 px-2 py-1 rounded-lg border border-sky-400/40">
-                    Completar
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ICONOS DE ACCIÓN RÁPIDA DE LA VERSIÓN ACTIVA (Acceso Inmediato sin pantalla intermedia) */}
-          <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl mx-auto flex-wrap pt-2">
-            {currentPlan === 'quick' ? (
-              <>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else if (onNewInvoice) onNewInvoice();
-                    else onNavigateSection?.('page-facturacion');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
-                  title="Nueva Factura"
-                >
-                  <Calculator className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onNavigateSection?.('page-clientes');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
-                  title="Clientes"
-                >
-                  <Users className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onNavigateSection?.('page-proveedores');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                  title="Proveedores"
-                >
-                  <Truck className="w-6 h-6 text-amber-400" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onNavigateSection?.('page-balances');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-violet-400/80 shadow-[0_0_12px_rgba(139,92,246,0.35)]"
-                  title="Balances"
-                >
-                  <PieChart className="w-6 h-6 text-violet-400" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onNavigateSection?.('page-configuracion');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-slate-500 shadow-[0_0_12px_rgba(156,163,175,0.25)]"
-                  title="Configuración"
-                >
-                  <Settings className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
-                </button>
-              </>
-            ) : currentPlan === 'lite' ? (
-              <>
-                <button
-                  onClick={() => {
-                    if (onNewBudget) onNewBudget();
-                    else onNavigateSection?.('page-presupuestos');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
-                  title="Crear Presupuesto A4 Directo"
-                >
-                  <FileText className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (onNewInvoice) onNewInvoice();
-                    else onNavigateSection?.('page-facturacion');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
-                  title="Crear Factura A4 Directa"
-                >
-                  <Calculator className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
-                </button>
-              </>
-            ) : currentPlan === 'enterprise' ? (
-              <>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenScanner();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)]"
-                  title="Escanear Matrícula OCR ALPR"
-                >
-                  <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else if (onOpenEnterpriseAeat) onOpenEnterpriseAeat();
-                    else onNavigateSection?.('page-configuracion');
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.35)]"
-                  title="Sede Electrónica AEAT"
-                >
-                  <Building2 className="w-6 h-6 text-indigo-400" strokeWidth={1.4} />
-                </button>
-                <button
-                  onClick={onOpenMenu}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)]"
-                  title="Menú de Secciones (+)"
-                >
-                  <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenMetisChat();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                  title="Asistente Metis IA"
-                >
-                  <span className="font-bold text-lg text-amber-400">AI</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenVoiceAssistant();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)]"
-                  title="Voz y Conversación Bidireccional"
-                >
-                  <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
-                </button>
-              </>
-            ) : (
-              // DEFAULT PRO
-              <>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenScanner();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)]"
-                  title="Escanear Matrícula OCR ALPR"
-                >
-                  <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
-                </button>
-                <button
-                  onClick={onOpenMenu}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)]"
-                  title="Menú de Secciones (+)"
-                >
-                  <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenMetisChat();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                  title="Asistente Metis IA"
-                >
-                  <span className="font-bold text-lg text-amber-400">AI</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) setIsLoginModalOpen(true);
-                    else onOpenVoiceAssistant();
-                  }}
-                  className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)]"
-                  title="Voz y Conversación Bidireccional"
-                >
-                  <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
-                </button>
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* =========================================================================
-            LAS CUATRO TARJETAS DE VERSIONES: INFORMACIÓN ACTUALIZADA Y ACCESO DIRECTO
-           ========================================================================= */}
-        <section className="w-full pt-4">
-          <div className="text-center max-w-2xl mx-auto mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.15em] text-white">
-              Versiones y Planes GESTARIAN
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 font-light">
-              Elige tu versión para acceder directamente a la aplicación o crear tu cuenta.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5 w-full items-stretch">
-            {PLANS_CONFIG.map((plan) => {
-              const isCurrent = plan.id === currentPlan;
-              return (
-                <div 
-                  key={plan.id}
-                  className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 border ${
-                    isCurrent 
-                      ? 'bg-slate-900/90 border-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.2)] ring-1 ring-sky-400/50' 
-                      : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 shadow-xl'
-                  }`}
-                >
-                  <div>
-                    {/* Header de la tarjeta */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
-                        {PLAN_OUTLINE_ICONS[plan.id]}
+              {/* Avisos de presupuestos pendientes si existiesen */}
+              {pendingBudgetReviews.length > 0 && (
+                <div className="w-full max-w-lg mx-auto space-y-2 mt-3">
+                  {pendingBudgetReviews.map((budget) => (
+                    <div
+                      key={budget.id}
+                      onClick={() => onOpenBudgetReview && onOpenBudgetReview(budget.id)}
+                      className="cursor-pointer bg-slate-900/95 border-2 border-sky-400 text-white p-3 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.4)] flex items-center justify-between gap-3 hover:scale-[1.02] transition-transform"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 border border-sky-400 flex items-center justify-center text-sky-400 font-bold text-xs shrink-0">
+                          AI
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">
+                            Presupuesto pendiente de {budget.createdByName || 'operario'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {budget.vehiclePlate ? `Matrícula: ${budget.vehiclePlate}` : budget.number}
+                          </p>
+                        </div>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
-                        isCurrent
-                          ? 'bg-sky-500/20 text-sky-300 border-sky-400/50'
-                          : 'bg-slate-900 text-slate-400 border-slate-800'
-                      }`}>
-                        {plan.badge}
+                      <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider bg-sky-500/20 px-2 py-1 rounded-lg border border-sky-400/40">
+                        Completar
                       </span>
                     </div>
+                  ))}
+                </div>
+              )}
+            </section>
 
-                    <h3 className="text-2xl font-black text-white tracking-wider uppercase mb-1">
-                      {plan.label}
-                    </h3>
-                    
-                    <p className="text-xs text-slate-300 leading-relaxed min-h-[48px] mb-4 font-light">
-                      {plan.desc}
-                    </p>
-
-                    {/* Características detalladas */}
-                    <ul className="space-y-2 mb-4 border-t border-slate-800/80 pt-3">
-                      {plan.features.map((feat, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-300 font-light">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                          <span className="leading-snug">{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Acciones directas de la tarjeta */}
-                  <div className="space-y-2 pt-3 border-t border-slate-800/80 mt-auto">
-                    {/* Botón Entrar / Seleccionar */}
+            {/* EN EL PIÉ: LOS ICONOS CENTRADOS REPARTIÉNDOSE TODO EL ESPACIO UNIFORMEMENTE
+                (A los extremos la mitad del espacio que entre los iconos -> justify-around)
+                Incluye la campanita para Quick, Pro y Enterprise (rastreo de facturas/recibos).
+            */}
+            <footer className="w-full py-3 my-1">
+              <div className="w-full max-w-xl mx-auto flex items-center justify-around px-2 sm:px-6">
+                
+                {/* 1. VERSIÓN QUICK */}
+                {currentPlan === 'quick' && (
+                  <>
                     <button
-                      type="button"
-                      onClick={() => handleSelectPlanDirect(plan.id)}
-                      className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                        isCurrent
-                          ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/20'
-                          : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-500'
+                      onClick={() => {
+                        if (onNewInvoice) onNewInvoice();
+                        else onNavigateSection?.('page-facturacion');
+                      }}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)] shrink-0"
+                      title="Nueva Factura"
+                    >
+                      <Calculator className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={() => onNavigateSection?.('page-clientes')}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.35)] shrink-0"
+                      title="Clientes"
+                    >
+                      <Users className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={() => onNavigateSection?.('page-proveedores')}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0"
+                      title="Proveedores"
+                    >
+                      <Truck className="w-6 h-6 text-amber-400" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={() => onNavigateSection?.('page-balances')}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-violet-400/80 shadow-[0_0_12px_rgba(139,92,246,0.35)] shrink-0"
+                      title="Balances"
+                    >
+                      <PieChart className="w-6 h-6 text-violet-400" strokeWidth={1.5} />
+                    </button>
+
+                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
+                    <button
+                      onClick={handleBellFooterClick}
+                      className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
+                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                    >
+                      <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
+                      {totalDetectedAlerts > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-black rounded-full animate-pulse shadow-md">
+                          {totalDetectedAlerts}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => onNavigateSection?.('page-configuracion')}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-slate-500 shadow-[0_0_12px_rgba(156,163,175,0.25)] shrink-0"
+                      title="Configuración"
+                    >
+                      <Settings className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+
+                {/* 2. VERSIÓN LITE */}
+                {currentPlan === 'lite' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (onNewBudget) onNewBudget();
+                        else onNavigateSection?.('page-presupuestos');
+                      }}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)] shrink-0"
+                      title="Crear Presupuesto A4 Directo"
+                    >
+                      <FileText className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (onNewInvoice) onNewInvoice();
+                        else onNavigateSection?.('page-facturacion');
+                      }}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.35)] shrink-0"
+                      title="Crear Factura A4 Directa"
+                    >
+                      <Calculator className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                      onClick={() => onNavigateSection?.('page-configuracion')}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-slate-500 shadow-[0_0_12px_rgba(156,163,175,0.25)] shrink-0"
+                      title="Configuración"
+                    >
+                      <Settings className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+
+                {/* 3. VERSIÓN ENTERPRISE */}
+                {currentPlan === 'enterprise' && (
+                  <>
+                    <button
+                      onClick={onOpenScanner}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)] shrink-0"
+                      title="Escanear Matrícula OCR ALPR"
+                    >
+                      <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (onOpenEnterpriseAeat) onOpenEnterpriseAeat();
+                        else onNavigateSection?.('page-configuracion');
+                      }}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.35)] shrink-0"
+                      title="Sede Electrónica AEAT"
+                    >
+                      <Building2 className="w-6 h-6 text-indigo-400" strokeWidth={1.4} />
+                    </button>
+
+                    <button
+                      onClick={onOpenMenu}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)] shrink-0"
+                      title="Menú de Secciones (+)"
+                    >
+                      <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
+                    </button>
+
+                    <button
+                      onClick={onOpenMetisChat}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0"
+                      title="Asistente Metis IA"
+                    >
+                      <span className="font-bold text-lg text-amber-400">AI</span>
+                    </button>
+
+                    <button
+                      onClick={onOpenVoiceAssistant}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)] shrink-0"
+                      title="Voz y Conversación Bidireccional"
+                    >
+                      <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
+                    </button>
+
+                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
+                    <button
+                      onClick={handleBellFooterClick}
+                      className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
+                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                    >
+                      <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
+                      {totalDetectedAlerts > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-black rounded-full animate-pulse shadow-md">
+                          {totalDetectedAlerts}
+                        </span>
+                      )}
+                    </button>
+                  </>
+                )}
+
+                {/* 4. VERSIÓN PRO (DEFAULT) */}
+                {currentPlan === 'pro' && (
+                  <>
+                    <button
+                      onClick={onOpenScanner}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)] shrink-0"
+                      title="Escanear Matrícula OCR ALPR"
+                    >
+                      <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
+                    </button>
+
+                    <button
+                      onClick={onOpenMenu}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)] shrink-0"
+                      title="Menú de Secciones (+)"
+                    >
+                      <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
+                    </button>
+
+                    <button
+                      onClick={onOpenMetisChat}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0"
+                      title="Asistente Metis IA"
+                    >
+                      <span className="font-bold text-lg text-amber-400">AI</span>
+                    </button>
+
+                    <button
+                      onClick={onOpenVoiceAssistant}
+                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)] shrink-0"
+                      title="Voz y Conversación Bidireccional"
+                    >
+                      <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
+                    </button>
+
+                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
+                    <button
+                      onClick={handleBellFooterClick}
+                      className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
+                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                    >
+                      <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
+                      {totalDetectedAlerts > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-black rounded-full animate-pulse shadow-md">
+                          {totalDetectedAlerts}
+                        </span>
+                      )}
+                    </button>
+                  </>
+                )}
+
+              </div>
+            </footer>
+
+            {/* A CONTINUACIÓN HACIA ABAJO EN MÓVIL PORTRAIT HACIENDO SCROLL:
+                "GESTARIAN" centrado, y después las versiones y planes
+            */}
+            <section className="w-full pt-6 pb-12 border-t border-slate-900">
+              <div className="text-center max-w-2xl mx-auto mb-6">
+                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.25em] text-white">
+                  GESTARIAN
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1 font-light tracking-wider">
+                  Versiones y Planes Asistidos
+                </p>
+              </div>
+
+              {/* LAS CUATRO TARJETAS DE VERSIONES CON RELLENO DE TONALIDADES MUY OSCURAS CONTRASTADAS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5 w-full items-stretch">
+                {PLANS_CONFIG.map((plan) => {
+                  const isCurrent = plan.id === currentPlan;
+                  const theme = PLAN_CARD_THEMES[plan.id];
+                  return (
+                    <div 
+                      key={plan.id}
+                      className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 border ${theme.cardBg} ${
+                        isCurrent 
+                          ? `${theme.activeBorderColor} ${theme.ringColor}` 
+                          : `${theme.borderColor} shadow-xl`
                       }`}
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{isCurrent ? 'Versión Activa' : `Entrar a ${plan.label}`}</span>
-                    </button>
+                      <div>
+                        {/* Header de la tarjeta */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center shrink-0">
+                            {PLAN_OUTLINE_ICONS[plan.id]}
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
+                            {plan.badge}
+                          </span>
+                        </div>
 
-                    {/* Botón Registro para el Plan */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectPlan?.(plan.id);
-                        if (onOpenNewUser) {
-                          onOpenNewUser();
-                        } else {
-                          setIsLoginModalOpen(true);
-                        }
-                      }}
-                      className="w-full py-2 px-3 rounded-xl bg-slate-950 hover:bg-slate-900 text-slate-300 hover:text-white text-[11px] font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-800 hover:border-slate-600"
-                    >
-                      <UserPlus className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Registro en {plan.label}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                        <h3 className={`text-2xl font-black tracking-wider uppercase mb-1 ${theme.titleColor}`}>
+                          {plan.label}
+                        </h3>
+                        
+                        <p className="text-xs text-slate-300 leading-relaxed min-h-[48px] mb-4 font-light">
+                          {plan.desc}
+                        </p>
 
-        {/* =========================================================================
-            BANNER DESTACADO: ACCESO AL PORTAL DE CLIENTES
-           ========================================================================= */}
-        <section className="w-full pt-2 pb-6">
-          <div className="w-full bg-slate-950/90 border border-indigo-500/30 rounded-2xl p-5 sm:p-6 text-white flex flex-col md:flex-row items-center justify-between gap-5 shadow-xl">
-            <div className="space-y-1.5 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/40 text-indigo-300 text-xs font-bold uppercase tracking-wider">
-                <Globe className="w-3.5 h-3.5" />
-                <span>Portal de Clientes Gestarian</span>
+                        {/* Características */}
+                        <ul className="space-y-2 mb-4 border-t border-white/5 pt-3">
+                          {plan.features.map((feat, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300 font-light">
+                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Botón de selección */}
+                      <div className="pt-3 border-t border-white/5 mt-auto">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPlanDirect(plan.id)}
+                          className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                            isCurrent
+                              ? theme.btnActiveBg
+                              : 'bg-slate-950/70 hover:bg-slate-900 text-slate-200 border-slate-700 hover:border-slate-500'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{isCurrent ? 'Versión Activa' : `Entrar a ${plan.label}`}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed font-light">
-                Consulta el estado de tu vehículo en tiempo real, revisa presupuestos oficiales, autoriza reparaciones y descarga tus facturas con total comodidad introduciendo tu Email o DNI/CIF/Matrícula.
+            </section>
+          </>
+        ) : (
+          /* =========================================================================
+             ESTADO 2: NO SE HA ACCEDIDO (PANTALLA DE INICIO SIN LOGIN)
+             Requisitos:
+             - GESTARIAN minimalista centrado
+             - Debajo centrado: GESTIÓN ADMINISTRATIVA ASISTIDA como subtítulo
+             - Después las cuatro tarjetas seguidas del acceso al área de cliente con sus
+               botones de registro, login, más información y descarga de la aplicación.
+             - Eliminamos el footer donde tenemos el botón de volver y de la casita.
+             ========================================================================= */
+          <>
+            {/* 1. TÍTULO GESTARIAN MINIMALISTA Y SUBTÍTULO CENTRADO */}
+            <header className="w-full text-center pt-3 pb-2">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[0.25em] text-white uppercase font-sans">
+                GESTARIAN
+              </h1>
+              <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] text-slate-400 uppercase mt-2">
+                GESTIÓN ADMINISTRATIVA ASISTIDA
               </p>
-            </div>
+            </header>
 
-            <div className="flex items-center gap-3 shrink-0 flex-wrap justify-center">
-              <button
-                type="button"
-                onClick={() => setIsClientLoginModalOpen(true)}
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
-              >
-                <Users className="w-4 h-4" />
-                <span>Acceder como Cliente</span>
-              </button>
+            {/* 2. LAS CUATRO TARJETAS DE VERSIONES CON TONOS OSCUROS CONTRASTADOS */}
+            <section className="w-full pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5 w-full items-stretch">
+                {PLANS_CONFIG.map((plan) => {
+                  const isCurrent = plan.id === currentPlan;
+                  const theme = PLAN_CARD_THEMES[plan.id];
+                  return (
+                    <div 
+                      key={plan.id}
+                      className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 border ${theme.cardBg} ${
+                        isCurrent 
+                          ? `${theme.activeBorderColor} ${theme.ringColor}` 
+                          : `${theme.borderColor} shadow-xl`
+                      }`}
+                    >
+                      <div>
+                        {/* Cabecera de la tarjeta */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center shrink-0">
+                            {PLAN_OUTLINE_ICONS[plan.id]}
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
+                            {plan.badge}
+                          </span>
+                        </div>
 
-              <a
-                href="https://www.clientes-gestarian.web.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all"
-                title="Abrir portal web independiente"
-              >
-                <span>Web Externa</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          </div>
-        </section>
+                        <h3 className={`text-2xl font-black tracking-wider uppercase mb-1 ${theme.titleColor}`}>
+                          {plan.label}
+                        </h3>
+                        
+                        <p className="text-xs text-slate-300 leading-relaxed min-h-[48px] mb-4 font-light">
+                          {plan.desc}
+                        </p>
+
+                        {/* Características de cada versión */}
+                        <ul className="space-y-2 mb-4 border-t border-white/5 pt-3">
+                          {plan.features.map((feat, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300 font-light">
+                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Acciones de la tarjeta */}
+                      <div className="space-y-2 pt-3 border-t border-white/5 mt-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelectPlanDirect(plan.id);
+                            setIsLoginModalOpen(true);
+                          }}
+                          className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                            isCurrent
+                              ? theme.btnActiveBg
+                              : 'bg-slate-950/70 hover:bg-slate-900 text-slate-200 border-slate-700 hover:border-slate-500'
+                          }`}
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          <span>Acceder a {plan.label}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* 3. ACCESO AL ÁREA DE CLIENTE CON SUS 4 BOTONES:
+                - Registro
+                - Login
+                - Más información
+                - Descarga de la aplicación
+            */}
+            <section className="w-full pt-4 pb-12">
+              <div className="w-full bg-[#0a101b] border border-slate-800 rounded-3xl p-6 sm:p-8 text-white flex flex-col items-center justify-center gap-6 shadow-2xl">
+                
+                <div className="text-center max-w-2xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-400/30 text-sky-300 text-xs font-bold uppercase tracking-wider mb-2">
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Área de Clientes y Gestión Asistida</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
+                    Acceso al Área de Cliente
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1 font-light leading-relaxed">
+                    Gestiona tu actividad profesional, emite facturas y presupuestos con Veri*Factu oficial o consulta el estado de reparación de tu vehículo en tiempo real.
+                  </p>
+                </div>
+
+                {/* Los 4 Botones Requeridos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full max-w-4xl">
+                  
+                  {/* Botón 1: Registro */}
+                  <button
+                    id="btn-inicio-registro"
+                    type="button"
+                    onClick={() => {
+                      if (onOpenNewUser) {
+                        onOpenNewUser();
+                      } else {
+                        setIsLoginModalOpen(true);
+                      }
+                    }}
+                    className="py-3 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/25 hover:scale-[1.02] active:scale-95"
+                    title="Crear nueva cuenta / Registro de empresa o autónomo"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Registro</span>
+                  </button>
+
+                  {/* Botón 2: Login */}
+                  <button
+                    id="btn-inicio-login"
+                    type="button"
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-sky-400/50 text-sky-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
+                    title="Iniciar sesión con tu cuenta"
+                  >
+                    <LogIn className="w-4 h-4 text-sky-400" />
+                    <span>Login</span>
+                  </button>
+
+                  {/* Botón 3: Más Información */}
+                  <button
+                    id="btn-inicio-mas-info"
+                    type="button"
+                    onClick={() => setIsMoreInfoModalOpen(true)}
+                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
+                    title="Análisis exhaustivo y comparativa de cada versión"
+                  >
+                    <Info className="w-4 h-4 text-indigo-400" />
+                    <span>Más Información</span>
+                  </button>
+
+                  {/* Botón 4: Descarga de la Aplicación */}
+                  <button
+                    id="btn-inicio-descarga-app"
+                    type="button"
+                    onClick={() => setIsDownloadAppModalOpen(true)}
+                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
+                    title="Descargar e instalar la aplicación en móvil o PC"
+                  >
+                    <Download className="w-4 h-4 text-emerald-400" />
+                    <span>Descarga de la App</span>
+                  </button>
+
+                </div>
+
+                {/* Acceso para clientes de taller (por DNI/CIF o matrícula) */}
+                <div className="pt-4 border-t border-slate-800/80 w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+                  <span>¿Eres cliente del taller y quieres consultar tu vehículo?</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsClientLoginModalOpen(true)}
+                    className="text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider underline cursor-pointer"
+                  >
+                    Acceder con Matrícula o DNI →
+                  </button>
+                </div>
+
+              </div>
+            </section>
+          </>
+        )}
 
       </div>
+
+      {/* =========================================================================
+          MODAL: MÁS INFORMACIÓN (ANÁLISIS EXHAUSTIVO DE VERSIONES Y NORMATIVA)
+         ========================================================================= */}
+      <MoreInfoModal 
+        isOpen={isMoreInfoModalOpen}
+        onClose={() => setIsMoreInfoModalOpen(false)}
+        onSelectPlan={(p) => {
+          onSelectPlan?.(p);
+          setIsMoreInfoModalOpen(false);
+        }}
+        currentPlan={currentPlan}
+      />
+
+      {/* =========================================================================
+          MODAL: DESCARGA DE LA APLICACIÓN (PWA / MÓVIL / ESCRITORIO)
+         ========================================================================= */}
+      <DownloadAppModal 
+        isOpen={isDownloadAppModalOpen}
+        onClose={() => setIsDownloadAppModalOpen(false)}
+        deferredPrompt={deferredPrompt}
+      />
 
       {/* =========================================================================
           MODAL DE ACCESO PARA CLIENTES (Email o DNI/CIF/Matrícula)
@@ -880,7 +1049,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
             </form>
 
-            {/* Acceso rápido a clientes registrados del taller */}
+            {/* Acceso rápido a clientes de prueba */}
             {defaultSampleClients.length > 0 && (
               <div className="mt-5 pt-4 border-t border-slate-800">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">

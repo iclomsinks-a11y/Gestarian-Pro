@@ -11,7 +11,7 @@ export async function fetchSystemConfig(): Promise<SystemConfig> {
   }
 
   return {
-    githubRepoUrl: 'https://github.com/gestarian/gestarian-core',
+    githubRepoUrl: 'https://github.com/iclomsinks-a11y/Gestarian-Pro.git',
     hasPlateRecognizerKey: false,
     hasResendKey: false,
   };
