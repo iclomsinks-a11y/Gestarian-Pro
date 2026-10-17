@@ -367,22 +367,38 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                 )}
 
                 {/* En Solicitudes: Icono para filtrar (x1.5) */}
+                {/* En Solicitudes: Icono para filtrar y nuevo presupuesto */}
                 {pageId === 'page-solicitudes' && (
-                  <button
-                    id="btn-footer-filter-solicitudes"
-                    type="button"
-                    onClick={() => setIsSolicitudFilterMode(true)}
-                    className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center relative"
-                    title="Filtrar Solicitudes"
-                  >
-                    <SlidersHorizontal className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
-                    {activeSolicitudFilter !== 'todas' && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-sky-500 rounded-full shadow-xs ring-2 ring-white" />
-                    )}
-                  </button>
+                  <>
+                    <button
+                      id="btn-footer-filter-solicitudes"
+                      type="button"
+                      onClick={() => setIsSolicitudFilterMode(true)}
+                      className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center relative"
+                      title="Filtrar Solicitudes"
+                    >
+                      <SlidersHorizontal className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                      {activeSolicitudFilter !== 'todas' && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-sky-500 rounded-full shadow-xs ring-2 ring-white" />
+                      )}
+                    </button>
+
+                    <button
+                      id="btn-footer-new-presupuesto-solicitudes"
+                      type="button"
+                      onClick={() => {
+                        if (onNewBudget) onNewBudget();
+                        window.dispatchEvent(new CustomEvent('gestarian_new_budget'));
+                      }}
+                      className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                      title="Nuevo Presupuesto"
+                    >
+                      <SheetPlusPIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                    </button>
+                  </>
                 )}
 
-                {/* En Presupuestos: Icono de lupa para buscar e input desplegable, e icono flotante de hoja A4 con +P para nuevo presupuesto (x1.5) */}
+                {/* En Presupuestos: Icono de lupa para buscar e input desplegable, e icono de nuevo presupuesto */}
                 {pageId === 'page-presupuestos' && (
                   <>
                     {isBudgetSearchOpen && (
@@ -444,7 +460,7 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                   </>
                 )}
 
-                {/* En Clientes: Icono de lupa e icono de añadir cliente (x1.5) sin recuadro ni relleno */}
+                {/* En Clientes: Icono de lupa, nuevo presupuesto, e icono de añadir cliente */}
                 {pageId === 'page-clientes' && (
                   <>
                     <button
@@ -459,6 +475,21 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                     >
                       <Search className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
                     </button>
+
+                    {currentPlan !== 'quick' && (
+                      <button
+                        id="btn-footer-new-presupuesto-clientes"
+                        type="button"
+                        onClick={() => {
+                          if (onNewBudget) onNewBudget();
+                          window.dispatchEvent(new CustomEvent('gestarian_new_budget'));
+                        }}
+                        className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                        title="Nuevo Presupuesto"
+                      >
+                        <SheetPlusPIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                      </button>
+                    )}
 
                     <button
                       id="btn-footer-new-cliente"

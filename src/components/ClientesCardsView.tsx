@@ -553,27 +553,11 @@ export const ClientesCardsView: React.FC<ClientesCardsViewProps> = ({
                       <span className="text-lg sm:text-xl font-black text-[#0F172A] truncate">
                         {client.name}
                       </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {currentUser?.currentTier !== 'quick' && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNewBudgetForClient(client);
-                            }}
-                            className="p-1 text-slate-800 hover:text-sky-600 hover:scale-115 active:scale-90 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
-                            title={`Crear nuevo presupuesto para ${client.name}`}
-                            aria-label="Nuevo presupuesto para este cliente"
-                          >
-                            <SheetPlusPIcon className="w-7 h-7 sm:w-8 sm:h-8" />
-                          </button>
-                        )}
-                        <div
-                          className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center font-mono text-sm font-black text-sky-950 shrink-0 select-text"
-                          title={`Número de cliente: ${clientNum}`}
-                        >
-                          {clientNum}
-                        </div>
+                      <div
+                        className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center font-mono text-sm font-black text-sky-950 shrink-0 select-text"
+                        title={`Número de cliente: ${clientNum}`}
+                      >
+                        {clientNum}
                       </div>
                     </div>
 

@@ -1751,6 +1751,7 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
+          onNewBudget={handleOpenNewBudget}
         >
           <SolicitudesView
             id="page-solicitudes"
@@ -1916,6 +1917,7 @@ export default function App() {
           onOpenMenu={() => setIsMenuOpen(true)}
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
+          onNewBudget={handleOpenNewBudget}
           onNewClient={() => {
             setEditingClient(null);
             setIsNewClientFullScreenOpen(true);
