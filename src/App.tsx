@@ -1672,6 +1672,14 @@ export default function App() {
             setEditingClient(null);
             setIsNewClientFullScreenOpen(true);
           }}
+          onOpenNewUser={() => setIsNewUserOpen(true)}
+          clients={clients}
+          documents={documents}
+          onClientLogin={(client) => {
+            setLoggedClientSession(client);
+            setIsClientPortalOpen(true);
+            showToast(`Sesión iniciada como ${client.name}`);
+          }}
         />
 
         {/* Módulos completos: Solo en PRO y ENTERPRISE (Ocultar en GESTARIAN LITE y QUICK) */}
