@@ -1061,7 +1061,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     <div
       className={inline
         ? "w-full h-full flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-slate-100/90 overflow-y-auto"
-        : "fixed inset-0 z-50 flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-white overflow-y-auto"
+        : "create-document-modal-backdrop fixed inset-0 z-50 flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 bg-white overflow-y-auto"
       }
       onClick={(e) => {
         if (!inline && e.target === e.currentTarget) onClose();
@@ -1096,6 +1096,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
       {/* HOJA DEL PRESUPUESTO / FACTURA: ANCHO TOTAL EN PANTALLA COMPLETA, RELLENO COLOR BLANCO */}
       <div
+        id="printable-create-sheet"
         className="w-full max-w-5xl my-1 sm:my-3 bg-white text-blue-950 rounded-2xl border border-sky-100 shadow-xl flex flex-col relative p-4 sm:p-8 md:p-10 font-sans select-none"
         style={{
           minHeight: "1050px",

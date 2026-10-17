@@ -173,11 +173,11 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
             </p>
           </div>
           {effectiveLogoUrl && (
-            <div className="shrink-0 flex items-center justify-center p-1.5 bg-white border border-slate-200 rounded-xl">
+            <div className="shrink-0 flex items-center justify-center p-1.5 bg-white border border-slate-200 rounded-xl issuer-logo-box">
               <img
                 src={effectiveLogoUrl}
                 alt={doc.issuerName}
-                className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
+                className="w-14 h-14 sm:w-20 sm:h-20 object-contain issuer-logo-img"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';

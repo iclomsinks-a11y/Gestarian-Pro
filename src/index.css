@@ -1,41 +1,188 @@
 @import "tailwindcss";
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 10mm 10mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
+  /* Resetear contenedores que atrapan el scroll o altura en pantalla */
+  #root,
+  #root > div {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+  }
+
+  /* Si el visor de documentos está activo o se imprime un documento oficial:
+     OCULTAR TODO EL DASHBOARD, PÁGINAS, CABECERAS, MENÚS Y FOOTERS DE LA APP */
+  body.document-viewer-open [id^="page-"],
+  body.is-printing-document [id^="page-"],
+  body:has(#printable-document-sheet) [id^="page-"],
+  body.document-viewer-open header,
+  body.is-printing-document header,
+  body:has(#printable-document-sheet) header,
+  body.document-viewer-open footer,
+  body.is-printing-document footer,
+  body:has(#printable-document-sheet) footer,
+  body.document-viewer-open nav,
+  body.is-printing-document nav,
+  body:has(#printable-document-sheet) nav,
+  body.document-viewer-open aside,
+  body.is-printing-document aside,
+  body:has(#printable-document-sheet) aside,
+  body.document-viewer-open .page-header,
+  body.is-printing-document .page-header,
+  body:has(#printable-document-sheet) .page-header,
+  body.document-viewer-open .bottom-navigation,
+  body.is-printing-document .bottom-navigation,
+  body:has(#printable-document-sheet) .bottom-navigation,
+  body.document-viewer-open .fixed.bottom-0,
+  body.is-printing-document .fixed.bottom-0,
+  body:has(#printable-document-sheet) .fixed.bottom-0,
+  body.document-viewer-open .fixed.bottom-6,
+  body.is-printing-document .fixed.bottom-6,
+  body:has(#printable-document-sheet) .fixed.bottom-6,
+  body.document-viewer-open #root > div > *:not(.document-viewer-modal-backdrop),
+  body.is-printing-document #root > div > *:not(.document-viewer-modal-backdrop),
+  body:has(#printable-document-sheet) #root > div > *:not(:has(#printable-document-sheet)),
   .print-hidden,
   .no-print,
   [data-print-hidden="true"] {
     display: none !important;
   }
-  .print-clean-page {
+
+  /* Fondo del modal: hacerlo estático y transparente, sin oscurecimiento */
+  .document-viewer-modal-backdrop,
+  body.document-viewer-open .document-viewer-modal-backdrop,
+  body.is-printing-document .document-viewer-modal-backdrop,
+  body:has(#printable-document-sheet) .document-viewer-modal-backdrop {
     position: static !important;
-    overflow: visible !important;
+    display: block !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     border: none !important;
     box-shadow: none !important;
+    inset: auto !important;
+    z-index: 9999 !important;
+  }
+
+  /* Contenedor exterior de la hoja de factura */
+  .document-sheet-outer-card,
+  .document-viewer-modal-backdrop > div,
+  body:has(#printable-document-sheet) .document-viewer-modal-backdrop > div {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     background: #ffffff !important;
   }
 
-  /* Asegurar que el logo del taller en impresión/PDF nunca supere los 250x250px */
+  /* Hoja imprimible oficial A4 */
+  #printable-document-sheet {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Soporte de impresión limpia para modal de creación / edición de presupuesto */
+  body:has(#printable-create-sheet) #root > div > *:not(:has(#printable-create-sheet)) {
+    display: none !important;
+  }
+  .create-document-modal-backdrop {
+    position: static !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    background: #ffffff !important;
+  }
+  #printable-create-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+  }
+
+  /* Evitar saltos de página partidos en tablas y bloques oficiales */
+  #printable-document-sheet table tr,
+  #printable-document-sheet .grid,
+  #printable-document-sheet > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  #printable-document-sheet table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  /* Asegurar que el logo del taller en impresión/PDF nunca supere los 120px */
   .issuer-logo-box {
-    width: 250px !important;
-    height: 250px !important;
-    max-width: 250px !important;
-    max-height: 250px !important;
-    min-width: 250px !important;
-    min-height: 250px !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    width: auto !important;
+    height: auto !important;
   }
   .issuer-logo-img {
-    width: 250px !important;
-    height: 250px !important;
-    max-width: 250px !important;
-    max-height: 250px !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
     object-fit: contain !important;
   }
 }

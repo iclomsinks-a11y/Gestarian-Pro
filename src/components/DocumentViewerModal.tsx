@@ -10,7 +10,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { GestarianDocument, DocumentPayment, InternalNotification, getDefaultIvaRate } from '../types';
-import { generateDocumentPdf } from '../services/pdfGenerator';
+import { generateDocumentPdf, printDocumentPdf } from '../services/pdfGenerator';
 import { ReceivedInvoiceViewer } from './ReceivedInvoiceViewer';
 import { DocumentSheet, isInvoiceType, isBudgetType } from './DocumentSheet';
 import {
@@ -76,6 +76,16 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('document-viewer-open');
+      return () => {
+        document.body.classList.remove('document-viewer-open');
+        document.body.classList.remove('is-printing-document');
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen || !doc) return null;
 
@@ -173,13 +183,19 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     Boolean(doc.sentAt);
 
   const handlePrint = () => {
+    document.body.classList.add('is-printing-document');
     try {
       window.print();
     } catch (e) {
-      console.warn('window.print() not available:', e);
+      console.warn('window.print() not available, probando generador PDF:', e);
+      printDocumentPdf(sheetDoc, { userLogoUrl: effectiveLogoUrl });
+    } finally {
+      setTimeout(() => {
+        document.body.classList.remove('is-printing-document');
+      }, 1000);
     }
     if (!isClientView && isInvoice && onShowToast) {
-      onShowToast('Factura guardada con éxito. Recuerde enviarla al cliente.', 6000);
+      onShowToast('Factura oficial enviada a impresión.', 5000);
     }
   };
 
@@ -214,7 +230,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center p-1 sm:p-4 md:p-6 overflow-y-auto print:p-0 print:m-0 print:bg-white print:static print:overflow-visible ${
+      id="document-viewer-modal-container"
+      className={`document-viewer-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-1 sm:p-4 md:p-6 overflow-y-auto print:p-0 print:m-0 print:bg-white print:static print:overflow-visible ${
         isClientView ? 'bg-[#0F172A]/90 backdrop-blur-sm' : 'bg-[#0F172A]/50 backdrop-blur-xs'
       }`}
       onClick={(e) => {
@@ -222,7 +239,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       }}
     >
       {/* Contenedor de la hoja: en móvil/tablet se ajusta a la pantalla sin recortes */}
-      <div className="w-full sm:w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-[1100px] my-1 sm:my-6 bg-white border border-[#D5D2C9] rounded-2xl shadow-2xl flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden print:max-h-none print:overflow-visible print:border-none print:shadow-none print:my-0 print:w-full">
+      <div className="document-sheet-outer-card w-full sm:w-[95vw] md:w-[90vw] lg:w-[80vw] max-w-[1100px] my-1 sm:my-6 bg-white border border-[#D5D2C9] rounded-2xl shadow-2xl flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden print:max-h-none print:overflow-visible print:border-none print:shadow-none print:my-0 print:w-full">
         {/* Hoja oficial con diseño unificado exacto a la captura */}
         <div
           id="printable-document-sheet"
@@ -372,7 +389,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               type="button"
               onClick={handlePrint}
               className="p-1.5 bg-transparent hover:opacity-80 text-blue-900 transition-transform hover:scale-125 active:scale-95 cursor-pointer shrink-0"
-              title="Imprimir"
+              title="Imprimir Factura Oficial (A4)"
+              aria-label="Imprimir Factura Oficial"
             >
               <Printer className="w-8 h-8 sm:w-9 sm:h-9 stroke-[2.2]" />
             </button>

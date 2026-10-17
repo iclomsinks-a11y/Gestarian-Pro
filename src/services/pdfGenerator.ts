@@ -7,7 +7,7 @@ interface GeneratePdfOptions {
   userLogoUrl?: string;
 }
 
-export async function generateDocumentPdf(doc: GestarianDocument, options: GeneratePdfOptions = {}): Promise<void> {
+export async function buildDocumentPdf(doc: GestarianDocument, options: GeneratePdfOptions = {}): Promise<jsPDF> {
   const isInvoice = doc.type === 'factura' || doc.type === 'factura_proforma' || doc.type === 'factura_rectificativa';
   const isBudget = doc.type === 'presupuesto' || doc.type === 'budget';
   const isReceipt = doc.type === 'recibo_abono' || (doc.type as string) === 'recibo';
@@ -532,8 +532,26 @@ export async function generateDocumentPdf(doc: GestarianDocument, options: Gener
     );
   }
 
-  // Guardar y disparar la descarga automática del archivo PDF
+  return pdf;
+}
+
+export async function generateDocumentPdf(doc: GestarianDocument, options: GeneratePdfOptions = {}): Promise<void> {
+  const isInvoice = doc.type === 'factura' || doc.type === 'factura_proforma' || doc.type === 'factura_rectificativa';
+  const isReceipt = doc.type === 'recibo_abono' || (doc.type as string) === 'recibo';
+  const docTitle = isInvoice ? 'FACTURA' : isReceipt ? 'RECIBO DE ABONO' : 'PRESUPUESTO';
+  const pdf = await buildDocumentPdf(doc, options);
   const cleanNumber = doc.number.replace(/[^a-zA-Z0-9_-]/g, '_');
   const fileName = `${docTitle}_${cleanNumber}_Oficial.pdf`;
   pdf.save(fileName);
+}
+
+export async function printDocumentPdf(doc: GestarianDocument, options: GeneratePdfOptions = {}): Promise<void> {
+  const pdf = await buildDocumentPdf(doc, options);
+  pdf.autoPrint();
+  const blob = pdf.output('blob');
+  const blobUrl = URL.createObjectURL(blob);
+  const printWindow = window.open(blobUrl, '_blank');
+  if (!printWindow) {
+    window.print();
+  }
 }
