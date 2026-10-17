@@ -73,7 +73,7 @@ import {
   getExpedienteFromDocNumber,
 } from './services/storage';
 import { fetchSystemConfig } from './services/plateRecognizerService';
-import { syncClientToSupabase } from './services/supabaseClient';
+import { syncClientToSupabase, fetchShortLinkFromSupabase } from './services/supabaseClient';
 import { playGentleChime } from './utils/audioNotification';
 import { ShieldCheck, FolderOpen } from 'lucide-react';
 
@@ -271,6 +271,19 @@ export default function App() {
 
     if (viewParam === 'doc' && idParam) {
       const cleanId = decodeURIComponent(idParam).trim().toUpperCase();
+      try {
+        const stored = getStoredDocuments();
+        const found = stored.find(
+          (d) =>
+            d.number?.toUpperCase() === cleanId ||
+            d.id?.toUpperCase() === cleanId ||
+            d.expediente?.toUpperCase() === cleanId
+        );
+        if (found) {
+          return { doc: found, isClient: true };
+        }
+      } catch (e) {}
+
       const dataParam = params.get('data');
       if (dataParam) {
         try {
@@ -800,58 +813,77 @@ export default function App() {
           d.expediente?.toUpperCase() === cleanId
       );
 
-      const fallbackDoc: GestarianDocument = {
-        id: `doc_${cleanId}`,
-        number: cleanId,
-        series: '2026',
-        type: cleanId.startsWith('F') ? 'factura' : 'presupuesto',
-        date: new Date().toISOString().split('T')[0],
-        dueDate: new Date().toISOString().split('T')[0],
-        issuerId: user.id,
-        issuerName: user.fullName,
-        issuerCif: user.cif,
-        issuerAddress: user.fiscalAddress,
-        issuerPhone: user.phone,
-        issuerEmail: user.email,
-        clientId: 'cli_url',
-        clientName: 'Cliente',
-        clientCif: '',
-        clientAddress: '',
-        clientPhone: '',
-        clientEmail: '',
-        items: [
-          {
-            id: '1',
-            description: 'Servicio de mantenimiento / reparación',
-            quantity: 1,
-            unitPrice: 100,
-            amount: 100,
-          },
-        ],
-        subtotal: 100,
-        applyIva: true,
-        ivaRate: 21,
-        ivaAmount: 21,
-        applyIrpf: false,
-        irpfRate: 0,
-        irpfAmount: 0,
-        total: 121,
-        status: 'enviado',
-        isLocked: false,
-        expediente: `E26${(cleanId.replace(/\D/g, '') || '0001').slice(-4).padStart(4, '0')}`,
-      };
-
-      const effectiveDoc = foundDoc || decodedDocFromUrl || fallbackDoc;
-
-      if (!foundDoc) {
-        const updatedDocs = [effectiveDoc, ...currentStoredDocs];
-        setDocuments(updatedDocs);
-        saveStoredDocuments(updatedDocs);
+      if (foundDoc || decodedDocFromUrl) {
+        const effectiveDoc = foundDoc || decodedDocFromUrl!;
+        if (!foundDoc) {
+          const updatedDocs = [effectiveDoc, ...currentStoredDocs];
+          setDocuments(updatedDocs);
+          saveStoredDocuments(updatedDocs);
+        }
+        setSelectedDoc(effectiveDoc);
+        setIsClientDocViewMode(true);
+        setIsViewDocOpen(true);
+      } else {
+        // Enlace corto limpio: consultar directamente en Supabase
+        fetchShortLinkFromSupabase(cleanId).then((record) => {
+          if (record && record.payload) {
+            const docFromSupabase = record.payload as GestarianDocument;
+            setSelectedDoc(docFromSupabase);
+            setIsClientDocViewMode(true);
+            setIsViewDocOpen(true);
+            const freshStored = getStoredDocuments();
+            if (!freshStored.some((d) => d.number?.toUpperCase() === docFromSupabase.number?.toUpperCase())) {
+              const updatedDocs = [docFromSupabase, ...freshStored];
+              setDocuments(updatedDocs);
+              saveStoredDocuments(updatedDocs);
+            }
+          } else {
+            const fallbackDoc: GestarianDocument = {
+              id: `doc_${cleanId}`,
+              number: cleanId,
+              series: '2026',
+              type: cleanId.startsWith('F') ? 'factura' : 'presupuesto',
+              date: new Date().toISOString().split('T')[0],
+              dueDate: new Date().toISOString().split('T')[0],
+              issuerId: user.id,
+              issuerName: user.fullName,
+              issuerCif: user.cif,
+              issuerAddress: user.fiscalAddress,
+              issuerPhone: user.phone,
+              issuerEmail: user.email,
+              clientId: 'cli_url',
+              clientName: 'Cliente',
+              clientCif: '',
+              clientAddress: '',
+              clientPhone: '',
+              clientEmail: '',
+              items: [
+                {
+                  id: '1',
+                  description: 'Servicio de mantenimiento / reparación',
+                  quantity: 1,
+                  unitPrice: 100,
+                  amount: 100,
+                },
+              ],
+              subtotal: 100,
+              applyIva: true,
+              ivaRate: 21,
+              ivaAmount: 21,
+              applyIrpf: false,
+              irpfRate: 0,
+              irpfAmount: 0,
+              total: 121,
+              status: 'enviado',
+              isLocked: false,
+              expediente: `E26${(cleanId.replace(/\D/g, '') || '0001').slice(-4).padStart(4, '0')}`,
+            };
+            setSelectedDoc(fallbackDoc);
+            setIsClientDocViewMode(true);
+            setIsViewDocOpen(true);
+          }
+        });
       }
-
-      setSelectedDoc(effectiveDoc);
-      setIsClientDocViewMode(true);
-      setIsViewDocOpen(true);
     } else if (viewParam === 'expediente' && idParam) {
       const cleanExp = decodeURIComponent(idParam).trim().toUpperCase();
       const dataParam = params.get('data');
@@ -906,62 +938,75 @@ export default function App() {
         }
       }
 
-      if (!existingExp) {
-        existingExp = {
-          id: `doc_${cleanExp}`,
-          number: `P26${(cleanExp.replace(/\D/g, '') || '0001').slice(-4).padStart(4, '0')}`,
-          series: '2026',
-          type: 'presupuesto',
-          date: new Date().toISOString().split('T')[0],
-          dueDate: new Date().toISOString().split('T')[0],
-          issuerId: user.id,
-          issuerName: user.fullName,
-          issuerCif: user.cif,
-          issuerAddress: user.fiscalAddress,
-          issuerPhone: user.phone,
-          issuerEmail: user.email,
-          clientId: 'cli_url',
-          clientName: 'Cliente',
-          clientCif: '',
-          clientAddress: '',
-          clientPhone: '',
-          clientEmail: '',
-          items: [],
-          subtotal: 0,
-          applyIva: true,
-          ivaRate: 21,
-          ivaAmount: 0,
-          applyIrpf: false,
-          irpfRate: 0,
-          irpfAmount: 0,
-          total: 0,
-          status: 'enviado',
-          isLocked: false,
-          expediente: cleanExp,
+      const applyExpedienteView = (targetDoc: GestarianDocument) => {
+        const freshDocs = getStoredDocuments();
+        if (!freshDocs.some((d) => d.id === targetDoc.id)) {
+          const updatedDocs = [targetDoc, ...freshDocs.filter((d) => d.id !== targetDoc.id)];
+          setDocuments(updatedDocs);
+          saveStoredDocuments(updatedDocs);
+        }
+        setTargetExpedienteId(cleanExp);
+
+        const clientSession: Client = {
+          id: targetDoc.clientId || 'cli_portal',
+          clientNumber: 1,
+          name: targetDoc.clientName || 'Cliente',
+          cif: targetDoc.clientCif || '',
+          address: targetDoc.clientAddress || '',
+          phone: targetDoc.clientPhone || '',
+          email: targetDoc.clientEmail || '',
+          plates: targetDoc.vehiclePlate ? [targetDoc.vehiclePlate] : [],
+          vehicles: targetDoc.vehiclePlate ? [{ plate: targetDoc.vehiclePlate, brand: targetDoc.vehicleBrand, model: targetDoc.vehicleModel }] : [],
+          clientType: 'particular',
         };
-      }
-
-      const updatedDocs = [existingExp, ...currentStoredDocs.filter((d) => d.id !== existingExp!.id)];
-      setDocuments(updatedDocs);
-      saveStoredDocuments(updatedDocs);
-
-      setTargetExpedienteId(cleanExp);
-
-      // Cargar sesión del cliente para abrir directamente el Área de Cliente
-      const clientSession: Client = {
-        id: existingExp.clientId || 'cli_portal',
-        clientNumber: 1,
-        name: existingExp.clientName || 'Cliente',
-        cif: existingExp.clientCif || '',
-        address: existingExp.clientAddress || '',
-        phone: existingExp.clientPhone || '',
-        email: existingExp.clientEmail || '',
-        plates: existingExp.vehiclePlate ? [existingExp.vehiclePlate] : [],
-        vehicles: existingExp.vehiclePlate ? [{ plate: existingExp.vehiclePlate, brand: existingExp.vehicleBrand, model: existingExp.vehicleModel }] : [],
-        clientType: 'particular',
+        setLoggedClientSession(clientSession);
+        setIsClientPortalOpen(true);
       };
-      setLoggedClientSession(clientSession);
-      setIsClientPortalOpen(true);
+
+      if (existingExp) {
+        applyExpedienteView(existingExp);
+      } else {
+        // Enlace corto limpio: consultar directamente en Supabase
+        fetchShortLinkFromSupabase(cleanExp).then((record) => {
+          if (record && record.payload) {
+            applyExpedienteView(record.payload as GestarianDocument);
+          } else {
+            const fallbackExpDoc: GestarianDocument = {
+              id: `doc_${cleanExp}`,
+              number: `P26${(cleanExp.replace(/\D/g, '') || '0001').slice(-4).padStart(4, '0')}`,
+              series: '2026',
+              type: 'presupuesto',
+              date: new Date().toISOString().split('T')[0],
+              dueDate: new Date().toISOString().split('T')[0],
+              issuerId: user.id,
+              issuerName: user.fullName,
+              issuerCif: user.cif,
+              issuerAddress: user.fiscalAddress,
+              issuerPhone: user.phone,
+              issuerEmail: user.email,
+              clientId: 'cli_url',
+              clientName: 'Cliente',
+              clientCif: '',
+              clientAddress: '',
+              clientPhone: '',
+              clientEmail: '',
+              items: [],
+              subtotal: 0,
+              applyIva: true,
+              ivaRate: 21,
+              ivaAmount: 0,
+              applyIrpf: false,
+              irpfRate: 0,
+              irpfAmount: 0,
+              total: 0,
+              status: 'enviado',
+              isLocked: false,
+              expediente: cleanExp,
+            };
+            applyExpedienteView(fallbackExpDoc);
+          }
+        });
+      }
     } else if (viewParam === 'app-clientes' || viewParam === 'app') {
       if (typeof window !== 'undefined' && !window.location.hostname.includes('clientes-gestarian')) {
         window.location.href = 'https://clientes-gestarian.web.app';

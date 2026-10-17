@@ -589,11 +589,11 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
       saveStoredDocuments(nextDocs);
       window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
 
-      // Registrar notificación en notificaciones.gestarian con documento en vista de impresión descargable
+      // Registrar notificación con enlace oficial
       const newNotif: InternalNotification = {
         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         title: `Presupuesto ${budgetNumberOnly} Enviado al Cliente`,
-        message: `Presupuesto enviado a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde notificaciones.gestarian.`,
+        message: `Presupuesto enviado a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde gestarian.com.`,
         timestamp: nowIso,
         read: false,
         type: 'budget_sent_client',
@@ -1651,7 +1651,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       `Estimado/a ${client?.name || doc.clientName},\n` +
                       `Le remitimos su Presupuesto *${budgetNumberOnly}* por importe de *${budgetTotal.toFixed(2)} €*.\n\n` +
                       `📄 *Documento oficial adjunto en vista de impresión descargable:*\n` +
-                      `https://notificaciones.gestarian/d/${encodeURIComponent(budgetNumberOnly)}\n\n` +
+                      `${getShortDocumentUrl(budgetDoc || doc)}\n\n` +
                       `Gracias por su confianza.`
                     )}`}
                     target="_blank"
@@ -1669,11 +1669,11 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       saveStoredDocuments(nextDocs);
                       window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
 
-                      // Registrar notificación en notificaciones.gestarian con documento en vista de impresión descargable
+                      // Registrar notificación con enlace oficial
                       const newNotif: InternalNotification = {
                         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                         title: `Presupuesto ${budgetNumberOnly} Enviado al Cliente`,
-                        message: `Presupuesto enviado a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde notificaciones.gestarian.`,
+                        message: `Presupuesto enviado a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde gestarian.com.`,
                         timestamp: nowIso,
                         read: false,
                         type: 'budget_sent_client',
@@ -2088,7 +2088,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       `Estimado/a ${client?.name || doc.clientName},\n` +
                       `Le remitimos su Factura Oficial *${invoiceNumberOnly}* por importe de *${invoiceTotal.toFixed(2)} €*.\n\n` +
                       `📄 *Documento oficial adjunto en vista de impresión descargable:*\n` +
-                      `https://notificaciones.gestarian/d/${encodeURIComponent(invoiceNumberOnly)}\n\n` +
+                      `${getShortDocumentUrl(invoiceDoc || doc)}\n\n` +
                       `Gracias por su confianza.`
                     )}`}
                     target="_blank"
@@ -2105,7 +2105,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                       const newNotif: InternalNotification = {
                         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                         title: `Factura ${invoiceNumberOnly} Enviada al Cliente`,
-                        message: `Factura enviada a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde notificaciones.gestarian.`,
+                        message: `Factura enviada a ${client?.name || doc.clientName} (${doc.vehiclePlate || 'Vehículo'}). Documento oficial adjunto en vista de impresión descargable desde gestarian.com.`,
                         timestamp: nowIso,
                         read: false,
                         type: 'budget_sent_client',

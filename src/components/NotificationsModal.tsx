@@ -244,7 +244,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             {n.documentNumber ? `Presupuesto ${n.documentNumber}` : 'Presupuesto Oficial'}
                           </span>
                           <span className="text-[10px] text-blue-800 font-mono block truncate font-medium">
-                            notificaciones.gestarian • Documento adjunto
+                            gestarian.com • Documento adjunto
                           </span>
                         </div>
                       </div>

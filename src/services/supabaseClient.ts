@@ -95,7 +95,7 @@ export async function supabaseRestQuery<T>(
         'apikey': config.anonKey,
         'Authorization': `Bearer ${config.anonKey}`,
         'Content-Type': 'application/json',
-        'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal',
+        'Prefer': method === 'POST' ? 'return=representation,resolution=merge-duplicates' : 'return=minimal',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -194,7 +194,7 @@ export async function syncShortLinkToSupabase(
 }
 
 /**
- * Consulta un enlace corto guardado en Supabase
+ * Consulta un enlace corto guardado en Supabase (por id, doc_number o expediente)
  */
 export async function fetchShortLinkFromSupabase(
   shortId: string
@@ -204,11 +204,13 @@ export async function fetchShortLinkFromSupabase(
     return null;
   }
 
+  const clean = encodeURIComponent(shortId.trim().toUpperCase());
+  const filter = `or=(id.eq.${clean},doc_number.eq.${clean},expediente.eq.${clean},id.eq.doc_${clean},id.eq.d_${clean},id.eq.exp_${clean})&limit=1`;
   const result = await supabaseRestQuery<SupabaseShortLinkRecord[]>(
     'gestarian_short_links',
     'GET',
     undefined,
-    `id=eq.${encodeURIComponent(shortId)}`
+    filter
   );
 
   if (result.data && result.data[0]) {

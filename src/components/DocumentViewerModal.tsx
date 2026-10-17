@@ -19,6 +19,7 @@ import {
   getStoredNotifications,
   saveStoredNotifications,
 } from '../services/storage';
+import { getShortDocumentUrl } from '../services/documentDispatchService';
 
 interface DocumentViewerModalProps {
   isOpen: boolean;
@@ -323,9 +324,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                       sheetDoc.total || 0
                     ).toFixed(2)} €*.\n\n` +
                     `📄 *Documento oficial adjunto en vista de impresión descargable:*\n` +
-                    `https://notificaciones.gestarian/d/${encodeURIComponent(
-                      sheetDoc.number
-                    )}\n\n` +
+                    `${getShortDocumentUrl(sheetDoc)}\n\n` +
                     `Gracias por su confianza.`
                 )}`}
                 target="_blank"
@@ -362,7 +361,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                       sheetDoc.clientName
                     } (${
                       sheetDoc.vehiclePlate || 'Vehículo'
-                    }). Documento oficial adjunto en vista de impresión descargable desde notificaciones.gestarian.`,
+                    }). Documento oficial adjunto en vista de impresión descargable desde gestarian.com.`,
                     timestamp: nowIso,
                     read: false,
                     type: 'budget_sent_client',

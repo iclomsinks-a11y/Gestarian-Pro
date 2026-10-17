@@ -17,9 +17,10 @@ export interface DispatchResult {
 }
 
 export const GESTARIAN_OFFICIAL_DOMAIN = 'https://www.gestarian.com';
-export const NOTIFICACIONES_GESTRIAN_DOMAIN = 'https://notificaciones.gestrian.com';
-export const GESTRIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTRIAN_DOMAIN;
-export const GESTARIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTRIAN_DOMAIN;
+export const NOTIFICACIONES_GESTARIAN_DOMAIN = 'https://www.gestarian.com';
+export const NOTIFICACIONES_GESTRIAN_DOMAIN = NOTIFICACIONES_GESTARIAN_DOMAIN;
+export const GESTRIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTARIAN_DOMAIN;
+export const GESTARIAN_NOTIFICACIONES_DOMAIN = NOTIFICACIONES_GESTARIAN_DOMAIN;
 
 /**
  * Dominio base para la generación de enlaces de notificaciones y documentos
@@ -28,14 +29,18 @@ export function getAppBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('gestarian_notificaciones_domain');
     if (custom && custom.trim()) return custom.trim().replace(/\/$/, '');
-    return window.location.origin;
+    const origin = window.location.origin;
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return GESTARIAN_OFFICIAL_DOMAIN;
+    }
+    return origin;
   }
-  return NOTIFICACIONES_GESTRIAN_DOMAIN;
+  return GESTARIAN_OFFICIAL_DOMAIN;
 }
 
 /**
  * Codifica los datos esenciales del documento en un parámetro ultra compacto
- * para permitir la apertura inmediata en cualquier dispositivo móvil o navegador de clientes.
+ * para permitir la apertura inmediata en caso de respaldo sin conexión.
  */
 export function encodeDocumentToDataParam(doc: GestarianDocument): string {
   try {
@@ -72,15 +77,15 @@ export function encodeDocumentToDataParam(doc: GestarianDocument): string {
 }
 
 /**
- * Genera el enlace directo y accesible al documento para WhatsApp y notificaciones.
- * Formato: https://<dominio>/d/NUMERO?data=...
+ * Genera el enlace ultra corto directo y accesible al documento para WhatsApp y notificaciones.
+ * Formato limpio idéntico a las invitaciones: https://www.gestarian.com/d/NUMERO (ej: https://www.gestarian.com/d/P260001)
  */
-export function getShortDocumentUrl(doc: GestarianDocument | string): string {
+export function getShortDocumentUrl(doc: GestarianDocument | string, includeData = false): string {
   const baseUrl = getAppBaseUrl();
   const docNum = typeof doc === 'object' ? (doc.number || doc.id) : doc;
   const cleanDoc = (docNum || '').trim().toUpperCase();
 
-  if (typeof doc === 'object') {
+  if (includeData && typeof doc === 'object') {
     const dataParam = encodeDocumentToDataParam(doc);
     if (dataParam) {
       return `${baseUrl}/d/${encodeURIComponent(cleanDoc)}?data=${dataParam}`;
@@ -96,10 +101,10 @@ export function generateDocumentPdfUrl(doc: GestarianDocument | string): string 
   return getShortDocumentUrl(doc);
 }
 
-export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: GestarianDocument): string {
+export function generateExpedienteTrackingUrl(expedienteNum: string, doc?: GestarianDocument, includeData = false): string {
   const baseUrl = getAppBaseUrl();
   const cleanExp = (expedienteNum || (doc?.expediente) || '').trim().toUpperCase();
-  if (doc && typeof doc === 'object') {
+  if (includeData && doc && typeof doc === 'object') {
     const dataParam = encodeDocumentToDataParam(doc);
     if (dataParam) {
       return `${baseUrl}/exp/${encodeURIComponent(cleanExp)}?data=${dataParam}`;
@@ -145,15 +150,19 @@ export function buildDocumentDispatchPayload(
   const expedienteNum = doc.expediente || getExpedienteFromDocNumber(docNum);
   const cleanPlate = sanitizePlate(doc.vehiclePlate || (client.vehicles && client.vehicles[0]?.plate) || (client.plates && client.plates[0]) || '');
   
-  // Enlace ultra corto usando notificaciones.gestrian
+  // Enlace ultra corto oficial (sin URLs kilométricas)
   const shortDocUrl = getShortDocumentUrl(doc);
   const trackingUrl = generateExpedienteTrackingUrl(expedienteNum, doc);
   const appDownloadUrl = generateClientPortalAppUrl();
 
-  // Sincronizar en segundo plano para acceso universal sin payload en URL
+  // Sincronizar en Supabase para acceso universal sin payload en URL
+  syncShortLinkToSupabase(docNum, shortDocUrl, docNum, expedienteNum, doc).catch(() => {});
   syncShortLinkToSupabase(`doc_${docNum}`, shortDocUrl, docNum, expedienteNum, doc).catch(() => {});
   syncShortLinkToSupabase(`d_${docNum}`, shortDocUrl, docNum, expedienteNum, doc).catch(() => {});
-  syncShortLinkToSupabase(`exp_${expedienteNum}`, trackingUrl, docNum, expedienteNum, doc).catch(() => {});
+  if (expedienteNum) {
+    syncShortLinkToSupabase(expedienteNum, trackingUrl, docNum, expedienteNum, doc).catch(() => {});
+    syncShortLinkToSupabase(`exp_${expedienteNum}`, trackingUrl, docNum, expedienteNum, doc).catch(() => {});
+  }
 
   const effectiveLogoUrl = user.logoUrl && (user.logoUrl.startsWith('http://') || user.logoUrl.startsWith('https://')) ? user.logoUrl : '';
   const vehiclePart = cleanPlate ? ` (Vehículo: ${cleanPlate})` : '';
