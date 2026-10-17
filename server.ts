@@ -1069,7 +1069,7 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
                 {
                   text: cleanSpeech.slice(0, 500),
                   speechMetadata: {
-                    style: 'Clear, friendly, conversational Spanish assistant from Spain',
+                    style: 'Voz femenina joven, seria y profesional, con acento de España peninsular, tono formal y claro',
                   },
                 },
               ],
@@ -1079,7 +1079,7 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
             responseModalities: ['AUDIO'],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Kore' },
+                prebuiltVoiceConfig: { voiceName: 'Aoede' },
               },
             },
           },
