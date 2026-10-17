@@ -207,6 +207,68 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   const [quickEmail, setQuickEmail] = useState("");
   const [quickIsAutonomo, setQuickIsAutonomo] = useState(false);
 
+  // Búsqueda y selección de cliente registrado
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const clientSearchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (clientSearchContainerRef.current && !clientSearchContainerRef.current.contains(e.target as Node)) {
+        setIsClientDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectClientFromList = (c: Client) => {
+    setSelectedClientId(c.id);
+    setQuickName(c.name || "");
+    setQuickCif(c.cif || "");
+    setQuickPhone(c.phone || "");
+    setQuickEmail(c.email || "");
+    setQuickAddress(c.address || "");
+    if (c.taskLocation) {
+      setTaskLocation(c.taskLocation);
+    } else if (c.address) {
+      setTaskLocation(c.address);
+    }
+    const clientVehicles = c.vehicles || [];
+    if (clientVehicles.length > 0) {
+      const firstVeh = clientVehicles[0];
+      setVehiclePlate(sanitizePlate(firstVeh.plate || ""));
+      setVehicleBrand(firstVeh.brand || "");
+      setVehicleModel(firstVeh.model || "");
+      if (firstVeh.images && firstVeh.images.length > 0) {
+        setVehicleImages(firstVeh.images);
+      }
+    } else if (c.plates && c.plates.length > 0) {
+      setVehiclePlate(sanitizePlate(c.plates[0]));
+    }
+    setIsClientDropdownOpen(false);
+    setClientSearchQuery("");
+    setIsSaved(false);
+  };
+
+  const handleClearSelectedClient = () => {
+    setSelectedClientId("");
+    setIsClientDropdownOpen(false);
+    setClientSearchQuery("");
+  };
+
+  const filteredSearchClients = clients.filter((c) => {
+    if (!clientSearchQuery.trim()) return true;
+    const q = clientSearchQuery.toLowerCase().trim();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.cif && c.cif.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.includes(q)) ||
+      (c.plates && c.plates.some((p) => p.toLowerCase().includes(q))) ||
+      (c.vehicles && c.vehicles.some((v) => v.plate?.toLowerCase().includes(q)))
+    );
+  });
+
   // Vehículo y control de visualización
   const [showVehicleData, setShowVehicleData] = useState<boolean>(() => {
     return initialBudget?.showVehicleData !== false;
@@ -405,6 +467,11 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
       if (initialBudget.clientId) {
         setSelectedClientId(initialBudget.clientId);
+        setQuickName(initialBudget.clientName || "");
+        setQuickCif(initialBudget.clientCif || "");
+        setQuickAddress(initialBudget.clientAddress || "");
+        setQuickPhone(initialBudget.clientPhone || "");
+        setQuickEmail(initialBudget.clientEmail || "");
       } else {
         setSelectedClientId("");
         setQuickName(initialBudget.clientName || "");
@@ -468,6 +535,14 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
       if (preselectedClientId) {
         setSelectedClientId(preselectedClientId);
+        const preClient = clients.find(c => c.id === preselectedClientId);
+        if (preClient) {
+          setQuickName(preClient.name || "");
+          setQuickCif(preClient.cif || "");
+          setQuickAddress(preClient.address || "");
+          setQuickPhone(preClient.phone || "");
+          setQuickEmail(preClient.email || "");
+        }
       } else {
         setSelectedClientId("");
         setQuickName("");
@@ -727,12 +802,12 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       issuerPhone: currentUser.phone,
       issuerEmail: currentUser.email,
       issuerLogoUrl: currentUser.logoUrl,
-      clientId: selectedClient?.id || `cli_temp_${Date.now()}`,
-      clientName: selectedClient?.name || quickName.trim(),
-      clientCif: selectedClient?.cif || quickCif.trim().toUpperCase(),
-      clientAddress: selectedClient?.address || quickAddress.trim(),
-      clientPhone: selectedClient?.phone || quickPhone.trim(),
-      clientEmail: selectedClient?.email || quickEmail.trim(),
+      clientId: selectedClientId || selectedClient?.id || `cli_temp_${Date.now()}`,
+      clientName: quickName.trim() || selectedClient?.name || '',
+      clientCif: quickCif.trim().toUpperCase() || selectedClient?.cif || '',
+      clientAddress: quickAddress.trim() || selectedClient?.address || '',
+      clientPhone: quickPhone.trim() || selectedClient?.phone || '',
+      clientEmail: quickEmail.trim() || selectedClient?.email || '',
       items: items.map((it) => ({
         ...it,
         description: it.description.trim() || "Concepto de taller",
@@ -1242,13 +1317,105 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
             ) : null}
           </div>
 
-          {/* 2. Tarjeta Cliente: Esquinas redondeadas, relleno fondo celeste clarito visible sin línea de borde */}
-          {/* 2. Tarjeta Cliente: Relleno manual directo de datos del cliente */}
+          {/* 2. Tarjeta Cliente: Selección de lista y/o entrada manual */}
           <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-start shadow-xs">
-            <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider mb-2">
-              DATOS DEL CLIENTE:
-            </span>
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+              <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider">
+                DATOS DEL CLIENTE:
+              </span>
+              {selectedClient && (
+                <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-lg text-xs font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="truncate max-w-[150px] sm:max-w-[200px]">Cliente: {selectedClient.name}</span>
+                  <button
+                    type="button"
+                    onClick={handleClearSelectedClient}
+                    className="ml-1 text-slate-400 hover:text-rose-600 font-black cursor-pointer"
+                    title="Desvincular cliente para escribir libremente"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
 
+            {/* Selector de Cliente: Buscar en listado de clientes */}
+            {!isLocked && (
+              <div ref={clientSearchContainerRef} className="relative mb-3">
+                <div className="relative flex items-center">
+                  <Search className="w-4 h-4 absolute left-3 text-sky-600 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={clientSearchQuery}
+                    onFocus={() => setIsClientDropdownOpen(true)}
+                    onChange={(e) => {
+                      setClientSearchQuery(e.target.value);
+                      setIsClientDropdownOpen(true);
+                    }}
+                    placeholder="🔍 Buscar en listado de clientes (nombre, CIF, teléfono, matrícula)..."
+                    className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sky-300 rounded-xl outline-none focus:border-sky-500 text-blue-950 placeholder-sky-400/80 shadow-2xs"
+                  />
+                  {clientSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setClientSearchQuery("")}
+                      className="absolute right-2.5 text-slate-400 hover:text-slate-600 text-xs font-black p-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown flotante con los clientes */}
+                {isClientDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-sky-400 rounded-2xl shadow-xl max-h-56 overflow-y-auto z-50 p-1.5 divide-y divide-slate-100">
+                    <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                      <span>Seleccionar de la lista ({filteredSearchClients.length})</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsClientDropdownOpen(false)}
+                        className="text-slate-400 hover:text-slate-700 text-xs font-bold"
+                      >
+                        Cerrar ✕
+                      </button>
+                    </div>
+                    {filteredSearchClients.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-slate-400 italic">
+                        No se encontraron clientes que coincidan. Puedes rellenar los datos manualmente abajo.
+                      </div>
+                    ) : (
+                      filteredSearchClients.slice(0, 8).map((c) => {
+                        const plateInfo = c.plates && c.plates.length > 0 ? c.plates[0] : (c.vehicles && c.vehicles.length > 0 ? c.vehicles[0].plate : null);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => handleSelectClientFromList(c)}
+                            className="w-full text-left px-3 py-2 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-black text-xs sm:text-sm text-blue-950 truncate">
+                                {c.name}
+                              </p>
+                              <p className="text-[11px] text-slate-500 font-mono truncate">
+                                {c.cif || 'Sin CIF'} {c.phone ? `· 📞 ${c.phone}` : ''}
+                              </p>
+                            </div>
+                            {plateInfo && (
+                              <span className="shrink-0 bg-white border border-slate-300 font-mono text-[10px] font-black px-2 py-0.5 rounded text-slate-800 shadow-2xs">
+                                {plateInfo}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Inputs de añadir cliente manualmente */}
             <div className="space-y-2 text-blue-950">
               <input
                 type="text"

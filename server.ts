@@ -251,6 +251,73 @@ const getSupabaseClient = () => {
     }
   });
 
+  // Endpoints para Gastos y Tasas Públicas (sin IVA)
+  app.get('/api/public-expenses', async (_req, res) => {
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        return res.json({ success: true, expenses: [] });
+      }
+      const { data, error } = await supabase
+        .from('public_expenses')
+        .select('*')
+        .order('expense_date', { ascending: false });
+      if (error) {
+        console.warn('Aviso leyendo public_expenses de Supabase:', error.message);
+        return res.json({ success: true, expenses: [] });
+      }
+      res.json({ success: true, expenses: data || [] });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/public-expenses', async (req, res) => {
+    try {
+      const { payer_name, amount, description, expense_date } = req.body;
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        return res.json({
+          success: true,
+          expense: {
+            id: `exp_local_${Date.now()}`,
+            payer_name: payer_name || 'Organismo público',
+            amount: Number(amount) || 0,
+            description: description || 'Gasto público',
+            expense_date: expense_date || new Date().toISOString().split('T')[0],
+          }
+        });
+      }
+      const { data, error } = await supabase
+        .from('public_expenses')
+        .insert({
+          payer_name: payer_name || 'Organismo público',
+          amount: Number(amount) || 0,
+          description: description || 'Gasto público',
+          expense_date: expense_date || new Date().toISOString().split('T')[0],
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      res.json({ success: true, expense: data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete('/api/public-expenses/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from('public_expenses').delete().eq('id', id);
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Proxy seguro para envío de correos con Resend API
   app.post('/api/send-email', async (req, res) => {
     try {

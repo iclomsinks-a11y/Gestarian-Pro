@@ -134,7 +134,7 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
   );
 
   return (
-    <div id={pageId} className="w-screen h-screen shrink-0 snap-start overflow-hidden flex flex-col bg-white select-none">
+    <div id={pageId} className="w-screen h-[100dvh] max-h-[100dvh] shrink-0 snap-start overflow-hidden flex flex-col bg-white select-none">
       {/* 1. HEADER SUPERIOR FIJO: CENTRADO SOBRE EL FONDO GRIS IGUAL QUE EL FOOTER (#f2f2f2) - ALTURA x0.7 */}
       <header className="w-full bg-[#f2f2f2] text-slate-800 border-b border-slate-300 py-1 sm:py-1.5 px-4 shrink-0 flex flex-col items-center justify-center relative select-none z-20">
         <div className="w-full flex items-center justify-between min-w-0 relative">
@@ -189,7 +189,7 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
 
       {/* 3. FOOTER INFERIOR (Oculto solo en Lite cuando se muestra la hoja directa) */}
       {((pageId !== 'page-facturacion' && pageId !== 'page-presupuestos') || currentPlan !== 'lite') && (
-        <footer className="w-full h-auto shrink-0 bg-[#f2f2f2] text-slate-800 border-t border-slate-300 flex flex-col justify-center px-4 sm:px-8 pt-[5px] pb-2.5 sm:pb-3 relative select-none">
+        <footer className="w-full h-auto shrink-0 bg-[#f2f2f2] text-slate-800 border-t border-slate-300 flex flex-col justify-center px-4 sm:px-8 pt-1.5 pb-[max(2.25rem,calc(env(safe-area-inset-bottom,0px)+1.5rem))] sm:pb-3 relative select-none shadow-[0_-4px_16px_rgba(0,0,0,0.06)] z-30">
         
         {isExpedienteFilterMode && pageId === 'page-expedientes' && !vehiclePlate ? (
           /* CUATRO BOTONES QUE OCUPAN EL FOOTER EN EXPEDIENTES: 2 EN UNA LÍNEA Y 2 DEBAJO EN OTRA LÍNEA */

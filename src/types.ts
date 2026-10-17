@@ -398,3 +398,12 @@ export interface SolicitudItem {
   reviewNotes?: string;
   reviewedAt?: string;
 }
+
+export interface PublicExpense {
+  id: string | number;
+  payer_name: string;
+  amount: number;
+  description: string;
+  expense_date: string;
+  created_at?: string;
+}

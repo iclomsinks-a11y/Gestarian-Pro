@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { PageHeader } from './PageHeader';
-import { GestarianDocument, AppUser, DocumentPayment, GestarianPlan } from '../types';
-import { Camera, FileText, UploadCloud, AlertCircle, RefreshCw, FolderOpen, FolderKanban, Euro, User, UserPen, Check, Plus, Mail, Eye, X, Image, Building2, Calendar, Phone, MapPin, Send, MessageSquare, CheckCircle2, Home } from 'lucide-react';
+import { GestarianDocument, AppUser, DocumentPayment, GestarianPlan, PublicExpense } from '../types';
+import { Camera, FileText, UploadCloud, AlertCircle, RefreshCw, FolderOpen, FolderKanban, Euro, User, UserPen, Check, Plus, Mail, Eye, X, Image, Building2, Calendar, Phone, MapPin, Send, MessageSquare, CheckCircle2, Home, Landmark, Trash2 } from 'lucide-react';
 import { SheetFIcon } from './BudgetIcons';
+import { getStoredPublicExpenses, saveStoredPublicExpenses, addStoredPublicExpense } from '../services/storage';
 
 interface FacturacionViewProps {
   id: string;
@@ -435,6 +436,64 @@ export const FacturacionView: React.FC<FacturacionViewProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const manualFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Estados para Gastos y Tasas Públicas (sin IVA)
+  const [recibidasSubTab, setRecibidasSubTab] = useState<'proveedores' | 'gastos'>('proveedores');
+  const [publicExpenses, setPublicExpenses] = useState<PublicExpense[]>(() => getStoredPublicExpenses());
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expensePayer, setExpensePayer] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Sincronizar gastos públicos con backend
+  React.useEffect(() => {
+    fetch('/api/public-expenses')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.expenses) && data.expenses.length > 0) {
+          setPublicExpenses(data.expenses);
+          saveStoredPublicExpenses(data.expenses);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSavePublicExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(expenseAmount);
+    if (!expensePayer.trim() || !amt || amt <= 0) return;
+    const newExp: PublicExpense = {
+      id: `exp_${Date.now()}`,
+      payer_name: expensePayer.trim(),
+      amount: amt,
+      description: expenseDescription.trim() || 'Gasto público / Tasa administrativa',
+      expense_date: expenseDate,
+    };
+    const updated = addStoredPublicExpense(newExp);
+    setPublicExpenses(updated);
+    try {
+      await fetch('/api/public-expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newExp),
+      });
+    } catch {}
+    setIsExpenseModalOpen(false);
+    setExpensePayer('');
+    setExpenseAmount('');
+    setExpenseDescription('');
+    setExpenseDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleDeletePublicExpense = async (id: string | number) => {
+    const updated = publicExpenses.filter((e) => e.id !== id);
+    setPublicExpenses(updated);
+    saveStoredPublicExpenses(updated);
+    try {
+      await fetch(`/api/public-expenses/${id}`, { method: 'DELETE' });
+    } catch {}
+  };
+
   React.useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
@@ -776,8 +835,145 @@ export const FacturacionView: React.FC<FacturacionViewProps> = ({
             </div>
           ) : (
             <div className="flex flex-col h-full">
-              {/* Botonera de Facturas Recibidas sin las dos líneas de texto */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              {/* Sub-selector dentro de Recibidas: Proveedores vs Gastos y Tasas Públicas */}
+              <div className="flex items-center gap-3 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setRecibidasSubTab('proveedores')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                    recibidasSubTab === 'proveedores'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4 text-sky-600" />
+                  <span>Proveedores (con IVA)</span>
+                  <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">
+                    {recibidas.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRecibidasSubTab('gastos')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                    recibidasSubTab === 'gastos'
+                      ? 'bg-[#0F2942] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Landmark className="w-4 h-4 text-emerald-400" />
+                  <span>Gastos y Tasas Públicas (sin IVA)</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                    recibidasSubTab === 'gastos' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {publicExpenses.length}
+                  </span>
+                </button>
+              </div>
+
+              {recibidasSubTab === 'gastos' ? (
+                /* SECCIÓN DE GASTOS Y TASAS PÚBLICAS (SIN IVA) */
+                <div className="flex flex-col gap-6">
+                  {/* Tarjeta resumen superior */}
+                  <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 rounded-3xl p-6 text-white shadow-lg flex flex-wrap items-center justify-between gap-6 border border-slate-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-400/30 shrink-0">
+                        <Landmark className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-emerald-400 uppercase tracking-widest block mb-1">
+                          Gastos y Tasas Públicas (sin IVA)
+                        </span>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-3xl sm:text-4xl font-black font-mono">
+                            {publicExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                          </span>
+                          <span className="text-xs text-slate-400 font-bold">
+                            ({publicExpenses.length} gastos registrados)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsExpenseModalOpen(true)}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-full font-black shadow-md shadow-emerald-600/30 transition-all text-xs tracking-wider uppercase cursor-pointer shrink-0 active:scale-95 hover:scale-105"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <span>Añadir Gasto / Tasa</span>
+                    </button>
+                  </div>
+
+                  {/* Listado de gastos públicos */}
+                  {publicExpenses.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 bg-white/50 rounded-2xl border-2 border-dashed border-gray-200 p-12">
+                      <Landmark className="w-16 h-16 mb-4 text-gray-300" />
+                      <p className="font-bold text-lg text-[#0F172A]">No hay gastos públicos registrados</p>
+                      <p className="text-sm max-w-sm mt-2 text-gray-500">
+                        Registra tasas de ayuntamientos, DGT, certificados de la AEAT, notaría u otros tributos sin IVA.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsExpenseModalOpen(true)}
+                        className="mt-4 px-5 py-2.5 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-xl text-xs font-bold uppercase tracking-wider"
+                      >
+                        + Añadir primer gasto
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {publicExpenses.map((exp) => (
+                        <div
+                          key={exp.id}
+                          className="bg-white border-2 border-emerald-500/30 hover:border-emerald-500 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <span className="font-black text-xs uppercase px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                Organismo Público
+                              </span>
+                              <span className="text-xs font-bold text-slate-500">
+                                {exp.expense_date}
+                              </span>
+                            </div>
+
+                            <h4 className="font-black text-base text-[#0F172A] leading-tight mb-2">
+                              {exp.payer_name}
+                            </h4>
+                            <p className="text-xs text-slate-600 line-clamp-3 mb-4">
+                              {exp.description}
+                            </p>
+                          </div>
+
+                          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Importe (sin IVA)</span>
+                              <span className="font-mono text-xl font-black text-emerald-700">
+                                {Number(exp.amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePublicExpense(exp.id)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                              title="Eliminar gasto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* SECCIÓN EXISTENTE DE PROVEEDORES */
+                <div className="flex flex-col">
+                  {/* Botonera de Facturas Recibidas sin las dos líneas de texto */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Botón 1: Email (facturas detectadas por rastreo) */}
                   {onOpenDetectedInvoices && (
@@ -908,7 +1104,111 @@ export const FacturacionView: React.FC<FacturacionViewProps> = ({
             </div>
           )}
         </div>
-      </div>
+      )}
+    </div>
+  </div>
+
+      {/* MODAL PARA AÑADIR GASTO O TASA PÚBLICA */}
+      {isExpenseModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm select-none">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 bg-[#0F2942] text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-400/30">
+                  <Landmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base uppercase tracking-wide">Añadir Gasto o Tasa Pública</h3>
+                  <p className="text-[11px] text-slate-300">Organismos oficiales, tributos, tasas o seguros (sin IVA)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExpenseModalOpen(false)}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePublicExpense} className="p-6 space-y-4 text-[#0F172A]">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                  Organismo / Pagador *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Ayuntamiento de Madrid, DGT, AEAT, Notaría..."
+                  value={expensePayer}
+                  onChange={(e) => setExpensePayer(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-emerald-600 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                    Importe Total (€) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    placeholder="0.00"
+                    value={expenseAmount}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold font-mono outline-none focus:border-emerald-600 focus:bg-white text-emerald-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                    Fecha del Gasto *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={expenseDate}
+                    onChange={(e) => setExpenseDate(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:border-emerald-600 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
+                  Concepto / Descripción *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="Ej: Tasa anual de vado permanente, duplicado de permiso, certificado tributario..."
+                  value={expenseDescription}
+                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:border-emerald-600 focus:bg-white resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsExpenseModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold uppercase tracking-wider cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/20 cursor-pointer"
+                >
+                  Guardar Gasto
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL PARA INCORPORAR FACTURA RECIBIDA MANUALMENTE */}
       {isManualModalOpen && (

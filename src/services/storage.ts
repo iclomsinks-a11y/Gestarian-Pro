@@ -1,4 +1,4 @@
-import { AppUser, Client, GestarianDocument, Appointment, QuarterlyReport, InternalNotification, DocumentType, SolicitudItem } from '../types';
+import { AppUser, Client, GestarianDocument, Appointment, QuarterlyReport, InternalNotification, DocumentType, SolicitudItem, PublicExpense } from '../types';
 
 const STORAGE_KEYS = {
   USER: 'gestarian_user_v1',
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   APPOINTMENTS: 'gestarian_appointments_v1',
   NOTIFICATIONS: 'gestarian_notifications_v1',
   SOLICITUDES: 'gestarian_solicitudes_v1',
+  PUBLIC_EXPENSES: 'gestarian_public_expenses_v1',
   ACTIVE_TIER: 'gestarian_tier_v1',
 };
 
@@ -1109,3 +1110,49 @@ export function addStoredSolicitud(solicitud: SolicitudItem): SolicitudItem[] {
   saveStoredSolicitudes(updated);
   return updated;
 }
+
+export const INITIAL_PUBLIC_EXPENSES: PublicExpense[] = [
+  {
+    id: 'exp_pub_01',
+    payer_name: 'Ayuntamiento de Madrid',
+    amount: 145.50,
+    description: 'Tasa Anual de Vado Permanente 2026',
+    expense_date: '2026-03-10',
+  },
+  {
+    id: 'exp_pub_02',
+    payer_name: 'Agencia Tributaria (AEAT)',
+    amount: 85.00,
+    description: 'Tasa administrativa expedición certificados tributarios',
+    expense_date: '2026-02-15',
+  },
+  {
+    id: 'exp_pub_03',
+    payer_name: 'DGT - Dirección General de Tráfico',
+    amount: 54.60,
+    description: 'Tasas de anotación y consulta de titularidad telemática',
+    expense_date: '2026-04-02',
+  },
+];
+
+export function getStoredPublicExpenses(): PublicExpense[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PUBLIC_EXPENSES);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fallback
+  }
+  return INITIAL_PUBLIC_EXPENSES;
+}
+
+export function saveStoredPublicExpenses(expenses: PublicExpense[]): void {
+  localStorage.setItem(STORAGE_KEYS.PUBLIC_EXPENSES, JSON.stringify(expenses));
+}
+
+export function addStoredPublicExpense(expense: PublicExpense): PublicExpense[] {
+  const current = getStoredPublicExpenses();
+  const updated = [expense, ...current];
+  saveStoredPublicExpenses(updated);
+  return updated;
+}
+

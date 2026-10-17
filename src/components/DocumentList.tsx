@@ -245,6 +245,17 @@ export const DocumentList: React.FC<DocumentListProps> = ({
             })}
           </div>
         )}
+
+        {/* Botón Flotante Grande: Hoja con +P dentro, sin relleno ni recuadro */}
+        <button
+          type="button"
+          onClick={onNewBudget}
+          className="fixed bottom-24 right-5 sm:bottom-22 sm:right-8 z-40 bg-transparent border-0 outline-none p-0 text-slate-800 hover:text-sky-600 hover:scale-115 active:scale-90 transition-all cursor-pointer drop-shadow-[0_4px_12px_rgba(0,0,0,0.18)] focus:outline-none flex items-center justify-center"
+          title="Crear Nuevo Presupuesto"
+          aria-label="Nuevo Presupuesto"
+        >
+          <SheetPlusPIcon className="w-16 h-16 sm:w-20 sm:h-20 stroke-[1.8]" />
+        </button>
       </div>
     );
   }
@@ -340,15 +351,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({
             </button>
           </div>
 
-          {/* Botón Nuevo Presupuesto: Hoja con el signo '+' y la 'P' mayúscula dentro */}
+          {/* Botón Nuevo Presupuesto: Hoja con el signo '+' y la 'P' mayúscula dentro sin relleno ni recuadro */}
           <button
             type="button"
             onClick={onNewBudget}
-            className="flex items-center justify-center p-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg transition-all shadow-xs hover:shadow-md cursor-pointer group"
+            className="flex items-center justify-center p-1 text-slate-800 hover:text-sky-600 bg-transparent border-0 outline-none transition-all hover:scale-115 active:scale-95 cursor-pointer group"
             title="Nuevo Presupuesto"
             aria-label="Nuevo Presupuesto"
           >
-            <SheetPlusPIcon className="w-5 h-5 group-hover:scale-105 transition-transform" />
+            <SheetPlusPIcon className="w-8 h-8 group-hover:scale-110 transition-transform stroke-[1.8]" />
           </button>
 
           {hasInvoices && onNewInvoice && (
@@ -726,6 +737,17 @@ export const DocumentList: React.FC<DocumentListProps> = ({
         </table>
       </div>
       )}
+
+      {/* Botón Flotante Grande: Hoja con +P dentro, sin relleno ni recuadro */}
+      <button
+        type="button"
+        onClick={onNewBudget}
+        className="fixed bottom-24 right-5 sm:bottom-22 sm:right-8 z-40 bg-transparent border-0 outline-none p-0 text-slate-800 hover:text-sky-600 hover:scale-115 active:scale-90 transition-all cursor-pointer drop-shadow-[0_4px_12px_rgba(0,0,0,0.18)] focus:outline-none flex items-center justify-center"
+        title="Crear Nuevo Presupuesto"
+        aria-label="Nuevo Presupuesto"
+      >
+        <SheetPlusPIcon className="w-16 h-16 sm:w-20 sm:h-20 stroke-[1.8]" />
+      </button>
     </section>
   );
 };

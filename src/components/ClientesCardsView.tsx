@@ -326,7 +326,7 @@ export const ClientesCardsView: React.FC<ClientesCardsViewProps> = ({
   });
 
   return (
-    <div id={id} className="w-screen h-screen shrink-0 snap-start flex flex-col bg-white overflow-y-auto">
+    <div id={id} className="w-screen h-[100dvh] max-h-[100dvh] shrink-0 snap-start flex flex-col bg-white overflow-y-auto">
       <PageHeader
         pageId="page-clientes"
         title="Clientes"
@@ -548,16 +548,32 @@ export const ClientesCardsView: React.FC<ClientesCardsViewProps> = ({
                       }
                     }}
                   >
-                    {/* Línea 1: Nombre arriba en línea 1 y número de cliente solo dentro de un círculo con relleno sutil sin borde */}
+                    {/* Línea 1: Nombre arriba en línea 1 y número de cliente con icono de nuevo presupuesto */}
                     <div className="flex items-center justify-between gap-3 w-full">
                       <span className="text-lg sm:text-xl font-black text-[#0F172A] truncate">
                         {client.name}
                       </span>
-                      <div
-                        className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center font-mono text-sm font-black text-sky-950 shrink-0 select-text"
-                        title={`Número de cliente: ${clientNum}`}
-                      >
-                        {clientNum}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {currentUser?.currentTier !== 'quick' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNewBudgetForClient(client);
+                            }}
+                            className="p-1 text-slate-800 hover:text-sky-600 hover:scale-115 active:scale-90 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                            title={`Crear nuevo presupuesto para ${client.name}`}
+                            aria-label="Nuevo presupuesto para este cliente"
+                          >
+                            <SheetPlusPIcon className="w-7 h-7 sm:w-8 sm:h-8" />
+                          </button>
+                        )}
+                        <div
+                          className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center font-mono text-sm font-black text-sky-950 shrink-0 select-text"
+                          title={`Número de cliente: ${clientNum}`}
+                        >
+                          {clientNum}
+                        </div>
                       </div>
                     </div>
 
@@ -659,8 +675,8 @@ export const ClientesCardsView: React.FC<ClientesCardsViewProps> = ({
                       className="bg-[#FAF9F6] border-t border-[#E2E0D8] p-4 flex flex-col gap-4 animate-in fade-in duration-200"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {/* Fila 1: Vehículo / Casita (según activación en Configuración), Editar Cliente, Ver Presupuestos, Ver Expedientes */}
-                      <div className={`grid ${isVehicleActive && isLocationActive ? 'grid-cols-5' : (!isVehicleActive && !isLocationActive ? 'grid-cols-3' : 'grid-cols-4')} gap-3 items-center justify-items-center`}>
+                      {/* Fila 1: Vehículo / Casita (según activación en Configuración), Editar Cliente, Nuevo Presupuesto, Ver Presupuestos, Ver Expedientes */}
+                      <div className="flex flex-wrap justify-around items-center gap-3">
                         {/* 1. Icono de Vehículo (Si está activado en Configuración) */}
                         {isVehicleActive && (
                           <button
@@ -706,6 +722,22 @@ export const ClientesCardsView: React.FC<ClientesCardsViewProps> = ({
                         >
                           <UserPen className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
                         </button>
+
+                        {/* 2B. Nuevo Presupuesto (Ocultar en Quick) */}
+                        {currentUser?.currentTier !== 'quick' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNewBudgetForClient(client);
+                            }}
+                            className="p-2 text-[#0F2942] hover:text-sky-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center"
+                            title={`Crear nuevo presupuesto para ${client.name}`}
+                            aria-label="Nuevo presupuesto"
+                          >
+                            <SheetPlusPIcon className="w-12 h-12 sm:w-14 sm:h-14" />
+                          </button>
+                        )}
 
                         {/* 3. Ver Presupuestos (Ocultar en Quick) */}
                         {currentUser?.currentTier !== 'quick' && (
