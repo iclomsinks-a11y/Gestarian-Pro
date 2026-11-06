@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { PageHeader } from './PageHeader';
 import { StandardCard } from './StandardCard';
 import { AppUser, Employee, GestarianDocument } from '../types';
-import { Search, Wrench, FolderKanban, Play, UserCheck, CheckCircle2, Users, Filter, Check, LogOut, MessageCircle, Phone } from 'lucide-react';
+import { Search, Wrench, FolderKanban, Play, UserCheck, CheckCircle2, Users, Filter, Check, LogOut, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
 import { AssignEmployeeModal } from './AssignEmployeeModal';
+import { VehicleMaintenanceModal } from './VehicleMaintenanceModal';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface TallerCardsViewProps {
   id: string;
@@ -41,6 +44,8 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
   const [search, setSearch] = useState('');
   const [assigningDoc, setAssigningDoc] = useState<GestarianDocument | null>(null);
   const [filterOnlyMyRepairs, setFilterOnlyMyRepairs] = useState<boolean>(Boolean(loggedEmployeeSession));
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState<boolean>(false);
+  const isVehicleActive = isVehicleFeatureActive(currentUser || getUser());
 
   // Trabajos de taller (órdenes de trabajo o presupuestos con vehículo)
   const workOrders = documents.filter(
@@ -186,14 +191,25 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenWorkOrdersModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
-          >
-            <Wrench className="w-3.5 h-3.5" />
-            <span>Panel de Órdenes de Trabajo</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMaintenanceModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Planes Oficiales de Mantenimiento</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenWorkOrdersModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0F2942] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs cursor-pointer"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Panel de Órdenes de Trabajo</span>
+            </button>
+          </div>
         </div>
 
         {/* Tarjetas con el mismo formato que Facturas Emitidas */}
@@ -242,8 +258,9 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
                   status={statusText}
                   statusColor={statusColor}
                   statusTextColor={statusTextColor}
-                  vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
-                  subtitle={subtitle}
+                  vehiclePlate={isVehicleActive ? (doc.vehiclePlate || 'SIN-MAT') : undefined}
+                  hidePlate={!isVehicleActive}
+                  subtitle={isVehicleActive ? subtitle : (doc.clientName || 'Orden de Trabajo')}
                   title={doc.clientName}
                   refCode={`OT-${doc.number}`}
                   expediente={doc.expediente || 'E260001'}
@@ -377,6 +394,15 @@ export const TallerCardsView: React.FC<TallerCardsViewProps> = ({
           document={assigningDoc}
           currentUser={currentUser}
           onConfirmAssignment={handleConfirmAssignment}
+        />
+      )}
+
+      {isMaintenanceModalOpen && (
+        <VehicleMaintenanceModal
+          isOpen={isMaintenanceModalOpen}
+          onClose={() => setIsMaintenanceModalOpen(false)}
+          documents={documents}
+          onShowToast={(msg) => onShowToast?.(msg)}
         />
       )}
     </div>

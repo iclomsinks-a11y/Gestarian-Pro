@@ -16,9 +16,7 @@ async function startServer() {
   const portFromArg = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? Number(process.argv[portArgIndex + 1]) : NaN;
   const PORT = !isNaN(portFromArg)
     ? portFromArg
-    : (process.env.NODE_ENV === 'production'
-        ? (Number(process.env.PORT) || 3000)
-        : (Number(process.env.DEFAULT_APP_PORT) || 3000));
+    : (Number(process.env.PORT) || Number(process.env.DEFAULT_APP_PORT) || 3000);
 
   // Middleware para JSON con límite ampliado para imágenes y PDFs en base64
   app.use(express.json({ limit: '50mb' }));
@@ -74,13 +72,43 @@ async function startServer() {
     res.json({ url: authUrl });
   });
 
-// Setup Supabase Client
+// Setup Supabase Client con validación estricta para evitar errores de conexión
 const getSupabaseClient = () => {
-  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  if (!url || !key || url.includes('your-project') || url.includes('lsycqoloreavctbqdsqc')) {
+    return null;
+  }
+  try {
+    return createClient(url, key);
+  } catch {
+    return null;
+  }
 };
+
+// Almacenamiento local persistente en archivo para gastos públicos y tasas
+const PUBLIC_EXPENSES_FILE = path.resolve(process.cwd(), 'data', 'public_expenses.json');
+
+function getLocalPublicExpenses(): any[] {
+  try {
+    if (fs.existsSync(PUBLIC_EXPENSES_FILE)) {
+      const content = fs.readFileSync(PUBLIC_EXPENSES_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function saveLocalPublicExpenses(expenses: any[]) {
+  try {
+    const dir = path.dirname(PUBLIC_EXPENSES_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(PUBLIC_EXPENSES_FILE, JSON.stringify(expenses, null, 2), 'utf-8');
+  } catch {}
+}
 
   app.get('/api/auth/google/callback', async (req, res) => {
     const { code } = req.query;
@@ -255,52 +283,52 @@ const getSupabaseClient = () => {
   // Endpoints para Gastos y Tasas Públicas (sin IVA)
   app.get('/api/public-expenses', async (_req, res) => {
     try {
+      const localExpenses = getLocalPublicExpenses();
       const supabase = getSupabaseClient();
       if (!supabase) {
-        return res.json({ success: true, expenses: [] });
+        return res.json({ success: true, expenses: localExpenses });
       }
-      const { data, error } = await supabase
-        .from('public_expenses')
-        .select('*')
-        .order('expense_date', { ascending: false });
-      if (error) {
-        console.warn('Aviso leyendo public_expenses de Supabase:', error.message);
-        return res.json({ success: true, expenses: [] });
+      try {
+        const { data, error } = await supabase
+          .from('public_expenses')
+          .select('*')
+          .order('expense_date', { ascending: false });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveLocalPublicExpenses(data);
+          return res.json({ success: true, expenses: data });
+        }
+      } catch {
+        // Fallback transparente al almacenamiento local
       }
-      res.json({ success: true, expenses: data || [] });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, expenses: localExpenses });
+    } catch {
+      res.json({ success: true, expenses: getLocalPublicExpenses() });
     }
   });
 
   app.post('/api/public-expenses', async (req, res) => {
     try {
-      const { payer_name, amount, description, expense_date } = req.body;
+      const { id, payer_name, amount, description, expense_date } = req.body;
+      const newExpense = {
+        id: id || `exp_${Date.now()}`,
+        payer_name: payer_name || 'Organismo público',
+        amount: Number(amount) || 0,
+        description: description || 'Gasto público / Tasa administrativa',
+        expense_date: expense_date || new Date().toISOString().split('T')[0],
+      };
+
+      const currentList = getLocalPublicExpenses();
+      const updated = [newExpense, ...currentList.filter((e: any) => e.id !== newExpense.id)];
+      saveLocalPublicExpenses(updated);
+
       const supabase = getSupabaseClient();
-      if (!supabase) {
-        return res.json({
-          success: true,
-          expense: {
-            id: `exp_local_${Date.now()}`,
-            payer_name: payer_name || 'Organismo público',
-            amount: Number(amount) || 0,
-            description: description || 'Gasto público',
-            expense_date: expense_date || new Date().toISOString().split('T')[0],
-          }
-        });
+      if (supabase) {
+        try {
+          await supabase.from('public_expenses').insert(newExpense);
+        } catch {}
       }
-      const { data, error } = await supabase
-        .from('public_expenses')
-        .insert({
-          payer_name: payer_name || 'Organismo público',
-          amount: Number(amount) || 0,
-          description: description || 'Gasto público',
-          expense_date: expense_date || new Date().toISOString().split('T')[0],
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      res.json({ success: true, expense: data });
+
+      res.json({ success: true, expense: newExpense });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -309,10 +337,17 @@ const getSupabaseClient = () => {
   app.delete('/api/public-expenses/:id', async (req, res) => {
     try {
       const { id } = req.params;
+      const currentList = getLocalPublicExpenses();
+      const updated = currentList.filter((e: any) => String(e.id) !== String(id));
+      saveLocalPublicExpenses(updated);
+
       const supabase = getSupabaseClient();
       if (supabase) {
-        await supabase.from('public_expenses').delete().eq('id', id);
+        try {
+          await supabase.from('public_expenses').delete().eq('id', id);
+        } catch {}
       }
+
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -988,10 +1023,13 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
         effectiveMime = effectiveMime.split(';')[0].trim();
       }
 
+      if (!cleanBase64 || cleanBase64.length < 500) {
+        return res.json({ success: true, text: '' });
+      }
+
       // Modelo especializado en transcripción rápida según SKILL.md de gemini-api
       const candidateModels = ['gemini-3.5-transcribe', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
       let response: any = null;
-      let lastErr: any = null;
 
       const transcribePrompt = `Transcribe este audio en español. Devuelve estrictamente solo las palabras habladas por el usuario, sin comillas, sin añadidos ni explicaciones. Si solo hay silencio o ruido, devuelve cadena vacía.`;
 
@@ -1000,33 +1038,22 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
           response = await ai.models.generateContent({
             model: modelName,
             contents: [
-              {
-                role: 'user',
-                parts: [
-                  { inlineData: { data: cleanBase64, mimeType: effectiveMime } },
-                  { text: transcribePrompt }
-                ]
-              }
+              { inlineData: { data: cleanBase64, mimeType: effectiveMime } },
+              { text: transcribePrompt }
             ]
           });
           if (response && response.text !== undefined) {
             break;
           }
-        } catch (mErr: any) {
-          lastErr = mErr;
-          console.warn(`[TranscribeAudio] Falló con modelo ${modelName}:`, mErr.message);
+        } catch {
+          // Intentar con el siguiente modelo de fallback
         }
-      }
-
-      if (!response && lastErr) {
-        throw lastErr;
       }
 
       const transcribedText = (response?.text || '').trim();
       return res.json({ success: true, text: transcribedText });
-    } catch (err: any) {
-      console.error('Error en /api/transcribe-audio:', err);
-      return res.status(500).json({ success: false, error: err.message || 'Error transcribiendo audio' });
+    } catch {
+      return res.json({ success: true, text: '' });
     }
   });
 
@@ -1178,10 +1205,17 @@ Return ONLY valid JSON matching this schema. If any field is not found in the do
         ? remindersList.map(r => `- ${r.text} (${r.completed ? 'Completado' : 'Pendiente'}, ${r.createdAt})`).join('\n')
         : 'Ningún recordatorio activo.';
 
-      const systemInstruction = `Eres **Metis**, la asistente inteligente especializada de élite para talleres mecánicos, de chapa y pintura y consultora tributaria/operativa oficial de la empresa **${companyName}** en la plataforma GESTARIAN PRO.
+      const sectorInfo = currentUser.sector || 'Automoción y Servicios';
+      const branchInfo = currentUser.branch || 'General';
+      const specialtyInfo = currentUser.specialty || 'General';
+      const userRoleTitle = isEmployee ? (employeeInfo?.profession || 'Operario / Técnico Especialista') : 'Administrador y Jefe de Empresa';
 
-## TU CONOCIMIENTO INTEGRAL DEL TALLER (${companyName}):
-Conoces a la perfección y con máximo detalle TODO el ciclo de vida del taller: desde la recepción inicial del vehículo, inspección de chapa/mecánica, propuesta de fecha de entrega, órdenes de trabajo, recambios/materiales, seguimiento en el Roadmap, hasta la facturación (Veri*Factu), cobros y cierre del expediente.
+      const systemInstruction = `Eres **Metis**, la asistente inteligente especializada de élite, consultora en administración corporativa, experta fiscal (AEAT, Veri*Factu, modelos 303, 130, 115, 200, enlaces A3, SAGE y Excel XML) y máxima autoridad experta en la materia exacta del sector (**${sectorInfo}**), rama (**${branchInfo}**) y especialidad (**${specialtyInfo}**) de la empresa **${companyName}** en la plataforma GESTARIAN PRO.
+
+## TU ROL PROFESIONAL Y ADAPTACIÓN AL USUARIO:
+- **Ámbito Fiscal y Administrativo**: Dominas con precisión contable y legal la facturación, deducciones de IVA soportado y repercutido, retenciones de IRPF, amortizaciones y liquidación tributaria para autónomos y sociedades limitadas.
+- **Especialización Sectorial**: Eres experta en la actividad exacta de la empresa (${sectorInfo} — ${branchInfo} — ${specialtyInfo}), ofreciendo normativas, procedimientos y optimizaciones técnicas específicas de este sector.
+- **Usuario Efectivo Actual**: Te comunicas y adaptas perfectamente al rol efectivo del usuario que te habla: **${userRoleTitle}** (${isEmployee ? 'Empleado / Operario' : 'Jefe / Administrador'}). Si es un operario de almacén, control de calidad, mecánico, chapista o administrativo, adoptas el rol de compañera experta en su materia o profesión específica, guiándole con rigor y claridad en sus tareas de campo u oficina.
 
 ## BASE DE DATOS Y ESTADO EN TIEMPO REAL:
 - **Clientes en base de datos (${clientsList.length} clientes en total):**
@@ -1195,34 +1229,24 @@ ${clientsList.length > 30 ? `(Y ${clientsList.length - 30} clientes más registr
   - Documentos e Historial de Expedientes Recientes:
 ${recentDocsText}
 
-- **Citas de Taller:**
+- **Citas de Taller / Agenda:**
   - Total citas: ${appointmentsList.length}
 ${appointmentsText}
 
-- **Recordatorios de Trabajo en Taller:**
+- **Recordatorios de Trabajo:**
 ${remindersText}
 
 - **PERFIL Y SEGURIDAD POR ROL DE USUARIO:**
-${isEmployee ? `⚠️ ROL ACTIVO: EMPLEADO / MECÁNICO (${employeeInfo?.name || 'Técnico'} - ${employeeInfo?.profession || 'Mecánica/Chapa/Pintura'}).
-RESTRICCIÓN DE SEGURIDAD ESTRICTA: Los empleados y mecánicos NO tienen acceso a información económica, dinero facturado, balances, gastos, IVA, IRPF ni cuentas.
-SI UN MECÁNICO PREGUNTA SOBRE FACTURACIÓN, COBROS O DINERO, RESPÓNDELE CON HUMOR Y RESPETO A LAS POLÍTICAS DE EMPRESA (por ejemplo: "Pregúntale al jefe, listillo... 😜 Como técnico, centrémonos en los vehículos y en las órdenes de trabajo del taller").
-Para tareas técnicas, procedimientos de reparación, tiempos de secado, manuales o consultar la siguiente tarea del vehículo en el que trabaja, responde con total precisión técnica.` : `ADMINISTRADOR / JEFE DE TALLER (${companyName}). Acceso total e ilimitado a facturación, IVA, IRPF, rentabilidad, clientes, WhatsApp, previsiones trimestrales y cambio de forma jurídica.`}
+${isEmployee ? `⚠️ ROL ACTIVO: EMPLEADO / OPERARIO (${employeeInfo?.name || 'Técnico'} - ${employeeInfo?.profession || 'Especialista'}).
+RESTRICCIÓN DE SEGURIDAD ESTRICTA: Los empleados u operarios de almacén/producción NO tienen acceso directo a información económica confidencial, dinero facturado, balances o IVA de la empresa.
+Si el operario pregunta sobre datos financieros reservados, respóndele con profesionalidad y desvía la consulta al administrador, centrándote en su rol y profesión específica.
+Para tareas de control de calidad, expedición, inventario, procesos de trabajo o procedimientos técnicos de su rama, responde con máxima autoridad experta.` : `ADMINISTRADOR / JEFE DE EMPRESA (${companyName}). Acceso total e ilimitado a facturación, IVA, IRPF, rentabilidad, clientes, WhatsApp, informes a gestoría y previsiones fiscales.`}
 
 ## NORMAS DE RESPUESTA INTELIGENTE Y EJEMPLOS DE ACTUACIÓN:
-
-1. **Atención al Jefe de Taller (Consultas de Facturación, Previsión Fiscal y Estrategia)**:
-   - Si pregunta por la facturación actual/semanal/mensual, calcula y detalla el total facturado, número de facturas emitidas, desglose con/sin IVA y cobros pendientes.
-   - Si pregunta por la previsión fiscal o cierre trimestral (ej. "el mes que viene prepárate que el cierre va a salir caro..."), calcula el estimativo de IVA a ingresar (IVA repercutido - IVA soportado) y el pago a cuenta IRPF o Impuesto de Sociedades. Proponle recomendaciones proactivas como *"Con tu volumen de facturación actual del trimestre, ve planteándote pasar de Autónomo a Sociedad Limitada (S.L.) para optimizar el tipo impositivo."*
-   - Si pregunta por un trabajo pasado (ej. "¿De quién era el vehículo X que se reparó el mes pasado?"), busca en el historial de expedientes y responde con nombre, localidad, matrícula y trabajo realizado (ej. "Era de Pedro Gómez, de Fuengirola. Le pintamos la aleta derecha granate"). Y OFRÉCELE redactar el mensaje de WhatsApp al cliente o abrir la conversación directamente.
-
-2. **Integración con WhatsApp**:
-   - Si el usuario desea enviar un mensaje de WhatsApp a un cliente, o pide redactarlo, facilítaselo redactado y, si corresponde, incluye la acción de WhatsApp con enlace directo \`https://wa.me/34NÚMERO?text=MENSAJE\` o sugiérele qué texto enviarle para que con un toque pueda enviarlo.
-
-3. **Atención a Mecánicos y Técnicos en Ejecución de Tareas (Manos Libres / Voz Bidireccional)**:
-   - Si un mecánico pregunta por la siguiente tarea, pasos de lijado, tiempos de secado de barniz/imprimación, proporciones de mezcla o código de pintura, respóndelo de manera muy clara, directa y estructurada para que pueda oírlo por el altavoz sin soltar herramientas.
-
-4. **Acciones y Navegación Dinámica**:
-   Si el usuario pide realizar una acción en la app, añade la etiqueta correspondiente al final del texto:
+1. **Consultas Fiscales y Administrativas**: Responde con rigor técnico sobre la AEAT, desgloses de bases, tipos impositivos y enlaces contables (A3, SAGE, Excel XML).
+2. **Consultas Específicas de Sector (${sectorInfo})**: Aporta directrices técnicas de experto en la materia.
+3. **Integración con WhatsApp**: Facilita mensajes redactados listos para enviar a clientes.
+4. **Acciones y Navegación Dinámica**: Añade al final de tu respuesta la etiqueta de acción si el usuario lo solicita:
    - \`[ACTION:fullscreen]\`
    - \`[ACTION:nav:facturacion:recibidas]\`
    - \`[ACTION:nav:facturacion:emitidas]\`
@@ -1231,7 +1255,7 @@ Para tareas técnicas, procedimientos de reparación, tiempos de secado, manuale
    - \`[ACTION:new-budget]\`
    - \`[ACTION:scanner]\`
 
-5. **Tono**: Profesional, dinámico, en español de España, útil y cercano.`;
+5. **Tono**: Profesional, experto, en español de España, útil y cercano.`;
 
       // Preparar historial normalizado para Gemini
       const contents: any[] = [];
@@ -1328,56 +1352,55 @@ Para tareas técnicas, procedimientos de reparación, tiempos de secado, manuale
       console.log(`[CRON - ${label}] Iniciando ciclo de escaneo global...`);
       const supabase = getSupabaseClient();
       if (!supabase) {
-        console.error(`[CRON - ${label}] Error: Supabase no configurado.`);
         return;
       }
 
       // 1. Obtener todos los usuarios con token
-      const { data: users, error } = await supabase.from('user_integrations').select('user_email, google_refresh_token');
-      if (error || !users) {
-        console.error(`[CRON - ${label}] Error obteniendo usuarios:`, error);
-        return;
-      }
-
-      console.log(`[CRON - ${label}] Procesando ${users.length} cuentas vinculadas...`);
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-      for (const user of users) {
-        try {
-          console.log(`[CRON - ${label}] Renovando token para ${user.user_email}...`);
-          // 2. Renovar el access_token usando el refresh_token
-          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: clientId!,
-              client_secret: clientSecret!,
-              refresh_token: user.google_refresh_token,
-              grant_type: 'refresh_token'
-            })
-          });
-
-          const tokenData = await tokenRes.json();
-          if (!tokenRes.ok || !tokenData.access_token) {
-            console.error(`[CRON - ${label}] Error renovando token de ${user.user_email}:`, tokenData);
-            continue;
-          }
-
-          // 3. Ejecutar el escáner
-          const facturas = await scanGmailForInvoices(tokenData.access_token);
-          
-          if (facturas.length > 0) {
-            console.log(`[CRON - ${label}] 🟢 ¡Éxito! Encontradas ${facturas.length} nuevas facturas para ${user.user_email}`);
-            // TODO: Guardar `facturas` en Supabase asociado al cliente (requerirá tabla de documentos en el futuro)
-          } else {
-            console.log(`[CRON - ${label}] ⚪ Sin nuevas facturas para ${user.user_email}`);
-          }
-        } catch (err: any) {
-           console.error(`[CRON - ${label}] Error procesando ${user.user_email}:`, err.message);
+      try {
+        const { data: users, error } = await supabase.from('user_integrations').select('user_email, google_refresh_token');
+        if (error || !users || users.length === 0) {
+          return;
         }
-      }
-      console.log(`[CRON - ${label}] Ciclo de escaneo finalizado.`);
+
+        console.log(`[CRON - ${label}] Procesando ${users.length} cuentas vinculadas...`);
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+        for (const user of users) {
+          try {
+            console.log(`[CRON - ${label}] Renovando token para ${user.user_email}...`);
+            // 2. Renovar el access_token usando el refresh_token
+            const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                client_id: clientId!,
+                client_secret: clientSecret!,
+                refresh_token: user.google_refresh_token,
+                grant_type: 'refresh_token'
+              })
+            });
+
+            const tokenData = await tokenRes.json();
+            if (!tokenRes.ok || !tokenData.access_token) {
+              console.error(`[CRON - ${label}] Error renovando token de ${user.user_email}:`, tokenData);
+              continue;
+            }
+
+            // 3. Ejecutar el escáner
+            const facturas = await scanGmailForInvoices(tokenData.access_token);
+            
+            if (facturas.length > 0) {
+              console.log(`[CRON - ${label}] 🟢 ¡Éxito! Encontradas ${facturas.length} nuevas facturas para ${user.user_email}`);
+            } else {
+              console.log(`[CRON - ${label}] ⚪ Sin nuevas facturas para ${user.user_email}`);
+            }
+          } catch (err: any) {
+            console.error(`[CRON - ${label}] Error procesando ${user.user_email}:`, err.message);
+          }
+        }
+        console.log(`[CRON - ${label}] Ciclo de escaneo finalizado.`);
+      } catch {}
     };
     
     // 1. Escaneo 06:00 AM

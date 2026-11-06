@@ -139,9 +139,21 @@ export const TierCards: React.FC<TierCardsProps> = ({
               <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700">
                 Base de Datos
               </span>
-              <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-blue-50 text-blue-800 rounded">
-                Gratis + Extras
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-blue-50 text-blue-800 rounded">
+                  Gratis + Extras
+                </span>
+                {onOpenQuickExtras && (
+                  <button
+                    type="button"
+                    onClick={onOpenQuickExtras}
+                    className="w-5 h-5 rounded-full border border-blue-500 text-blue-600 hover:bg-blue-50 flex items-center justify-center text-[10px] font-serif italic font-bold transition-all cursor-pointer"
+                    title="Información detallada de opciones de pago y extras"
+                  >
+                    i
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5 mb-1.5">
@@ -162,11 +174,15 @@ export const TierCards: React.FC<TierCardsProps> = ({
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span>Custodia BD gratis 1er año | 1-4a (+10€/año) | 4-8a (+15€/año)</span>
+                <span>Avisos Mantenimiento e ITV (+60€/año)</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span>Rastreo email + Captura cámara OCR (+19€/año)</span>
+                <span>Custodia BD 1a gratis | 4a (+10€) | 8a (+15€)</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>Rastreo email (+12€) | OCR foto (+19€)</span>
               </li>
               <li className="flex items-center gap-2 text-slate-400">
                 <span className="w-3.5 h-3.5 text-center text-slate-300">✕</span>

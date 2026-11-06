@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import { PageHeader } from './PageHeader';
 import { GestarianDocument, AppUser, DocumentPayment, GestarianPlan, PublicExpense } from '../types';
 import { Camera, FileText, UploadCloud, AlertCircle, RefreshCw, FolderOpen, FolderKanban, Euro, User, UserPen, Check, Plus, Mail, Eye, X, Image, Building2, Calendar, Phone, MapPin, Send, MessageSquare, CheckCircle2, Home, Landmark, Trash2 } from 'lucide-react';
-import { SheetFIcon } from './BudgetIcons';
-import { getStoredPublicExpenses, saveStoredPublicExpenses, addStoredPublicExpense } from '../services/storage';
+import { SheetFIcon, SheetPlusFIcon } from './BudgetIcons';
+import { getStoredPublicExpenses, saveStoredPublicExpenses, addStoredPublicExpense, getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface FacturacionViewProps {
   id: string;
@@ -83,9 +84,17 @@ export const FacturaCard: React.FC<{
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [showPaymentControl, setShowPaymentControl] = useState(false);
 
+  const isQuick = userTier === 'quick';
   const canUseCobros = userTier === 'pro' || userTier === 'enterprise';
+  const currentUser = getUser();
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
 
   const { status, color, text, bgColor } = getInvoiceStatusInfo(doc);
+  
+  const isFacturaRecibida = doc.type === 'factura_recibida';
+  const targetExp = !isFacturaRecibida 
+    ? (doc.expediente || (doc.number ? `E${doc.number.replace(/\D/g, '')}` : undefined))
+    : undefined;
   
   const payments = doc.payments || [];
   const total = doc.total || 0;
@@ -164,56 +173,91 @@ export const FacturaCard: React.FC<{
   return (
     <div 
       className={`${bgColor} rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden border ${color} w-full lg:w-full mx-auto`}
+      onClick={() => {
+        if (isQuick) {
+          onViewDoc(doc);
+        }
+      }}
     >
-      <div className="p-5 flex flex-col gap-4" onClick={() => setIsExpanded(!isExpanded)}>
+      <div 
+        className="p-5 flex flex-col gap-4" 
+        onClick={(e) => {
+          if (isQuick) {
+            e.stopPropagation();
+            onViewDoc(doc);
+          } else {
+            setIsExpanded(!isExpanded);
+          }
+        }}
+      >
         {/* Line 1: Status & License Plate or Location */}
         <div className="flex items-center justify-between">
           <span className={`font-black text-sm tracking-widest ${text}`}>
             {status}
           </span>
-          {/* Matrícula o Ubicación (Desplazada a la derecha) */}
-          {doc.showLocationData && doc.taskLocation && (!doc.showVehicleData || !doc.vehiclePlate) ? (
+          {/* Matrícula o Ubicación (Desplazada a la derecha, solo para sector automoción/transporte) */}
+          {isVehicleActive ? (
+            doc.showLocationData && doc.taskLocation && (!doc.showVehicleData || !doc.vehiclePlate) ? (
+              <div className="flex items-center ml-auto bg-emerald-50 border-2 border-emerald-500 rounded overflow-hidden h-8 px-2.5 gap-1.5 shadow-sm">
+                <Home className="w-4 h-4 text-emerald-800 shrink-0" />
+                <span className="font-extrabold text-[11px] text-emerald-950 uppercase tracking-wider max-w-[140px] truncate">
+                  {doc.taskLocation}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center ml-auto bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-sm">
+                <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
+                  <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
+                  <span className="text-[10px] text-white font-bold leading-none">E</span>
+                </div>
+                <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
+                  {doc.vehiclePlate || 'SIN-MAT'}
+                </div>
+              </div>
+            )
+          ) : doc.taskLocation ? (
             <div className="flex items-center ml-auto bg-emerald-50 border-2 border-emerald-500 rounded overflow-hidden h-8 px-2.5 gap-1.5 shadow-sm">
               <Home className="w-4 h-4 text-emerald-800 shrink-0" />
               <span className="font-extrabold text-[11px] text-emerald-950 uppercase tracking-wider max-w-[140px] truncate">
                 {doc.taskLocation}
               </span>
             </div>
-          ) : (
-            <div className="flex items-center ml-auto bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-sm">
-              <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
-                <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
-                <span className="text-[10px] text-white font-bold leading-none">E</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
-                {doc.vehiclePlate || 'SIN-MAT'}
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Line 2: Brand and Model with optional Location badge */}
-        <div className="flex flex-wrap items-center justify-between gap-1 text-sm font-bold text-[#475569] uppercase tracking-wider">
-          <span>{doc.vehicleBrand || ''} {doc.vehicleModel || doc.vehicleType || (!doc.vehiclePlate && doc.taskLocation ? '' : 'Vehículo')}</span>
-          {doc.taskLocation && (
+        {/* Line 2: Brand and Model with optional Location badge (Solo si vehículo activo o ubicación) */}
+        {isVehicleActive ? (
+          <div className="flex flex-wrap items-center justify-between gap-1 text-sm font-bold text-[#475569] uppercase tracking-wider">
+            <span>{doc.vehicleBrand || ''} {doc.vehicleModel || doc.vehicleType || (!doc.vehiclePlate && doc.taskLocation ? '' : 'Vehículo')}</span>
+            {doc.taskLocation && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md">
+                <Home className="w-3 h-3 text-emerald-700 shrink-0" />
+                <span className="max-w-[150px] truncate">{doc.taskLocation}</span>
+              </span>
+            )}
+          </div>
+        ) : doc.taskLocation ? (
+          <div className="flex flex-wrap items-center justify-between gap-1 text-sm font-bold text-[#475569] uppercase tracking-wider">
             <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md">
               <Home className="w-3 h-3 text-emerald-700 shrink-0" />
               <span className="max-w-[150px] truncate">{doc.taskLocation}</span>
             </span>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {/* Line 3: Client Name */}
         <div className="text-xl font-black text-[#0F172A] truncate">
           {doc.clientName || 'Cliente Desconocido'}
         </div>
 
-        {/* Line 4: Invoice and Expediente (Sin expediente en Quick ni Lite) */}
-        <div className="flex items-center gap-4 text-xs font-bold text-[#64748B] font-mono">
-          <span>{doc.number}</span>
-          {userTier !== 'quick' && userTier !== 'lite' && doc.expediente && (
-            <span className="flex items-center gap-1 before:content-['•'] before:mr-2">
-              {doc.expediente}
+        {/* Line 4: Invoice and Expediente (En Quick: número tamaño x2 y expediente justificado a la derecha) */}
+        <div className="flex items-baseline justify-between w-full font-mono gap-2">
+          <span className={isQuick ? "text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight" : "text-xs font-bold text-[#64748B]"}>
+            {doc.number}
+          </span>
+          {targetExp && (
+            <span className={isQuick ? "text-base sm:text-lg font-black text-[#0F2942] tracking-tight ml-auto text-right" : (userTier !== 'lite' ? "text-xs font-bold text-[#64748B] ml-auto text-right" : "")}>
+              {targetExp}
             </span>
           )}
         </div>
@@ -234,14 +278,14 @@ export const FacturaCard: React.FC<{
               <SheetFIcon className="w-12 h-12 sm:w-14 sm:h-14" />
             </button>
 
-            {/* 2. Ir a Expediente (Oculto en Quick y Lite) */}
-            {userTier !== 'quick' && userTier !== 'lite' && doc.expediente && onNavigateToExpediente ? (
+            {/* 2. Ir a Expediente vinculado */}
+            {!isFacturaRecibida && targetExp && onNavigateToExpediente ? (
               <button 
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onNavigateToExpediente(doc.expediente!); }}
+                onClick={(e) => { e.stopPropagation(); onNavigateToExpediente(targetExp); }}
                 className="p-2 text-[#0F2942] hover:text-blue-600 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 outline-none flex items-center justify-center relative"
-                title="Ir a Expediente"
-                aria-label="Expediente"
+                title="Ver Roadmap del expediente vinculado"
+                aria-label="Ver expediente"
               >
                 <FolderKanban className="w-12 h-12 sm:w-14 sm:h-14" strokeWidth={1.8} />
               </button>
@@ -808,7 +852,7 @@ export const FacturacionView: React.FC<FacturacionViewProps> = ({
                   className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-full font-bold shadow-md shadow-emerald-600/20 transition-all text-xs tracking-wider uppercase cursor-pointer shrink-0 ml-auto active:scale-95 hover:scale-102"
                   title="Crear Nueva Factura Emitida"
                 >
-                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <SheetPlusFIcon className="w-4 h-4 stroke-[2]" />
                   <span>Nueva Factura</span>
                 </button>
               </div>

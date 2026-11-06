@@ -3,21 +3,21 @@ import {
   Camera, Bell, Lock, LogOut, FileText, CheckCircle2,
   Users, Truck, Settings, Plus, Sparkles, AlertCircle,
   Menu, ChevronDown, Download, UserPlus, LogIn, ExternalLink, Globe, Building2, Smartphone, Check, Info,
-  Zap, Gem, Calculator, PieChart, ShieldCheck, ArrowRight, X, Wrench, Car
+  Zap, Gem, Calculator, PieChart, ShieldCheck, ArrowRight, X, Wrench, Car, Eye, EyeOff, KeyRound, Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CasioVintageClock } from './CasioVintageClock';
 import { AppUser, Client, GestarianDocument, GestarianPlan } from '../types';
-import { LoginCard } from './LoginCard';
 import { MoreInfoModal } from './MoreInfoModal';
 import { DownloadAppModal } from './DownloadAppModal';
+import { SheetPlusFIcon } from './BudgetIcons';
 
 // Iconos minimalistas en líneas de 1px sin relleno para las 4 versiones
 const PLAN_OUTLINE_ICONS: Record<GestarianPlan, React.ReactNode> = {
-  lite: <Globe className="w-8 h-8 text-slate-300" strokeWidth={1.2} />,
-  quick: <Zap className="w-8 h-8 text-sky-400" strokeWidth={1.2} />,
-  pro: <Gem className="w-8 h-8 text-emerald-400" strokeWidth={1.2} />,
-  enterprise: <Building2 className="w-8 h-8 text-indigo-400" strokeWidth={1.2} />
+  lite: <Globe className="w-8 h-8 text-emerald-400" strokeWidth={1.2} />,
+  quick: <Zap className="w-8 h-8 text-pink-400" strokeWidth={1.2} />,
+  pro: <Gem className="w-8 h-8 text-sky-400" strokeWidth={1.2} />,
+  enterprise: <Building2 className="w-8 h-8 text-amber-400" strokeWidth={1.2} />
 };
 
 // Estilos de tarjetas con tonalidades oscuras diferenciadas para contrastar con el fondo negro
@@ -33,19 +33,30 @@ const PLAN_CARD_THEMES: Record<GestarianPlan, {
   titleColor: string;
 }> = {
   lite: {
-    cardBg: 'bg-[#0c131d]',
-    borderColor: 'border-slate-700/80 hover:border-slate-500',
-    activeBorderColor: 'border-slate-400 shadow-[0_0_24px_rgba(203,213,225,0.15)]',
-    ringColor: 'ring-1 ring-slate-400/50',
-    badgeBg: 'bg-slate-800/80',
-    badgeText: 'text-slate-200',
-    badgeBorder: 'border-slate-600',
-    btnActiveBg: 'bg-slate-200 text-slate-950 font-black',
-    titleColor: 'text-slate-100',
+    cardBg: 'bg-[#061a14]',
+    borderColor: 'border-emerald-900/80 hover:border-emerald-500',
+    activeBorderColor: 'border-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.25)]',
+    ringColor: 'ring-1 ring-emerald-400/50',
+    badgeBg: 'bg-emerald-950/80',
+    badgeText: 'text-emerald-300',
+    badgeBorder: 'border-emerald-700',
+    btnActiveBg: 'bg-emerald-400 text-slate-950 font-black',
+    titleColor: 'text-emerald-100',
   },
   quick: {
+    cardBg: 'bg-[#1f0b18]',
+    borderColor: 'border-pink-900/80 hover:border-pink-500',
+    activeBorderColor: 'border-pink-400 shadow-[0_0_24px_rgba(236,72,153,0.25)]',
+    ringColor: 'ring-1 ring-pink-400/50',
+    badgeBg: 'bg-pink-950/80',
+    badgeText: 'text-pink-300',
+    badgeBorder: 'border-pink-700',
+    btnActiveBg: 'bg-pink-400 text-slate-950 font-black',
+    titleColor: 'text-pink-100',
+  },
+  pro: {
     cardBg: 'bg-[#061829]',
-    borderColor: 'border-sky-800/80 hover:border-sky-500',
+    borderColor: 'border-sky-900/80 hover:border-sky-500',
     activeBorderColor: 'border-sky-400 shadow-[0_0_24px_rgba(56,189,248,0.25)]',
     ringColor: 'ring-1 ring-sky-400/50',
     badgeBg: 'bg-sky-950/80',
@@ -54,27 +65,48 @@ const PLAN_CARD_THEMES: Record<GestarianPlan, {
     btnActiveBg: 'bg-sky-400 text-slate-950 font-black',
     titleColor: 'text-sky-100',
   },
+  enterprise: {
+    cardBg: 'bg-[#1c1806]',
+    borderColor: 'border-amber-900/80 hover:border-amber-500',
+    activeBorderColor: 'border-amber-400 shadow-[0_0_24px_rgba(251,191,36,0.25)]',
+    ringColor: 'ring-1 ring-amber-400/50',
+    badgeBg: 'bg-amber-950/80',
+    badgeText: 'text-amber-300',
+    badgeBorder: 'border-amber-700',
+    btnActiveBg: 'bg-amber-400 text-slate-950 font-black',
+    titleColor: 'text-amber-100',
+  },
+};
+
+const PLAN_BUTTON_GLOWS: Record<GestarianPlan, {
+  border: string;
+  text: string;
+  glowInactive: string;
+  glowActive: string;
+}> = {
+  lite: {
+    border: 'border-emerald-500',
+    text: 'text-emerald-200',
+    glowInactive: 'border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.15)]',
+    glowActive: 'border-emerald-400 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.55),0_0_35px_rgba(16,185,129,0.3)] font-black scale-[1.01]',
+  },
+  quick: {
+    border: 'border-pink-500',
+    text: 'text-pink-200',
+    glowInactive: 'border-pink-500/30 shadow-[0_0_8px_rgba(236,72,153,0.15)]',
+    glowActive: 'border-pink-400 text-pink-100 shadow-[0_0_20px_rgba(236,72,153,0.55),0_0_35px_rgba(236,72,153,0.3)] font-black scale-[1.01]',
+  },
   pro: {
-    cardBg: 'bg-[#061a14]',
-    borderColor: 'border-emerald-800/80 hover:border-emerald-500',
-    activeBorderColor: 'border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.25)]',
-    ringColor: 'ring-1 ring-emerald-400/50',
-    badgeBg: 'bg-emerald-950/80',
-    badgeText: 'text-emerald-300',
-    badgeBorder: 'border-emerald-700',
-    btnActiveBg: 'bg-emerald-400 text-slate-950 font-black',
-    titleColor: 'text-emerald-100',
+    border: 'border-sky-400',
+    text: 'text-sky-200',
+    glowInactive: 'border-sky-400/30 shadow-[0_0_8px_rgba(56,189,248,0.15)]',
+    glowActive: 'border-sky-300 text-sky-100 shadow-[0_0_20px_rgba(56,189,248,0.55),0_0_35px_rgba(56,189,248,0.3)] font-black scale-[1.01]',
   },
   enterprise: {
-    cardBg: 'bg-[#120c2b]',
-    borderColor: 'border-purple-900/80 hover:border-purple-500',
-    activeBorderColor: 'border-indigo-400 shadow-[0_0_24px_rgba(167,139,250,0.25)]',
-    ringColor: 'ring-1 ring-indigo-400/50',
-    badgeBg: 'bg-indigo-950/80',
-    badgeText: 'text-indigo-300',
-    badgeBorder: 'border-indigo-700',
-    btnActiveBg: 'bg-indigo-400 text-slate-950 font-black',
-    titleColor: 'text-purple-100',
+    border: 'border-amber-400',
+    text: 'text-amber-200',
+    glowInactive: 'border-amber-400/30 shadow-[0_0_8px_rgba(251,191,36,0.15)]',
+    glowActive: 'border-amber-300 text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.55),0_0_35px_rgba(251,191,36,0.3)] font-black scale-[1.01]',
   },
 };
 
@@ -242,6 +274,104 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isDownloadAppModalOpen, setIsDownloadAppModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
+  const [expandedPlan, setExpandedPlan] = useState<GestarianPlan | null>(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginConfirmPassword, setLoginConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoginSuccess, setIsLoginSuccess] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(true);
+
+  const handleDirectPlanAccess = (planId: GestarianPlan) => {
+    handleSelectPlanDirect(planId);
+    try {
+      localStorage.setItem('gestarian_auth_session', 'true');
+    } catch {}
+    onLoginSuccess(currentUser.email || 'usuario@gestarian.com');
+  };
+
+  const handleTogglePlanLogin = (planId: GestarianPlan) => {
+    handleSelectPlanDirect(planId);
+    if (expandedPlan === planId) {
+      setExpandedPlan(null);
+    } else {
+      setExpandedPlan(planId);
+      setLoginError(null);
+      setIsLoginSuccess(false);
+      setShowResetConfirm(false);
+      try {
+        const storedPass = localStorage.getItem('gestarian_auth_password');
+        setIsFirstTimeLogin(!storedPass || storedPass.trim().length === 0);
+        const storedEmail = localStorage.getItem('gestarian_auth_email');
+        if (storedEmail) {
+          setLoginEmail(storedEmail);
+        } else if (currentUser.email) {
+          setLoginEmail(currentUser.email);
+        }
+      } catch {
+        setIsFirstTimeLogin(true);
+      }
+    }
+  };
+
+  const handleInlineLoginSubmit = (e: React.FormEvent, planId: GestarianPlan) => {
+    e.preventDefault();
+    setLoginError(null);
+
+    const cleanEmail = loginEmail.trim().toLowerCase();
+    const cleanPass = loginPassword.trim();
+
+    if (!cleanEmail) {
+      setLoginError('Por favor, introduce un correo electrónico válido.');
+      return;
+    }
+
+    if (cleanPass.length < 3) {
+      setLoginError('La contraseña debe tener al menos 3 caracteres.');
+      return;
+    }
+
+    if (isFirstTimeLogin) {
+      if (cleanPass !== loginConfirmPassword.trim()) {
+        setLoginError('Las contraseñas no coinciden. Por favor, verifícalas.');
+        return;
+      }
+
+      try {
+        localStorage.setItem('gestarian_auth_password', cleanPass);
+        localStorage.setItem('gestarian_auth_email', cleanEmail);
+        localStorage.setItem('gestarian_auth_session', 'true');
+      } catch (err) {
+        console.error('Error al guardar credenciales:', err);
+      }
+
+      setIsLoginSuccess(true);
+      setTimeout(() => {
+        onLoginSuccess(cleanEmail);
+      }, 700);
+    } else {
+      const storedPass = localStorage.getItem('gestarian_auth_password') || '';
+      if (cleanPass !== storedPass) {
+        setLoginError('Contraseña incorrecta. Por favor, inténtalo de nuevo.');
+        return;
+      }
+
+      try {
+        localStorage.setItem('gestarian_auth_session', 'true');
+        localStorage.setItem('gestarian_auth_email', cleanEmail);
+      } catch (err) {
+        console.error('Error al guardar sesión:', err);
+      }
+
+      setIsLoginSuccess(true);
+      setTimeout(() => {
+        onLoginSuccess(cleanEmail);
+      }, 600);
+    }
+  };
+
   const [clientEmailInput, setClientEmailInput] = useState('');
   const [clientIdInput, setClientIdInput] = useState('');
   const [clientLoginError, setClientLoginError] = useState('');
@@ -310,7 +440,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const cleanId = clientIdInput.trim().toUpperCase().replace(/[\s-]/g, '');
 
     if (!cleanEmail && !cleanId) {
-      setClientLoginError('Por favor, introduce tu correo o tu DNI/CIF/Matrícula.');
+      setClientLoginError('Por favor, introduce tu correo y tu DNI o NIF/CIF.');
       return;
     }
 
@@ -366,8 +496,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div
-      className="relative w-screen h-screen shrink-0 snap-start bg-[#06080D] text-slate-100 overflow-y-auto overflow-x-hidden select-none"
       id="page-inicio"
+      className="relative w-screen h-[100dvh] max-h-[100dvh] shrink-0 snap-start bg-[#06080D] text-slate-100 overflow-y-auto overflow-x-hidden select-none"
     >
       {/* Fondo de Pantalla Personalizado si está habilitado en Configuración */}
       {currentUser.enableSystemWallpaper && (
@@ -389,53 +519,58 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* CONTENEDOR PRINCIPAL */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 flex flex-col gap-5 sm:gap-7">
+      <div className="relative z-10 w-full max-w-7xl landscape:max-w-none landscape:w-[99vw] 2xl:w-[98vw] mx-auto px-4 sm:px-6 lg:px-3 py-2 landscape:py-1 flex flex-col gap-2 landscape:gap-1 min-h-[95vh] justify-between">
         
         {/* =========================================================================
             ESTADO 1: USUARIO AUTENTICADO / HA ACCEDIDO CON SU CUENTA
            ========================================================================= */}
         {isAuthenticated ? (
-          <>
+          <div className="w-full flex flex-col justify-between flex-1">
             {/* CABECERA AUTENTICADA:
-                - Arriba a la izquierda: SOLO la versión (Lite, Quick, Pro o Enterprise), minimalista sin recuadro ni relleno.
-                - Arriba a la derecha: SOLO el nombre del usuario antes de la @, minimalista sin recuadro ni relleno.
+                - Arriba a la izquierda: la versión (Lite, Quick, Pro o Enterprise).
+                - Arriba a la derecha: el nombre del usuario antes de la @ con el botón de salir.
             */}
-            <header className="w-full flex items-center justify-between pt-1 pb-2">
-              {/* Arriba izquierda: Solo versión, minimalista, sin recuadro ni relleno */}
+            <header className="w-full flex items-center justify-between pt-1 pb-1 shrink-0">
               <div className="text-left">
                 <span className="text-sm sm:text-base font-bold tracking-wider text-slate-300 font-sans uppercase">
                   {activePlanConfig.label}
                 </span>
               </div>
 
-              {/* Arriba derecha: Solo nombre antes de @, minimalista, sin recuadro ni relleno */}
               <div className="flex items-center gap-2.5 text-right">
                 <span className="text-sm sm:text-base font-medium tracking-wide text-slate-300 font-sans">
                   {usernameBeforeAt}
                 </span>
                 <button
                   onClick={onLogout}
-                  className="text-slate-500 hover:text-rose-400 transition-colors p-1 cursor-pointer"
-                  title="Cerrar sesión"
-                  aria-label="Cerrar sesión"
+                  className="text-slate-400 hover:text-rose-400 transition-colors p-1 cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                  title="Salir (Redirigir a la landing page)"
                 >
                   <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Salir</span>
                 </button>
               </div>
             </header>
 
-            {/* A CONTINUACIÓN: LA HORA Y LA FECHA (Reloj Casio Vintage digital) */}
-            <section className="w-full flex flex-col items-center justify-center pt-1 pb-2">
-              <div className="w-full max-w-2xl mx-auto">
-                <CasioVintageClock 
-                  isLightBackground={false} 
-                  fiscalAddress={currentUser.fiscalAddress} 
-                />
+            {/* DEBAJO DE LA VERSIÓN Y EL USUARIO: HORA, FECHA Y GRADOS */}
+            <div className="w-full max-w-2xl mx-auto pt-1 pb-2 shrink-0">
+              <CasioVintageClock 
+                isLightBackground={false} 
+                fiscalAddress={currentUser.fiscalAddress} 
+              />
+            </div>
+
+            {/* GESTARIAN CENTRADO EN EL MEDIO */}
+            <section className="w-full flex flex-col items-center justify-center my-auto py-2 shrink-0">
+              <div className="text-center">
+                <h1 className="text-3xl sm:text-5xl font-extralight tracking-[0.35em] text-slate-200 uppercase font-sans">
+                  GESTARIAN
+                </h1>
               </div>
 
               {/* Avisos de presupuestos pendientes si existiesen */}
               {pendingBudgetReviews.length > 0 && (
-                <div className="w-full max-w-lg mx-auto space-y-2 mt-3">
+                <div className="w-full max-w-lg mx-auto space-y-2 mt-4">
                   {pendingBudgetReviews.map((budget) => (
                     <div
                       key={budget.id}
@@ -464,11 +599,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
               )}
             </section>
 
-            {/* EN EL PIÉ: LOS ICONOS CENTRADOS REPARTIÉNDOSE TODO EL ESPACIO UNIFORMEMENTE
-                (A los extremos la mitad del espacio que entre los iconos -> justify-around)
-                Incluye la campanita para Quick, Pro y Enterprise (rastreo de facturas/recibos).
-            */}
-            <footer className="w-full py-3 my-1">
+            {/* FOOTER: ICONOS DE LA VERSIÓN ACTIVA */}
+            <footer className="w-full py-3 mt-auto shrink-0">
               <div className="w-full max-w-xl mx-auto flex items-center justify-around px-2 sm:px-6">
                 
                 {/* 1. VERSIÓN QUICK */}
@@ -482,7 +614,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)] shrink-0"
                       title="Nueva Factura"
                     >
-                      <Calculator className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
+                      <SheetPlusFIcon className="w-6 h-6 text-emerald-400" />
                     </button>
 
                     <button
@@ -509,11 +641,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       <PieChart className="w-6 h-6 text-violet-400" strokeWidth={1.5} />
                     </button>
 
-                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
                     <button
                       onClick={handleBellFooterClick}
                       className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
-                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                      title="Rastreo de Facturas"
                     >
                       <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
                       {totalDetectedAlerts > 0 && (
@@ -521,14 +652,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           {totalDetectedAlerts}
                         </span>
                       )}
-                    </button>
-
-                    <button
-                      onClick={() => onNavigateSection?.('page-configuracion')}
-                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-slate-500 shadow-[0_0_12px_rgba(156,163,175,0.25)] shrink-0"
-                      title="Configuración"
-                    >
-                      <Settings className="w-6 h-6 text-slate-300" strokeWidth={1.5} />
                     </button>
                   </>
                 )}
@@ -542,7 +665,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         else onNavigateSection?.('page-presupuestos');
                       }}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.35)] shrink-0"
-                      title="Crear Presupuesto A4 Directo"
+                      title="Crear Presupuesto"
                     >
                       <FileText className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
                     </button>
@@ -553,7 +676,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         else onNavigateSection?.('page-facturacion');
                       }}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.35)] shrink-0"
-                      title="Crear Factura A4 Directa"
+                      title="Crear Factura"
                     >
                       <Calculator className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
                     </button>
@@ -574,26 +697,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenScanner}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)] shrink-0"
-                      title="Escanear Matrícula OCR ALPR"
+                      title="Escanear Matrícula OCR"
                     >
                       <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
                     </button>
 
                     <button
-                      onClick={() => {
-                        if (onOpenEnterpriseAeat) onOpenEnterpriseAeat();
-                        else onNavigateSection?.('page-configuracion');
-                      }}
-                      className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.35)] shrink-0"
-                      title="Sede Electrónica AEAT"
-                    >
-                      <Building2 className="w-6 h-6 text-indigo-400" strokeWidth={1.4} />
-                    </button>
-
-                    <button
                       onClick={onOpenMenu}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)] shrink-0"
-                      title="Menú de Secciones (+)"
+                      title="Menú"
                     >
                       <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
                     </button>
@@ -601,7 +713,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenMetisChat}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0"
-                      title="Asistente Metis IA"
+                      title="Metis IA"
                     >
                       <span className="font-bold text-lg text-amber-400">AI</span>
                     </button>
@@ -609,16 +721,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenVoiceAssistant}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)] shrink-0"
-                      title="Voz y Conversación Bidireccional"
+                      title="Voz"
                     >
                       <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
                     </button>
 
-                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
                     <button
                       onClick={handleBellFooterClick}
                       className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
-                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                      title="Avisos"
                     >
                       <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
                       {totalDetectedAlerts > 0 && (
@@ -636,7 +747,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenScanner}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.35)] shrink-0"
-                      title="Escanear Matrícula OCR ALPR"
+                      title="Escanear Matrícula OCR"
                     >
                       <Camera className="w-6 h-6 text-emerald-400" strokeWidth={1.4} />
                     </button>
@@ -644,7 +755,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenMenu}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.35)] shrink-0"
-                      title="Menú de Secciones (+)"
+                      title="Menú"
                     >
                       <Plus className="w-6 h-6 text-pink-400" strokeWidth={2} />
                     </button>
@@ -652,7 +763,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenMetisChat}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)] shrink-0"
-                      title="Asistente Metis IA"
+                      title="Metis IA"
                     >
                       <span className="font-bold text-lg text-amber-400">AI</span>
                     </button>
@@ -660,16 +771,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <button
                       onClick={onOpenVoiceAssistant}
                       className="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)] shrink-0"
-                      title="Voz y Conversación Bidireccional"
+                      title="Voz"
                     >
                       <BidirectionalWavesIcon className="w-6 h-6 text-purple-400" />
                     </button>
 
-                    {/* Campanita en el footer para rastreo de facturas / recibos detectados */}
                     <button
                       onClick={handleBellFooterClick}
                       className="relative w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer text-white border border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.35)] shrink-0"
-                      title="Rastreo de Facturas: Avisa cuando hay facturas o recibos detectados"
+                      title="Avisos"
                     >
                       <Bell className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
                       {totalDetectedAlerts > 0 && (
@@ -683,430 +793,363 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               </div>
             </footer>
-
-            {/* A CONTINUACIÓN HACIA ABAJO EN MÓVIL PORTRAIT HACIENDO SCROLL:
-                "GESTARIAN" centrado, y después las versiones y planes
-            */}
-            <section className="w-full pt-6 pb-12 border-t border-slate-900">
-              <div className="text-center max-w-2xl mx-auto mb-6">
-                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.25em] text-white">
-                  GESTARIAN
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1 font-light tracking-wider">
-                  Versiones y Planes Asistidos
-                </p>
-              </div>
-
-              {/* LAS CUATRO TARJETAS DE VERSIONES CON RELLENO DE TONALIDADES MUY OSCURAS CONTRASTADAS */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5 w-full items-stretch">
-                {PLANS_CONFIG.map((plan) => {
-                  const isCurrent = plan.id === currentPlan;
-                  const theme = PLAN_CARD_THEMES[plan.id];
-                  return (
-                    <div 
-                      key={plan.id}
-                      className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 border ${theme.cardBg} ${
-                        isCurrent 
-                          ? `${theme.activeBorderColor} ${theme.ringColor}` 
-                          : `${theme.borderColor} shadow-xl`
-                      }`}
-                    >
-                      <div>
-                        {/* Header de la tarjeta */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center shrink-0">
-                            {PLAN_OUTLINE_ICONS[plan.id]}
-                          </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
-                            {plan.badge}
-                          </span>
-                        </div>
-
-                        <h3 className={`text-2xl font-black tracking-wider uppercase mb-1 ${theme.titleColor}`}>
-                          {plan.label}
-                        </h3>
-                        
-                        <p className="text-xs text-slate-300 leading-relaxed min-h-[48px] mb-4 font-light">
-                          {plan.desc}
-                        </p>
-
-                        {/* Características */}
-                        <ul className="space-y-2 mb-4 border-t border-white/5 pt-3">
-                          {plan.features.map((feat, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300 font-light">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                              <span className="leading-snug">{feat}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Botón de selección */}
-                      <div className="pt-3 border-t border-white/5 mt-auto">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectPlanDirect(plan.id)}
-                          className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                            isCurrent
-                              ? theme.btnActiveBg
-                              : 'bg-slate-950/70 hover:bg-slate-900 text-slate-200 border-slate-700 hover:border-slate-500'
-                          }`}
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>{isCurrent ? 'Versión Activa' : `Entrar a ${plan.label}`}</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          </>
+          </div>
         ) : (
           /* =========================================================================
-             ESTADO 2: NO SE HA ACCEDIDO (PANTALLA DE INICIO SIN LOGIN)
-             Requisitos:
-             - GESTARIAN minimalista centrado
-             - Debajo centrado: GESTIÓN ADMINISTRATIVA ASISTIDA como subtítulo
-             - Después las cuatro tarjetas seguidas del acceso al área de cliente con sus
-               botones de registro, login, más información y descarga de la aplicación.
-             - Eliminamos el footer donde tenemos el botón de volver y de la casita.
+             ESTADO 2: LANDING PAGE (NO AUTENTICADO)
+             - Optimizada para landscape en una única pantalla
              ========================================================================= */
-          <>
-            {/* 1. TÍTULO GESTARIAN MINIMALISTA Y SUBTÍTULO CENTRADO */}
-            <header className="w-full text-center pt-3 pb-2">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[0.25em] text-white uppercase font-sans">
+          <div className="w-full flex flex-col justify-between min-h-[92vh] landscape:min-h-[96vh] py-4">
+            
+            {/* SUPERIOR: GESTARIAN Y VERSIONES Y PLANES ASISTIDOS */}
+            <div className="w-full flex flex-col items-center justify-center text-center py-6 sm:py-10 landscape:py-6">
+              <h1 className="text-3xl sm:text-5xl lg:landscape:text-4xl xl:landscape:text-5xl font-extralight tracking-[0.35em] text-slate-200 uppercase font-sans">
                 GESTARIAN
               </h1>
-              <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] text-slate-400 uppercase mt-2">
-                GESTIÓN ADMINISTRATIVA ASISTIDA
+              <p className="text-[10px] sm:text-xs landscape:lg:text-[10px] font-light tracking-[0.30em] text-slate-400 uppercase mt-2 sm:mt-3 landscape:mt-2">
+                Versiones y Planes Asistidos
               </p>
-            </header>
+            </div>
 
-            {/* 2. LAS CUATRO TARJETAS DE VERSIONES CON TONOS OSCUROS CONTRASTADOS */}
-            <section className="w-full pt-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5 w-full items-stretch">
+            {/* TARJETAS INFORMATIVAS DE LAS VERSIONES ESTIRADAS */}
+            <section className="w-full py-1 border-t border-slate-900 flex-1 flex flex-col justify-center">
+              {/* 4 Botones en la misma línea repartiéndose el espacio equitativamente */}
+              <div className="w-full max-w-5xl mx-auto px-2 mb-2 landscape:mb-1 flex items-center gap-2 sm:gap-3">
                 {PLANS_CONFIG.map((plan) => {
+                  const isActive = currentPlan === plan.id || expandedPlan === plan.id;
+                  const glowStyle = PLAN_BUTTON_GLOWS[plan.id];
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => handleDirectPlanAccess(plan.id)}
+                      className={`flex-1 py-2 sm:py-2.5 px-2 rounded-xl bg-transparent border transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5 text-xs sm:text-sm landscape:lg:text-xs font-bold uppercase tracking-wider ${glowStyle.border} ${glowStyle.text} ${
+                        isActive ? glowStyle.glowActive : glowStyle.glowInactive + ' hover:opacity-90'
+                      }`}
+                      title={`Acceder a ${plan.label}`}
+                    >
+                      <span className="truncate">{plan.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="w-[95%] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 landscape:grid-cols-2 lg:landscape:grid-cols-4 gap-4 xl:gap-5 h-full items-stretch landscape:px-1 mb-4">
+                {PLANS_CONFIG.map((plan, index) => {
                   const isCurrent = plan.id === currentPlan;
                   const theme = PLAN_CARD_THEMES[plan.id];
                   return (
-                    <div 
+                    <motion.div 
                       key={plan.id}
-                      className={`relative rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 border ${theme.cardBg} ${
+                      initial={{ opacity: 0, y: 70 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false, margin: "-40px" }}
+                      transition={{ duration: 0.6, delay: index * 0.1, ease: "easeOut" }}
+                      className={`relative rounded-2xl p-4 sm:p-5 landscape:p-3.5 flex flex-col justify-between transition-all duration-300 border h-full ${theme.cardBg} ${
                         isCurrent 
                           ? `${theme.activeBorderColor} ${theme.ringColor}` 
                           : `${theme.borderColor} shadow-xl`
                       }`}
                     >
-                      <div>
-                        {/* Cabecera de la tarjeta */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center shrink-0">
-                            {PLAN_OUTLINE_ICONS[plan.id]}
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          {/* Cabecera de la tarjeta */}
+                          <div className="flex items-center justify-between mb-2 landscape:mb-1">
+                            <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-center shrink-0">
+                              {PLAN_OUTLINE_ICONS[plan.id]}
+                            </div>
+                            <span className={`text-[10px] lg:landscape:text-[10px] xl:landscape:text-xs 2xl:landscape:text-sm font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
+                              {plan.badge}
+                            </span>
                           </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`}>
-                            {plan.badge}
-                          </span>
+
+                          <h3 className={`text-xl sm:text-2xl lg:landscape:text-2xl xl:landscape:text-3xl 2xl:landscape:text-4xl font-black tracking-wider uppercase mb-2 ${theme.titleColor}`}>
+                            {plan.label}
+                          </h3>
+                          
+                          <p className="text-sm lg:landscape:text-sm xl:landscape:text-lg 2xl:landscape:text-xl text-slate-200 leading-relaxed landscape:leading-normal mb-3 font-normal">
+                            {plan.desc}
+                          </p>
+
+                          <ul className="space-y-2 landscape:space-y-1.5 mb-3 border-t border-white/10 pt-2">
+                            {plan.features.map((feat, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-sm lg:landscape:text-xs xl:landscape:text-base 2xl:landscape:text-lg text-slate-200 font-normal">
+                                <Check className="w-4 h-4 lg:landscape:w-4 lg:landscape:h-4 xl:landscape:w-5 xl:landscape:h-5 text-emerald-400 shrink-0 mt-0.5" />
+                                <span className="leading-snug">{feat}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
 
-                        <h3 className={`text-2xl font-black tracking-wider uppercase mb-1 ${theme.titleColor}`}>
-                          {plan.label}
-                        </h3>
-                        
-                        <p className="text-xs text-slate-300 leading-relaxed min-h-[48px] mb-4 font-light">
-                          {plan.desc}
-                        </p>
-
-                        {/* Características de cada versión */}
-                        <ul className="space-y-2 mb-4 border-t border-white/5 pt-3">
-                          {plan.features.map((feat, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-xs text-slate-300 font-light">
-                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                              <span className="leading-snug">{feat}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="space-y-2 pt-2 border-t border-white/5 mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleDirectPlanAccess(plan.id)}
+                            className={`w-full py-2.5 landscape:py-2 px-3 rounded-xl text-xs lg:landscape:text-xs xl:landscape:text-sm 2xl:landscape:text-base font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${theme.btnActiveBg}`}
+                          >
+                            <LogIn className="w-3.5 h-3.5 lg:landscape:w-3.5 lg:landscape:h-3.5 xl:landscape:w-4 xl:landscape:h-4" />
+                            <span>Acceder a {plan.label}</span>
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Acciones de la tarjeta */}
-                      <div className="space-y-2 pt-3 border-t border-white/5 mt-auto">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleSelectPlanDirect(plan.id);
-                            setIsLoginModalOpen(true);
-                          }}
-                          className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                            isCurrent
-                              ? theme.btnActiveBg
-                              : 'bg-slate-950/70 hover:bg-slate-900 text-slate-200 border-slate-700 hover:border-slate-500'
-                          }`}
-                        >
-                          <LogIn className="w-3.5 h-3.5" />
-                          <span>Acceder a {plan.label}</span>
-                        </button>
-                      </div>
-                    </div>
+                      {/* DESPLEGABLE FLUIDO POR DEBAJO DE LA TARJETA */}
+                      <AnimatePresence>
+                        {expandedPlan === plan.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 mt-3 border-t border-white/10 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                                  <Lock className="w-3.5 h-3.5 text-sky-400" />
+                                  <span>Acceso {plan.label}</span>
+                                </span>
+                                {isFirstTimeLogin && (
+                                  <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30 rounded-full">
+                                    Primera vez
+                                  </span>
+                                )}
+                              </div>
+
+                              {loginError && (
+                                <div className="p-2.5 bg-rose-500/20 border border-rose-500/40 rounded-xl text-[11px] text-rose-300 font-medium">
+                                  {loginError}
+                                </div>
+                              )}
+
+                              {showResetConfirm ? (
+                                <div className="p-3 bg-slate-950/90 border border-amber-500/40 rounded-xl space-y-2 text-center">
+                                  <p className="text-[11px] text-slate-300">¿Restablecer contraseña de acceso?</p>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowResetConfirm(false)}
+                                      className="px-2.5 py-1 text-[10px] text-slate-400 hover:text-white bg-slate-800 rounded-lg"
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        localStorage.removeItem('gestarian_auth_password');
+                                        localStorage.removeItem('gestarian_auth_session');
+                                        setIsFirstTimeLogin(true);
+                                        setLoginPassword('');
+                                        setLoginConfirmPassword('');
+                                        setShowResetConfirm(false);
+                                        setLoginError(null);
+                                      }}
+                                      className="px-2.5 py-1 text-[10px] font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg"
+                                    >
+                                      Restablecer
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <form onSubmit={(e) => handleInlineLoginSubmit(e, plan.id)} className="space-y-3">
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                                      Correo Electrónico
+                                    </label>
+                                    <input
+                                      type="email"
+                                      required
+                                      value={loginEmail}
+                                      onChange={(e) => setLoginEmail(e.target.value)}
+                                      placeholder="ejemplo@correo.com"
+                                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                                        {isFirstTimeLogin ? 'Crea Contraseña' : 'Contraseña'}
+                                      </label>
+                                      {!isFirstTimeLogin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowResetConfirm(true)}
+                                          className="text-[10px] text-sky-400 hover:underline"
+                                        >
+                                          ¿Olvidaste clave?
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="relative flex items-center">
+                                      <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={loginPassword}
+                                        onChange={(e) => setLoginPassword(e.target.value)}
+                                        placeholder={isFirstTimeLogin ? 'Mínimo 3 caracteres' : '••••••••'}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 pr-9 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-2.5 text-slate-400 hover:text-white"
+                                      >
+                                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {isFirstTimeLogin && (
+                                    <div>
+                                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                                        Confirmar Contraseña
+                                      </label>
+                                      <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={loginConfirmPassword}
+                                        onChange={(e) => setLoginConfirmPassword(e.target.value)}
+                                        placeholder="Repite la contraseña"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                                      />
+                                    </div>
+                                  )}
+
+                                  <button
+                                    type="submit"
+                                    disabled={isLoginSuccess}
+                                    className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 ${
+                                      isLoginSuccess
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-black'
+                                    }`}
+                                  >
+                                    {isLoginSuccess ? (
+                                      <>
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Entrando...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <LogIn className="w-3.5 h-3.5" />
+                                        <span>Entrar a {plan.label}</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   );
                 })}
               </div>
             </section>
 
-            {/* 3. ACCESO AL ÁREA DE CLIENTE CON SUS 4 BOTONES:
-                - Registro
-                - Login
-                - Más información
-                - Descarga de la aplicación
-            */}
-            <section className="w-full pt-4 pb-12">
-              <div className="w-full bg-[#0a101b] border border-slate-800 rounded-3xl p-6 sm:p-8 text-white flex flex-col items-center justify-center gap-6 shadow-2xl">
-                
-                <div className="text-center max-w-2xl">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-400/30 text-sky-300 text-xs font-bold uppercase tracking-wider mb-2">
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Área de Clientes y Gestión Asistida</span>
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
-                    Acceso al Área de Cliente
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-1 font-light leading-relaxed">
-                    Gestiona tu actividad profesional, emite facturas y presupuestos con Veri*Factu oficial o consulta el estado de reparación de tu vehículo en tiempo real.
-                  </p>
-                </div>
-
-                {/* Los 4 Botones Requeridos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full max-w-4xl">
-                  
-                  {/* Botón 1: Registro */}
-                  <button
-                    id="btn-inicio-registro"
-                    type="button"
-                    onClick={() => {
-                      if (onOpenNewUser) {
-                        onOpenNewUser();
-                      } else {
-                        setIsLoginModalOpen(true);
-                      }
-                    }}
-                    className="py-3 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/25 hover:scale-[1.02] active:scale-95"
-                    title="Crear nueva cuenta / Registro de empresa o autónomo"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Registro</span>
-                  </button>
-
-                  {/* Botón 2: Login */}
-                  <button
-                    id="btn-inicio-login"
-                    type="button"
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-sky-400/50 text-sky-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
-                    title="Iniciar sesión con tu cuenta"
-                  >
-                    <LogIn className="w-4 h-4 text-sky-400" />
-                    <span>Login</span>
-                  </button>
-
-                  {/* Botón 3: Más Información */}
-                  <button
-                    id="btn-inicio-mas-info"
-                    type="button"
-                    onClick={() => setIsMoreInfoModalOpen(true)}
-                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
-                    title="Análisis exhaustivo y comparativa de cada versión"
-                  >
-                    <Info className="w-4 h-4 text-indigo-400" />
-                    <span>Más Información</span>
-                  </button>
-
-                  {/* Botón 4: Descarga de la Aplicación */}
-                  <button
-                    id="btn-inicio-descarga-app"
-                    type="button"
-                    onClick={() => setIsDownloadAppModalOpen(true)}
-                    className="py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
-                    title="Descargar e instalar la aplicación en móvil o PC"
-                  >
-                    <Download className="w-4 h-4 text-emerald-400" />
-                    <span>Descarga de la App</span>
-                  </button>
-
-                </div>
-
-                {/* Acceso para clientes de taller (por DNI/CIF o matrícula) */}
-                <div className="pt-4 border-t border-slate-800/80 w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-                  <span>¿Eres cliente del taller y quieres consultar tu vehículo?</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsClientLoginModalOpen(true)}
-                    className="text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider underline cursor-pointer"
-                  >
-                    Acceder con Matrícula o DNI →
-                  </button>
-                </div>
-
-              </div>
+            {/* AL FINAL: UN BOTÓN MINIMALISTA DE ACCESO AL ÁREA DE CLIENTE */}
+            <section className="w-full pt-4 pb-12 landscape:py-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setIsClientLoginModalOpen(true)}
+                className="py-3.5 px-7 rounded-full bg-slate-900/90 hover:bg-slate-800 text-sky-400 text-xs sm:text-sm font-bold uppercase tracking-[0.2em] transition-all flex items-center gap-3 cursor-pointer border border-sky-500/30 hover:border-sky-400/60 shadow-xl shadow-sky-500/10 hover:scale-105 active:scale-95"
+                title="Acceso al Área de Cliente"
+              >
+                <Users className="w-4 h-4 text-sky-400" />
+                <span>Acceso al Área de Cliente</span>
+              </button>
             </section>
-          </>
+          </div>
         )}
 
       </div>
 
-      {/* =========================================================================
-          MODAL: MÁS INFORMACIÓN (ANÁLISIS EXHAUSTIVO DE VERSIONES Y NORMATIVA)
-         ========================================================================= */}
-      <MoreInfoModal 
-        isOpen={isMoreInfoModalOpen}
-        onClose={() => setIsMoreInfoModalOpen(false)}
-        onSelectPlan={(p) => {
-          onSelectPlan?.(p);
-          setIsMoreInfoModalOpen(false);
-        }}
-        currentPlan={currentPlan}
-      />
+      {/* MODALES DE ACCESO Y MÁS INFORMACIÓN */}
+      <AnimatePresence>
+        {isMoreInfoModalOpen && (
+          <MoreInfoModal
+            isOpen={isMoreInfoModalOpen}
+            onClose={() => setIsMoreInfoModalOpen(false)}
+            onSelectPlan={(plan) => {
+              handleSelectPlanDirect(plan);
+              setIsMoreInfoModalOpen(false);
+            }}
+            currentPlan={currentPlan}
+          />
+        )}
 
-      {/* =========================================================================
-          MODAL: DESCARGA DE LA APLICACIÓN (PWA / MÓVIL / ESCRITORIO)
-         ========================================================================= */}
-      <DownloadAppModal 
-        isOpen={isDownloadAppModalOpen}
-        onClose={() => setIsDownloadAppModalOpen(false)}
-        deferredPrompt={deferredPrompt}
-      />
+        {isDownloadAppModalOpen && (
+          <DownloadAppModal
+            isOpen={isDownloadAppModalOpen}
+            onClose={() => setIsDownloadAppModalOpen(false)}
+            deferredPrompt={deferredPrompt}
+          />
+        )}
 
-      {/* =========================================================================
-          MODAL DE ACCESO PARA CLIENTES (Email o DNI/CIF/Matrícula)
-         ========================================================================= */}
-      {isClientLoginModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-7 max-w-md w-full text-white relative shadow-2xl animate-in zoom-in-95">
-            <button
-              onClick={() => {
-                setIsClientLoginModalOpen(false);
-                setClientLoginError('');
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 text-sm cursor-pointer"
+        {/* MODAL DE LOGIN DE CLIENTE / PORTAL DE CLIENTES (Email y DNI o NIF/CIF) */}
+        {isClientLoginModalOpen && (
+          <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#0b1329] border border-sky-500/30 w-full max-w-md rounded-3xl p-6 text-white shadow-2xl relative"
             >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-2xl bg-indigo-500/15 border border-indigo-400/40 text-indigo-400">
-                <Globe className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold uppercase tracking-wider text-white">
-                  Área de Clientes
-                </h3>
-                <p className="text-xs text-indigo-300 font-medium">Portal Web Gestarian</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed mb-5 font-light">
-              Introduce tu correo electrónico o tu DNI/CIF o la matrícula de tu vehículo para acceder a tu historial de reparaciones y presupuestos.
-            </p>
-
-            <form onSubmit={handleClientLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Correo Electrónico (opcional si pones DNI o Matrícula)
-                </label>
-                <input
-                  type="email"
-                  value={clientEmailInput}
-                  onChange={(e) => setClientEmailInput(e.target.value)}
-                  placeholder="ejemplo@correo.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm focus:border-indigo-400 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  DNI / CIF o Matrícula del Vehículo
-                </label>
-                <input
-                  type="text"
-                  value={clientIdInput}
-                  onChange={(e) => setClientIdInput(e.target.value.toUpperCase())}
-                  placeholder="ej. 12345678Z ó 4582KMB"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 text-sm uppercase focus:border-indigo-400 outline-none"
-                />
-              </div>
-
-              {clientLoginError && (
-                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{clientLoginError}</span>
-                </div>
-              )}
-
               <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/30"
+                onClick={() => setIsClientLoginModalOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full bg-slate-900/80"
               >
-                <ArrowRight className="w-4 h-4" />
-                <span>Acceder al Portal de Clientes</span>
+                <X className="w-5 h-5" />
               </button>
-            </form>
 
-            {/* Acceso rápido a clientes de prueba */}
-            {defaultSampleClients.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-slate-800">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Acceso Rápido de Prueba (Clientes del Taller):
-                </p>
-                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                  {defaultSampleClients.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        if (onClientLogin) {
-                          onClientLogin(c);
-                        }
-                        setIsClientLoginModalOpen(false);
-                      }}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left text-xs text-slate-300 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <div className="truncate">
-                        <span className="font-semibold">{c.name}</span>
-                        <span className="text-[10px] text-slate-400 ml-2">
-                          {c.cif || c.plates?.[0] || c.email}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-indigo-400 shrink-0 font-bold">Entrar →</span>
-                    </button>
-                  ))}
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/40 text-sky-400 flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-6 h-6" />
                 </div>
+                <h3 className="text-lg font-black uppercase tracking-wider text-white">Acceso al Área de Cliente</h3>
+                <p className="text-xs text-slate-400 mt-1">Introduce tu correo electrónico y tu DNI o NIF/CIF</p>
               </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* =========================================================================
-          MODAL DE INICIO DE SESIÓN / ACCESO DE USUARIOS REGISTRADOS
-         ========================================================================= */}
-      {isLoginModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm sm:max-w-md mx-auto animate-in zoom-in-95">
-            <button
-              onClick={() => setIsLoginModalOpen(false)}
-              className="absolute -top-10 right-0 text-white/80 hover:text-white text-xs font-bold bg-slate-800/80 px-3 py-1.5 rounded-xl border border-white/20 cursor-pointer z-50 shadow-lg"
-            >
-              Cerrar ✕
-            </button>
-            <LoginCard 
-              currentUser={currentUser}
-              onLoginSuccess={(email) => {
-                onLoginSuccess(email);
-                setIsLoginModalOpen(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
+              <form onSubmit={handleClientLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Correo electrónico (Email)</label>
+                  <input
+                    type="email"
+                    value={clientEmailInput}
+                    onChange={(e) => setClientEmailInput(e.target.value)}
+                    placeholder="ejemplo@correo.com"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
 
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">DNI o NIF/CIF</label>
+                  <input
+                    type="text"
+                    value={clientIdInput}
+                    onChange={(e) => setClientIdInput(e.target.value)}
+                    placeholder="Ej. 12345678Z o B12345678"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 uppercase font-mono"
+                  />
+                </div>
+
+                {clientLoginError && (
+                  <p className="text-xs text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-xl">{clientLoginError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-sky-500/25 cursor-pointer mt-2"
+                >
+                  Acceder
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

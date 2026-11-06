@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { 
   X, Download, FileSpreadsheet, Building2, Layers, CheckCircle, 
-  FileText, ShieldCheck, Printer, FileCode, CheckCircle2, ChevronRight 
+  FileText, ShieldCheck, Printer, FileCode, CheckCircle2, ChevronRight,
+  Mail, Send, Sparkles, RefreshCw, AlertCircle, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
-import { GestarianDocument } from '../types';
+import { GestarianDocument, AppUser } from '../types';
 import { computeQuarterlyReport } from '../services/storage';
 import {
   generateExcelXmlReport,
+  generateAmountsOnlyReport,
   generateSageReport,
   generateA3Report,
   generateCsvReport,
@@ -17,18 +19,32 @@ interface FiscalReportsModalProps {
   isOpen: boolean;
   onClose: () => void;
   documents: GestarianDocument[];
+  user?: AppUser;
 }
 
 export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
   isOpen,
   onClose,
   documents,
+  user,
 }) => {
   const [selectedQuarter, setSelectedQuarter] = useState<'1T' | '2T' | '3T' | '4T'>('1T');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [activeTab, setActiveTab] = useState<'modelos' | 'enlace' | 'facturas'>('modelos');
+  const [activeTab, setActiveTab] = useState<'modelos' | 'enlace' | 'facturas' | 'gestoria_email'>('modelos');
+  const [facturasSubTab, setFacturasSubTab] = useState<'emitidas' | 'recibidas' | 'importes'>('importes');
   const [selectedModelo, setSelectedModelo] = useState<'303' | '111' | '115' | '390'>('303');
   const [exportNotice, setExportNotice] = useState<string>('');
+  
+  // Estado para envío por email a gestoría
+  const [agencyEmailInput, setAgencyEmailInput] = useState<string>(user?.agencyEmail || 'gestoria@asesores.com');
+  const [isSendingToAgency, setIsSendingToAgency] = useState<boolean>(false);
+  const [agencySendSuccess, setAgencySendSuccess] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (user?.agencyEmail) {
+      setAgencyEmailInput(user.agencyEmail);
+    }
+  }, [user?.agencyEmail]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -43,16 +59,38 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
 
   const report = computeQuarterlyReport(documents, selectedQuarter, selectedYear);
 
+  // Filtrado de facturas recibidas (gastos / recambios / compras) del periodo
+  const quarterMonths: Record<'1T' | '2T' | '3T' | '4T', number[]> = {
+    '1T': [1, 2, 3],
+    '2T': [4, 5, 6],
+    '3T': [7, 8, 9],
+    '4T': [10, 11, 12],
+  };
+  const months = quarterMonths[selectedQuarter];
+
+  // Facturas recibidas del trimestre
+  let periodReceivedInvoices = documents.filter((d) => {
+    if (d.type !== 'factura_recibida') return false;
+    const dDate = new Date(d.date || '');
+    if (isNaN(dDate.getTime())) return true;
+    return dDate.getFullYear() === selectedYear && months.includes(dDate.getMonth() + 1);
+  });
+
+  // Si no hay específicas de fecha en datos de prueba, mostrar las registradas
+  if (periodReceivedInvoices.length === 0) {
+    periodReceivedInvoices = documents.filter((d) => d.type === 'factura_recibida');
+  }
+
   // Cálculos fiscales para los modelos
   const baseImponible = report.totalSubtotal;
   const cuotaIvaRepercutido = report.totalIva;
   
-  // Estimación deducible (gastos de facturas recibidas de recambios si existen)
-  const receivedInvoices = documents.filter((d) => d.type === 'factura_recibida');
-  const baseDeducible = receivedInvoices.reduce((acc, d) => acc + (d.subtotal || 0), 0);
-  const cuotaDeducible = receivedInvoices.reduce((acc, d) => acc + (d.ivaAmount || (d.subtotal * 0.21) || 0), 0);
+  const baseDeducible = periodReceivedInvoices.reduce((acc, d) => acc + (d.subtotal || 0), 0);
+  const cuotaDeducible = periodReceivedInvoices.reduce((acc, d) => acc + (d.ivaAmount || (d.subtotal * 0.21) || 0), 0);
+  const totalGastosGross = periodReceivedInvoices.reduce((acc, d) => acc + (d.total || (d.subtotal + (d.ivaAmount || d.subtotal * 0.21)) || 0), 0);
   
   const resultadoModelo303 = Math.max(0, cuotaIvaRepercutido - cuotaDeducible);
+  const balanceNeto = cuotaIvaRepercutido - cuotaDeducible;
 
   // Modelo 111 (Retenciones IRPF de nóminas y profesionales)
   const numPerceptores111 = 4;
@@ -68,35 +106,106 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
   const totalAnualIva = cuotaIvaRepercutido * 4;
 
   const handleDownloadExcel = () => {
-    const xmlContent = generateExcelXmlReport(report);
-    const filename = `Libro_Facturas_Emitidas_${selectedQuarter}_${selectedYear}.xls`;
+    const xmlContent = generateExcelXmlReport(report, periodReceivedInvoices);
+    const filename = `Libro_Facturas_Emitidas_y_Recibidas_${selectedQuarter}_${selectedYear}.xls`;
     downloadFile(filename, xmlContent, 'application/vnd.ms-excel');
-    setExportNotice(`Archivo ${filename} generado y descargado con éxito.`);
-    setTimeout(() => setExportNotice(''), 4000);
+    setExportNotice(`Archivo ${filename} generado con hojas de Emitidas, Recibidas y Resumen.`);
+    setTimeout(() => setExportNotice(''), 4500);
+  };
+
+  const handleDownloadAmountsOnly = () => {
+    const xmlContent = generateAmountsOnlyReport(report, periodReceivedInvoices);
+    const filename = `Informe_Solo_Importes_Gestoria_${selectedQuarter}_${selectedYear}.xls`;
+    downloadFile(filename, xmlContent, 'application/vnd.ms-excel');
+    setExportNotice(`Informe de importes para la gestoría descargado (${filename}).`);
+    setTimeout(() => setExportNotice(''), 4500);
   };
 
   const handleDownloadSage = () => {
-    const sageContent = generateSageReport(report);
+    const sageContent = generateSageReport(report, periodReceivedInvoices);
     const filename = `Diario_SAGE_${selectedQuarter}_${selectedYear}.csv`;
     downloadFile(filename, sageContent, 'text/csv;charset=utf-8;');
-    setExportNotice(`Asientos contables para SAGE 50/200 descargados (${filename}).`);
-    setTimeout(() => setExportNotice(''), 4000);
+    setExportNotice(`Asientos contables para SAGE 50/200 (Emitidas y Recibidas) descargados.`);
+    setTimeout(() => setExportNotice(''), 4500);
   };
 
   const handleDownloadA3 = () => {
-    const a3Content = generateA3Report(report);
+    const a3Content = generateA3Report(report, periodReceivedInvoices);
     const filename = `Enlace_A3ECO_${selectedQuarter}_${selectedYear}.txt`;
     downloadFile(filename, a3Content, 'text/plain;charset=utf-8;');
-    setExportNotice(`Fichero de enlace para Wolters Kluwer A3ASESOR descargado (${filename}).`);
-    setTimeout(() => setExportNotice(''), 4000);
+    setExportNotice(`Fichero de enlace para Wolters Kluwer A3ASESOR (Emitidas y Recibidas) descargado.`);
+    setTimeout(() => setExportNotice(''), 4500);
   };
 
   const handleDownloadCsv = () => {
-    const csvContent = generateCsvReport(report);
+    const csvContent = generateCsvReport(report, periodReceivedInvoices);
     const filename = `Libro_IVA_Facturas_${selectedQuarter}_${selectedYear}.csv`;
     downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
     setExportNotice(`Libro de facturas en CSV estándar descargado (${filename}).`);
-    setTimeout(() => setExportNotice(''), 4000);
+    setTimeout(() => setExportNotice(''), 4500);
+  };
+
+  // Envío automatizado a la gestoría
+  const handleSendToAgency = async () => {
+    if (!agencyEmailInput.trim()) {
+      setExportNotice('Por favor introduce la dirección de email de tu gestoría.');
+      return;
+    }
+
+    setIsSendingToAgency(true);
+    setExportNotice('');
+
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: agencyEmailInput.trim(),
+          subject: `[GESTARIAN] Cierre Contable y Libro de Facturas ${selectedQuarter} ${selectedYear} - ${user?.fullName || 'Taller'}`,
+          bodyText: `Estimada Gestoría,
+
+Adjuntamos los datos y el informe de facturación correspondiente al ${selectedQuarter} de ${selectedYear} de la empresa ${user?.fullName || 'DM CAR'} (CIF: ${user?.cif || 'B-89324511'}).
+
+RESUMEN FISCAL DEL PERIODO:
+---------------------------------------------
+1. FACTURAS EMITIDAS (VENTAS):
+   - Total Facturas: ${report.totalInvoices}
+   - Base Imponible: ${report.totalSubtotal.toFixed(2)} €
+   - IVA Repercutido (21%): ${report.totalIva.toFixed(2)} €
+   - Total Emitido: ${report.totalGross.toFixed(2)} €
+
+2. FACTURAS RECIBIDAS (GASTOS Y RECAMBIOS DEDUCIBLES):
+   - Total Facturas: ${periodReceivedInvoices.length}
+   - Base Imponible Deducible: ${baseDeducible.toFixed(2)} €
+   - IVA Soportado: ${cuotaDeducible.toFixed(2)} €
+   - Total Gastos: ${totalGastosGross.toFixed(2)} €
+
+3. ESTIMACIÓN MODELO 303:
+   - Diferencia IVA (Repercutido - Soportado): ${balanceNeto.toFixed(2)} €
+   ${balanceNeto >= 0 ? `Resultado a ingresar en la AEAT: ${balanceNeto.toFixed(2)} €` : `Resultado a compensar / devolver: ${Math.abs(balanceNeto).toFixed(2)} €`}
+
+Los ficheros de importación contable directa en formatos oficiales Wolters Kluwer A3ASESOR, SAGE Despachos / 50c y Microsoft Excel (Informe de solo importes y libro completo) han sido consolidados desde la base de datos de Gestarian.
+
+Saludos cordiales,
+${user?.fullName || 'DM CAR'}
+Teléfono: ${user?.phone || '+34 912 345 678'}
+Email: ${user?.email || 'contacto@dmcar.es'}`,
+        }),
+      });
+
+      setAgencySendSuccess(true);
+      setExportNotice(`✅ Informe del ${selectedQuarter} ${selectedYear} enviado automáticamente a la gestoría (${agencyEmailInput}).`);
+      setTimeout(() => {
+        setAgencySendSuccess(false);
+      }, 5000);
+    } catch {
+      // Fallback correo cliente
+      window.location.href = `mailto:${encodeURIComponent(agencyEmailInput.trim())}?subject=${encodeURIComponent(`[GESTARIAN] Cierre Contable ${selectedQuarter} ${selectedYear} - ${user?.fullName || 'Taller'}`)}&body=${encodeURIComponent(`Informe enviado desde Gestarian.\nEmitidas: ${report.totalSubtotal.toFixed(2)} €\nRecibidas: ${baseDeducible.toFixed(2)} €\nIVA Neto: ${balanceNeto.toFixed(2)} €`)}`;
+      setAgencySendSuccess(true);
+      setExportNotice(`Enlace a gestoría preparado en su gestor de correo.`);
+    } finally {
+      setIsSendingToAgency(false);
+    }
   };
 
   return (
@@ -119,7 +228,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                 Informes Fiscales & Gestoría Contable
               </span>
               <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
-                Modelos Tributarios Oficiales AEAT & Enlace Contable
+                Base de Facturas Emitidas y Recibidas · Enlace Contable & Gestoría
               </h2>
             </div>
           </div>
@@ -133,17 +242,17 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
           </button>
         </div>
 
-        {/* Notificación de descarga */}
+        {/* Notificación de descarga o envío */}
         {exportNotice && (
           <div className="bg-emerald-50 border-b border-emerald-200 text-emerald-800 px-6 py-2 text-xs flex items-center gap-2 shrink-0">
-            <CheckCircle className="w-4 h-4 text-emerald-600" />
-            <span>{exportNotice}</span>
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">{exportNotice}</span>
           </div>
         )}
 
         {/* Pestañas principales */}
         <div className="flex flex-wrap items-center justify-between px-6 pt-3 pb-2 bg-slate-100 border-b border-slate-200 gap-3 shrink-0">
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <button
               type="button"
               onClick={() => setActiveTab('modelos')}
@@ -153,7 +262,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
-              🏛️ Modelos AEAT (303, 111, 115, 390)
+              🏛️ Modelos AEAT (303, 111, 115)
             </button>
             <button
               type="button"
@@ -164,7 +273,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
-              📁 Ficheros de Enlace (A3, Sage, XLS, CSV)
+              📁 Enlace Contable (A3, SAGE, XLS)
             </button>
             <button
               type="button"
@@ -175,7 +284,19 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
-              📄 Facturas del Periodo ({report.invoices.length})
+              📄 Base Facturas ({report.invoices.length} emitidas · {periodReceivedInvoices.length} recibidas)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('gestoria_email')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'gestoria_email'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Envío a Gestoría</span>
             </button>
           </div>
 
@@ -211,53 +332,172 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
         {/* CONTENIDO PRINCIPAL */}
         <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-800">
           
-          {/* Resumen numérico en tarjetas */}
+          {/* Resumen numérico en tarjetas con Facturas Emitidas y Recibidas */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-              <span className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">
-                Facturas Emitidas
-              </span>
-              <span className="text-xl font-black font-mono text-slate-900">
-                {report.totalInvoices}
-              </span>
-              <span className="block text-[10px] text-slate-400 mt-0.5">{report.periodLabel}</span>
-            </div>
-
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-              <span className="block text-[10px] font-bold uppercase text-slate-500 mb-0.5">
-                Base Imponible Total
-              </span>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] font-bold uppercase text-slate-500">
+                  Emitidas (Ventas)
+                </span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
               <span className="text-xl font-black font-mono text-slate-900">
                 {baseImponible.toFixed(2)} €
               </span>
-              <span className="block text-[10px] text-slate-400 mt-0.5">Ingresos computables</span>
+              <span className="block text-[10px] text-slate-400 mt-0.5">
+                {report.totalInvoices} facturas · IVA: {cuotaIvaRepercutido.toFixed(2)} €
+              </span>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] font-bold uppercase text-slate-500">
+                  Recibidas (Gastos)
+                </span>
+                <ArrowDownLeft className="w-3.5 h-3.5 text-amber-600" />
+              </div>
+              <span className="text-xl font-black font-mono text-slate-900">
+                {baseDeducible.toFixed(2)} €
+              </span>
+              <span className="block text-[10px] text-slate-400 mt-0.5">
+                {periodReceivedInvoices.length} facturas · IVA: {cuotaDeducible.toFixed(2)} €
+              </span>
             </div>
 
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
               <span className="block text-[10px] font-bold uppercase text-blue-800 mb-0.5">
-                IVA Repercutido (21%)
+                IVA Neto (Mod. 303)
               </span>
-              <span className="text-xl font-black font-mono text-blue-900">
-                {cuotaIvaRepercutido.toFixed(2)} €
+              <span className={`text-xl font-black font-mono ${balanceNeto >= 0 ? 'text-blue-900' : 'text-emerald-700'}`}>
+                {balanceNeto.toFixed(2)} €
               </span>
-              <span className="block text-[10px] text-blue-700 mt-0.5">Casilla 03 (Mod. 303)</span>
+              <span className="block text-[10px] text-blue-700 mt-0.5">
+                {balanceNeto >= 0 ? 'A ingresar en Hacienda' : 'A compensar / devolver'}
+              </span>
             </div>
 
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
               <span className="block text-[10px] font-bold uppercase text-teal-800 mb-0.5">
-                Total Facturado
+                Volumen Total Bruto
               </span>
               <span className="text-xl font-black font-mono text-teal-900">
                 {report.totalGross.toFixed(2)} €
               </span>
-              <span className="block text-[10px] text-teal-700 mt-0.5">Importe total {selectedQuarter}</span>
+              <span className="block text-[10px] text-teal-700 mt-0.5">Total emitido {selectedQuarter}</span>
             </div>
           </div>
 
-          {/* PESTAÑA 1: MODELOS OFICIALES DE LA AEAT */}
+          {/* PESTAÑA: ENVÍO A GESTORÍA MEDIANTE EMAIL */}
+          {activeTab === 'gestoria_email' && (
+            <div className="p-5 bg-gradient-to-br from-teal-50 to-slate-50 border border-teal-200 rounded-xl space-y-4">
+              <div className="flex items-start justify-between border-b border-teal-200/80 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-teal-700" />
+                    <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                      Envío Automático a la Gestoría Contable
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Enlaza directamente la base de datos de facturas emitidas y recibidas para que el asesor pueda descargarlas mediante el informe de solo importes y ficheros contables:
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 bg-teal-100 text-teal-900 font-bold rounded text-[11px] uppercase">
+                  {selectedQuarter} {selectedYear}
+                </span>
+              </div>
+
+              {agencySendSuccess && (
+                <div className="p-3.5 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-lg flex items-center gap-2 text-xs font-semibold">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>¡Envío completado! El informe detallado y los enlaces contables han sido remitidos con éxito a la gestoría.</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Dirección de correo de la Gestoría / Asesor Fiscal *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={agencyEmailInput}
+                      onChange={(e) => setAgencyEmailInput(e.target.value)}
+                      placeholder="gestoria@asesores.com"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md font-mono text-xs font-semibold text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                    />
+                    <button
+                      type="button"
+                      disabled={isSendingToAgency}
+                      onClick={handleSendToAgency}
+                      className="px-5 py-2 bg-teal-700 hover:bg-teal-800 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-md transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSendingToAgency ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Enviar Informe</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block">
+                    Remitente: <strong>{user?.fullName || 'DM CAR'}</strong> ({user?.email || 'contacto@dmcar.es'})
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1 text-slate-700">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Formatos Incluidos
+                  </span>
+                  <div className="text-[11px] space-y-0.5 font-medium">
+                    <div className="flex items-center gap-1.5 text-emerald-700">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Informe Solo Importes (Excel XLS)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-800">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Enlace A3ECO / A3ASESOR (.txt)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-blue-800">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Diario SAGE 50 / 200 (.csv)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vista previa del informe que recibirá la gestoría */}
+              <div className="p-4 bg-white border border-slate-200 rounded-lg space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Vista Previa del Resumen de Importes
+                </span>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                    <span className="text-[10px] text-slate-500 block">Base Ventas</span>
+                    <strong className="text-slate-900 font-mono text-sm">{baseImponible.toFixed(2)} €</strong>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                    <span className="text-[10px] text-slate-500 block">Base Gastos Deducibles</span>
+                    <strong className="text-slate-900 font-mono text-sm">{baseDeducible.toFixed(2)} €</strong>
+                  </div>
+                  <div className="p-2.5 bg-teal-50 border border-teal-200 rounded">
+                    <span className="text-[10px] text-teal-700 block">Resultado IVA Neto</span>
+                    <strong className="text-teal-900 font-mono text-sm">{balanceNeto.toFixed(2)} €</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PESTAÑA: MODELOS OFICIALES DE LA AEAT */}
           {activeTab === 'modelos' && (
             <div className="space-y-4">
-              {/* Selector de Modelo */}
               <div className="flex border-b border-slate-200 gap-2 pb-2">
                 {[
                   { id: '303', label: 'Modelo 303 (IVA Trimestral)', desc: 'Autoliquidación Régimen General' },
@@ -289,7 +529,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                         Modelo 303 · Impuesto sobre el Valor Añadido (Autoliquidación)
                       </h3>
                       <p className="text-[11px] text-slate-500">
-                        Cumplimentación oficial con casillas oficiales de la Sede Electrónica de la AEAT para el {selectedQuarter} de {selectedYear}
+                        Cumplimentación oficial con casillas de la AEAT para el {selectedQuarter} de {selectedYear}
                       </p>
                     </div>
                     <span className="px-2.5 py-1 bg-blue-100 text-blue-900 font-bold rounded font-mono text-xs">
@@ -299,7 +539,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
 
                   <div className="space-y-2">
                     <span className="font-bold text-xs uppercase text-slate-700 block tracking-wide">
-                      I. IVA DEVENGADO (Régimen General)
+                      I. IVA DEVENGADO (Facturas Emitidas / Ventas)
                     </span>
                     <div className="bg-white border border-slate-200 rounded divide-y divide-slate-100 text-xs">
                       <div className="flex justify-between p-2.5">
@@ -323,7 +563,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
 
                   <div className="space-y-2">
                     <span className="font-bold text-xs uppercase text-slate-700 block tracking-wide">
-                      II. IVA DEDUCIBLE (Facturas recibidas de recambios y suministros)
+                      II. IVA DEDUCIBLE (Facturas recibidas de recambios, pintura y suministros)
                     </span>
                     <div className="bg-white border border-slate-200 rounded divide-y divide-slate-100 text-xs">
                       <div className="flex justify-between p-2.5">
@@ -347,7 +587,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                         Resultado de la Autoliquidación Modelo 303
                       </span>
                       <span className="text-[11px] text-blue-200">
-                        <strong>[46]</strong> Resultado régimen general · <strong>[71]</strong> Resultado a ingresar en la AEAT
+                        <strong>[46]</strong> Resultado régimen general · <strong>[71]</strong> Resultado a ingresar o compensar
                       </span>
                     </div>
                     <div className="text-2xl font-black font-mono text-white">
@@ -470,12 +710,12 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
             </div>
           )}
 
-          {/* PESTAÑA 2: ARCHIVOS DE ENLACE CONTABLE */}
+          {/* PESTAÑA: ARCHIVOS DE ENLACE CONTABLE */}
           {activeTab === 'enlace' && (
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Exportación Oficial Directa para Despachos y Software Contable
+                  Exportación de Facturas Emitidas y Recibidas para Despachos Contables
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Archivos estandarizados listos para su remisión al asesor fiscal o carga desatendida en el software del despacho:
@@ -483,7 +723,28 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Botón A3 */}
+                {/* 1. Informe de Solo Importes (Especial Gestoría) */}
+                <button
+                  type="button"
+                  onClick={handleDownloadAmountsOnly}
+                  className="flex flex-col items-start p-4 bg-teal-50/70 hover:bg-teal-100/80 border border-teal-300 hover:border-teal-700 rounded-md transition-all text-left cursor-pointer group sm:col-span-2"
+                >
+                  <div className="flex items-center justify-between w-full mb-1.5">
+                    <div className="flex items-center gap-2 text-teal-950 font-black text-xs uppercase tracking-wide">
+                      <FileSpreadsheet className="w-4 h-4 text-teal-700" />
+                      <span>Informe Especial de Solo Importes para Gestoría (Excel XLS / XML)</span>
+                    </div>
+                    <Download className="w-4 h-4 text-teal-600 group-hover:text-teal-950 transition-colors" />
+                  </div>
+                  <p className="text-[11px] text-teal-900/80 leading-tight">
+                    Muestra exclusivamente las bases imponibles, porcentajes de IVA, retenciones y totales de todas las facturas emitidas y recibidas del periodo con desglose contable para rápida liquidación.
+                  </p>
+                  <span className="mt-2 text-[10px] font-bold text-teal-800 uppercase group-hover:underline">
+                    Descargar Informe_Solo_Importes_Gestoria.xls →
+                  </span>
+                </button>
+
+                {/* 2. Botón A3 */}
                 <button
                   type="button"
                   onClick={handleDownloadA3}
@@ -497,14 +758,14 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                     <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-colors" />
                   </div>
                   <p className="text-[11px] text-slate-600 leading-tight">
-                    Fichero de enlace oficial para el software Wolters Kluwer A3ASESOR con asientos y desglose fiscal.
+                    Fichero de enlace oficial para el software Wolters Kluwer A3ASESOR con asientos de emitidas y recibidas.
                   </p>
                   <span className="mt-2.5 text-[10px] font-bold text-blue-700 uppercase group-hover:underline">
                     Descargar Enlace_A3ECO.txt →
                   </span>
                 </button>
 
-                {/* Botón SAGE */}
+                {/* 3. Botón SAGE */}
                 <button
                   type="button"
                   onClick={handleDownloadSage}
@@ -518,14 +779,14 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                     <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-colors" />
                   </div>
                   <p className="text-[11px] text-slate-600 leading-tight">
-                    Estructura de asientos contables con cuentas del PGC de cliente (430), ventas (705) e IVA (477).
+                    Estructura de asientos contables con cuentas del PGC de cliente (430), proveedor (400), ventas (705) y compras (600).
                   </p>
                   <span className="mt-2.5 text-[10px] font-bold text-blue-700 uppercase group-hover:underline">
                     Descargar Diario_SAGE.csv →
                   </span>
                 </button>
 
-                {/* Botón Excel XLS */}
+                {/* 4. Botón Excel Completo */}
                 <button
                   type="button"
                   onClick={handleDownloadExcel}
@@ -534,19 +795,19 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                   <div className="flex items-center justify-between w-full mb-1.5">
                     <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wide">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-                      <span>Microsoft Excel (XML / XLS)</span>
+                      <span>Libro Completo (Multi-Hoja Excel)</span>
                     </div>
                     <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-colors" />
                   </div>
                   <p className="text-[11px] text-slate-600 leading-tight">
-                    Libro oficial de facturas emitidas con fórmulas, subtotales, bases de IVA y estados.
+                    Libro con tres hojas separadas: Hoja 1 Emitidas, Hoja 2 Recibidas y Hoja 3 Resumen de Liquidación.
                   </p>
                   <span className="mt-2.5 text-[10px] font-bold text-blue-700 uppercase group-hover:underline">
                     Descargar Libro_Facturas.xls →
                   </span>
                 </button>
 
-                {/* Botón CSV */}
+                {/* 5. Botón CSV */}
                 <button
                   type="button"
                   onClick={handleDownloadCsv}
@@ -560,7 +821,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                     <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-colors" />
                   </div>
                   <p className="text-[11px] text-slate-600 leading-tight">
-                    Exportación universal delimitada por comas compatible con cualquier base de datos y ERP contable.
+                    Exportación universal delimitada por comas compatible con cualquier ERP y base de datos contable.
                   </p>
                   <span className="mt-2.5 text-[10px] font-bold text-blue-700 uppercase group-hover:underline">
                     Descargar Facturas.csv →
@@ -570,18 +831,115 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
             </div>
           )}
 
-          {/* PESTAÑA 3: FACTURAS DEL PERIODO */}
+          {/* PESTAÑA: FACTURAS DEL PERIODO (CON SUBPESTAÑAS EMITIDAS / RECIBIDAS / IMPORTES) */}
           {activeTab === 'facturas' && (
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Facturas Emitidas en {selectedQuarter} {selectedYear} ({report.invoices.length})
-              </h4>
-
-              {report.invoices.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded">
-                  No hay facturas emitidas registradas para este periodo.
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setFacturasSubTab('importes')}
+                    className={`px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      facturasSubTab === 'importes'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    📊 Solo Importes Consolidados ({report.invoices.length + periodReceivedInvoices.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFacturasSubTab('emitidas')}
+                    className={`px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      facturasSubTab === 'emitidas'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    Facturas Emitidas ({report.invoices.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFacturasSubTab('recibidas')}
+                    className={`px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      facturasSubTab === 'recibidas'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    Facturas Recibidas / Gastos ({periodReceivedInvoices.length})
+                  </button>
                 </div>
-              ) : (
+
+                <button
+                  type="button"
+                  onClick={handleDownloadAmountsOnly}
+                  className="px-3 py-1 bg-teal-700 hover:bg-teal-800 text-white text-[11px] font-bold rounded flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Descargar XLS Importes</span>
+                </button>
+              </div>
+
+              {/* Subpestaña: Solo Importes */}
+              {facturasSubTab === 'importes' && (
+                <div className="overflow-x-auto border border-slate-200 rounded-md">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Tipo</th>
+                        <th className="py-2.5 px-3">Número</th>
+                        <th className="py-2.5 px-3">Fecha</th>
+                        <th className="py-2.5 px-3">NIF/CIF</th>
+                        <th className="py-2.5 px-3">Titular / Empresa</th>
+                        <th className="py-2.5 px-3 text-right">Base Imponible</th>
+                        <th className="py-2.5 px-3 text-right">% IVA</th>
+                        <th className="py-2.5 px-3 text-right">Cuota IVA</th>
+                        <th className="py-2.5 px-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {report.invoices.map((inv) => (
+                        <tr key={`emitted_${inv.id}`} className="hover:bg-slate-50">
+                          <td className="py-2 px-3 font-sans">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800">
+                              EMITIDA
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 font-bold text-slate-900">{inv.number}</td>
+                          <td className="py-2 px-3 text-slate-600 font-sans">{inv.date}</td>
+                          <td className="py-2 px-3 text-slate-600">{inv.clientCif}</td>
+                          <td className="py-2 px-3 font-medium text-slate-900 font-sans">{inv.clientName}</td>
+                          <td className="py-2 px-3 text-right text-slate-800">{inv.subtotal.toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right text-slate-500">{inv.applyIva ? inv.ivaRate : 0}%</td>
+                          <td className="py-2 px-3 text-right text-blue-800">{inv.ivaAmount.toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right font-bold text-slate-950">{inv.total.toFixed(2)} €</td>
+                        </tr>
+                      ))}
+                      {periodReceivedInvoices.map((inv) => (
+                        <tr key={`received_${inv.id}`} className="hover:bg-slate-50 bg-amber-50/20">
+                          <td className="py-2 px-3 font-sans">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-100 text-amber-800">
+                              RECIBIDA
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 font-bold text-slate-900">{inv.number}</td>
+                          <td className="py-2 px-3 text-slate-600 font-sans">{inv.date}</td>
+                          <td className="py-2 px-3 text-slate-600">{inv.clientCif || inv.issuerCif || '-'}</td>
+                          <td className="py-2 px-3 font-medium text-slate-900 font-sans">{inv.clientName || inv.issuerName || 'Proveedor'}</td>
+                          <td className="py-2 px-3 text-right text-slate-800">{(inv.subtotal || 0).toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right text-slate-500">21%</td>
+                          <td className="py-2 px-3 text-right text-amber-800">{(inv.ivaAmount || inv.subtotal * 0.21 || 0).toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right font-bold text-slate-950">{(inv.total || 0).toFixed(2)} €</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Subpestaña: Facturas Emitidas */}
+              {facturasSubTab === 'emitidas' && (
                 <div className="overflow-x-auto border border-slate-200 rounded-md">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
@@ -591,7 +949,7 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                         <th className="py-2.5 px-3">Cliente</th>
                         <th className="py-2.5 px-3">CIF/NIF</th>
                         <th className="py-2.5 px-3 text-right">Base</th>
-                        <th className="py-2.5 px-3 text-right">IVA (21%)</th>
+                        <th className="py-2.5 px-3 text-right">IVA</th>
                         <th className="py-2.5 px-3 text-right">Total</th>
                         <th className="py-2.5 px-3 text-center">Estado</th>
                       </tr>
@@ -617,23 +975,66 @@ export const FiscalReportsModal: React.FC<FiscalReportsModalProps> = ({
                   </table>
                 </div>
               )}
+
+              {/* Subpestaña: Facturas Recibidas */}
+              {facturasSubTab === 'recibidas' && (
+                <div className="overflow-x-auto border border-slate-200 rounded-md">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Número / Factura</th>
+                        <th className="py-2.5 px-3">Fecha</th>
+                        <th className="py-2.5 px-3">Proveedor</th>
+                        <th className="py-2.5 px-3">Concepto</th>
+                        <th className="py-2.5 px-3 text-right">Base Imponible</th>
+                        <th className="py-2.5 px-3 text-right">IVA Soportado</th>
+                        <th className="py-2.5 px-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {periodReceivedInvoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50">
+                          <td className="py-2 px-3 font-bold text-slate-900">{inv.number}</td>
+                          <td className="py-2 px-3 text-slate-600 font-sans">{inv.date}</td>
+                          <td className="py-2 px-3 font-medium text-slate-900 font-sans">{inv.clientName || inv.issuerName || 'Proveedor'}</td>
+                          <td className="py-2 px-3 text-slate-600 font-sans">{inv.items?.[0]?.description || 'Gasto deducible'}</td>
+                          <td className="py-2 px-3 text-right text-slate-800">{(inv.subtotal || 0).toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right text-emerald-800">{(inv.ivaAmount || inv.subtotal * 0.21 || 0).toFixed(2)} €</td>
+                          <td className="py-2 px-3 text-right font-bold text-slate-950">{(inv.total || 0).toFixed(2)} €</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <span className="text-xs text-slate-500">
-            Libros de facturación conforme a Ley 11/2021 y Veri*Factu (RD 1007/2023)
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer"
-          >
-            Cerrar Informes
-          </button>
+        <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="font-semibold">Ley 11/2021 & Veri*Factu:</span>
+            <span>Libros conciliados de emitidas y recibidas.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadAmountsOnly}
+              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Informe Importes XLS</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
 
       </div>

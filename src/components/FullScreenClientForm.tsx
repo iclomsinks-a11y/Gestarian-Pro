@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Client, ClientVehicle } from '../types';
+import { Client, ClientVehicle, AppUser, GestarianPlan } from '../types';
 import { 
   X, Save, FileText, Building2, User, Phone, Mail, MapPin, 
   Car, Plus, Trash2, Pencil, Sparkles, Image as ImageIcon,
@@ -16,6 +16,8 @@ interface FullScreenClientFormProps {
   onSaveAndCreateBudget?: (client: Omit<Client, 'id'>) => void;
   initialClient?: Client | null;
   onUpdateClient?: (client: Client) => void;
+  currentUser?: AppUser;
+  currentPlan?: GestarianPlan;
 }
 
 export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
@@ -25,7 +27,10 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
   onSaveAndCreateBudget,
   initialClient = null,
   onUpdateClient,
+  currentUser,
+  currentPlan,
 }) => {
+  const isQuick = currentPlan === 'quick' || currentUser?.currentTier === 'quick';
   const [name, setName] = useState('');
   const [cif, setCif] = useState('');
   const [address, setAddress] = useState('');
@@ -92,7 +97,6 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
 
   const validate = () => {
     if (!name.trim()) return 'El Nombre/Razón Social es obligatorio.';
@@ -255,7 +259,7 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
   };
 
   const formScrollRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll({ container: formScrollRef });
+  const { scrollY } = useScroll();
 
   const yOrbSky = useTransform(scrollY, [0, 500], [0, -140]);
   const yOrbIndigo = useTransform(scrollY, [0, 500], [0, -200]);
@@ -263,6 +267,8 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
   const yContactSection = useTransform(scrollY, [0, 400], [0, -35]);
 
   const isEditing = !!initialClient;
+
+  if (!isOpen) return null;
 
   return (
     <div 
@@ -333,7 +339,7 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
                   value={cif}
                   onChange={(e) => setCif(e.target.value.toUpperCase())}
                   className="w-full px-5 py-4 text-xl sm:text-2xl font-black uppercase bg-slate-500/[0.03] text-[#0F2942] border-2 border-slate-300 rounded-3xl focus:outline-none focus:border-[#0F2942] placeholder:text-[#0F2942]/70 focus:placeholder:text-transparent font-mono transition-all"
-                  placeholder="NIF / CIF *"
+                  placeholder="DNI / NIF / CIF *"
                 />
               </div>
 
@@ -536,20 +542,22 @@ export const FullScreenClientForm: React.FC<FullScreenClientFormProps> = ({
             <Save className="w-9 h-9 sm:w-10 sm:h-10" strokeWidth={2.2} />
           </button>
 
-          {/* 2. HOJA DE NUEVO PRESUPUESTO CON +P DENTRO */}
-          <button
-            type="button"
-            onClick={handleSaveAndBudget}
-            className="p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-sky-600 relative flex items-center justify-center"
-            title="Guardar y Crear Nuevo Presupuesto (+P)"
-          >
-            <div className="relative flex items-center justify-center">
-              <FileText className="w-9 h-9 sm:w-10 sm:h-10 text-sky-600" strokeWidth={2.2} />
-              <span className="absolute top-2.5 sm:top-3 left-1/2 -translate-x-1/2 text-[10px] sm:text-[11px] font-black text-sky-950 font-mono tracking-tighter">
-                +P
-              </span>
-            </div>
-          </button>
+          {/* 2. HOJA DE NUEVO PRESUPUESTO CON +P DENTRO (Oculto en Quick) */}
+          {!isQuick && onSaveAndCreateBudget && (
+            <button
+              type="button"
+              onClick={handleSaveAndBudget}
+              className="p-1.5 cursor-pointer transition-transform hover:scale-125 active:scale-95 text-sky-600 relative flex items-center justify-center"
+              title="Guardar y Crear Nuevo Presupuesto (+P)"
+            >
+              <div className="relative flex items-center justify-center">
+                <FileText className="w-9 h-9 sm:w-10 sm:h-10 text-sky-600" strokeWidth={2.2} />
+                <span className="absolute top-2.5 sm:top-3 left-1/2 -translate-x-1/2 text-[10px] sm:text-[11px] font-black text-sky-950 font-mono tracking-tighter">
+                  +P
+                </span>
+              </div>
+            </button>
+          )}
 
           {/* 3. X DE SALIR GRANDE */}
           <button

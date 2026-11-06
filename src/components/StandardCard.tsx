@@ -7,6 +7,7 @@ export interface StandardCardProps {
   statusColor?: string;
   statusTextColor?: string;
   vehiclePlate?: string;
+  hidePlate?: boolean;
   subtitle?: string; // Línea 2: Marca, Modelo o subtítulo
   title: string;     // Línea 3: Nombre del cliente o entidad
   refCode?: string;  // Línea 4: Número de presupuesto / documento
@@ -28,6 +29,8 @@ export interface StandardCardProps {
   extraHeaderAction?: React.ReactNode;
   cleanNumbersLayout?: boolean;
   cardBgColor?: string;
+  expanded?: boolean;
+  onToggleExpand?: (expanded: boolean) => void;
 }
 
 /**
@@ -54,6 +57,7 @@ export const StandardCard: React.FC<StandardCardProps> = ({
   statusColor,
   statusTextColor = 'text-orange-500',
   vehiclePlate,
+  hidePlate = false,
   subtitle = 'Vehículo General',
   title,
   refCode,
@@ -75,8 +79,11 @@ export const StandardCard: React.FC<StandardCardProps> = ({
   extraHeaderAction,
   cleanNumbersLayout = false,
   cardBgColor = 'bg-white',
+  expanded,
+  onToggleExpand,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = expanded !== undefined ? expanded : internalExpanded;
 
   const hasStatus = status !== null && status !== undefined && status !== '';
   const finalStatus = hasStatus ? status : null;
@@ -92,7 +99,13 @@ export const StandardCard: React.FC<StandardCardProps> = ({
     if (onClick) {
       onClick();
     } else if (isExpandable) {
-      setIsExpanded(!isExpanded);
+      const next = !isExpanded;
+      if (expanded === undefined) {
+        setInternalExpanded(next);
+      }
+      if (onToggleExpand) {
+        onToggleExpand(next);
+      }
     }
   };
 
@@ -137,16 +150,18 @@ export const StandardCard: React.FC<StandardCardProps> = ({
             )}
           </div>
 
-          {/* Matrícula Oficial (Estilo placa española) a la derecha */}
-          <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-xs shrink-0 ml-auto">
-            <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
-              <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
-              <span className="text-[10px] text-white font-bold leading-none">E</span>
+          {/* Matrícula Oficial (Estilo placa española) a la derecha (si no está oculta) */}
+          {!hidePlate && (
+            <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-xs shrink-0 ml-auto">
+              <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
+                <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
+                <span className="text-[10px] text-white font-bold leading-none">E</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
+                {vehiclePlate || 'SIN-MAT'}
+              </div>
             </div>
-            <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
-              {vehiclePlate || 'SIN-MAT'}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Línea 2: Marca y Modelo / Subtítulo */}

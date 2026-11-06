@@ -5,6 +5,7 @@ import {
   Briefcase, Lock, CheckCircle2, ChevronDown, UserCheck, Phone, Mail, IdCard, X,
   FolderGit2, Inbox, Receipt, TrendingUp, Truck, AlertTriangle, CheckSquare, Square
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Employee, EmployeePermissions } from '../types';
 import { 
   SPANISH_CNO_CATALOG, 
@@ -13,6 +14,61 @@ import {
   searchOccupations,
   CnoOccupation
 } from '../data/spanishOccupations';
+
+export interface ModuleSubAction {
+  key: keyof EmployeePermissions;
+  label: string;
+}
+
+export const MODULE_SUB_ACTIONS: Record<keyof EmployeePermissions, ModuleSubAction[]> = {
+  accessPresupuestos: [
+    { key: 'permPresupuestosView', label: 'Ver presupuestos' },
+    { key: 'permPresupuestosEditDeliveryDate', label: 'Proponer fecha de entrega del vehículo' },
+    { key: 'permPresupuestosEditItemsPrices', label: 'Editar conceptos, precio y cantidad' },
+    { key: 'permPresupuestosEditLocation', label: 'Editar lugar de la obra o servicio' },
+    { key: 'permPresupuestosAddImages', label: 'Añadir imágenes a presupuestos' },
+    { key: 'permPresupuestosDownload', label: 'Descargar presupuesto (PDF)' },
+    { key: 'permPresupuestosPrint', label: 'Imprimir presupuesto' },
+    { key: 'permPresupuestosSend', label: 'Enviar presupuesto (WhatsApp / Email)' },
+  ],
+  accessFacturacion: [
+    { key: 'permFacturacionView', label: 'Ver facturas e ingresos/gastos' },
+    { key: 'permFacturacionDownload', label: 'Descargar factura (PDF)' },
+    { key: 'permFacturacionPrint', label: 'Imprimir factura' },
+    { key: 'permFacturacionSend', label: 'Enviar factura' },
+    { key: 'permFacturacionPayments', label: 'Registrar pagos y cobros' },
+  ],
+  accessTaller: [
+    { key: 'permTallerFactoryView', label: 'Ver órdenes de trabajo' },
+    { key: 'permTallerChangeStatus', label: 'Cambiar estado de OT (En taller / Finalizado)' },
+    { key: 'permTallerAssign', label: 'Asignar operarios' },
+  ],
+  accessClientes: [
+    { key: 'permClientesView', label: 'Ver cartera de clientes' },
+    { key: 'permClientesEdit', label: 'Crear y editar datos de clientes y vehículos' },
+  ],
+  accessExpedientes: [
+    { key: 'permExpedientesView', label: 'Ver expedientes' },
+    { key: 'permExpedientesRoadmap', label: 'Avanzar roadmap de estados en tiempo real' },
+  ],
+  accessCitas: [
+    { key: 'permCitasView', label: 'Ver agenda y citas' },
+    { key: 'permCitasEdit', label: 'Programar o modificar citas' },
+  ],
+  accessProveedores: [
+    { key: 'permProveedoresView', label: 'Ver proveedores y recambistas' },
+    { key: 'permProveedoresInvoices', label: 'Registrar facturas recibidas de proveedores' },
+  ],
+  accessBalances: [
+    { key: 'permBalancesView', label: 'Ver volumen de facturación y balances gráficos' },
+  ],
+  accessIncidencias: [
+    { key: 'permIncidenciasManage', label: 'Ver y resolver incidencias de taller' },
+  ],
+  accessSolicitudes: [
+    { key: 'permSolicitudesManage', label: 'Recepción y gestión de solicitudes de clientes' },
+  ],
+} as any;
 
 export const APP_MODULES: { key: keyof EmployeePermissions; label: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'accessExpedientes', label: 'Expedientes', desc: 'Roadmap y progreso de reparación', icon: FolderGit2 },
@@ -491,39 +547,77 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onC
             </div>
 
             <div className="overflow-y-auto space-y-6 pr-2 flex-1">
-              {/* Bloque 1: Partes de la Aplicación de Usuario */}
+              {/* Bloque 1: Partes de la Aplicación de Usuario y Sub-acciones granulares */}
               <div>
                 <div className="text-[22px] font-bold uppercase tracking-wider text-[#0F2942] mb-3 flex items-center gap-2">
                   <Shield className="w-6 h-6 text-[#0F2942]" />
-                  Acceso a Secciones de la Aplicación
+                  Acceso a Secciones de la Aplicación y Funciones Granulares
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {APP_MODULES.map((mod) => {
                     const isChecked = managingPermissionsEmp.permissions ? (managingPermissionsEmp.permissions[mod.key] ?? false) : false;
                     const Icon = mod.icon;
+                    const subActions = MODULE_SUB_ACTIONS[mod.key] || [];
                     return (
-                      <label
+                      <div
                         key={mod.key}
-                        className={`flex items-start gap-3.5 p-3.5 rounded-xl border-2 transition-colors cursor-pointer ${
-                          isChecked ? 'bg-white border-[#0F2942] shadow-sm' : 'bg-[#F1F5F9] border-[#CBD5E1] opacity-75'
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          isChecked ? 'bg-white border-[#0F2942] shadow-sm' : 'bg-[#F1F5F9] border-[#CBD5E1]'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleToggleSinglePermission(managingPermissionsEmp.id, mod.key)}
-                          className="w-6 h-6 accent-[#0F2942] rounded-md cursor-pointer mt-0.5 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[20px] font-bold text-[#0F2942] flex items-center gap-2">
-                            <Icon className="w-5 h-5 text-[#0F2942]" />
-                            <span>{mod.label}</span>
-                          </div>
-                          <p className="text-[18px] text-[#0F2942]/85 leading-tight mt-1">
-                            {mod.desc}
-                          </p>
+                        <div className="flex items-start justify-between gap-3">
+                          <label className="flex items-start gap-3.5 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleSinglePermission(managingPermissionsEmp.id, mod.key)}
+                              className="w-6 h-6 accent-[#0F2942] rounded-md cursor-pointer mt-0.5 shrink-0"
+                            />
+                            <div>
+                              <div className="text-[20px] font-bold text-[#0F2942] flex items-center gap-2">
+                                <Icon className="w-5 h-5 text-[#0F2942]" />
+                                <span>{mod.label}</span>
+                              </div>
+                              <p className="text-[18px] text-[#0F2942]/85 leading-tight mt-0.5">
+                                {mod.desc}
+                              </p>
+                            </div>
+                          </label>
                         </div>
-                      </label>
+
+                        {/* Desplegable fluido de sub-acciones cuando la página está activada */}
+                        <AnimatePresence>
+                          {isChecked && subActions.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25, ease: 'easeInOut' }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3.5 pt-3 border-t border-[#E2E8F0] grid grid-cols-1 sm:grid-cols-2 gap-2 pl-9">
+                                {subActions.map((sub) => {
+                                  const isSubChecked = managingPermissionsEmp.permissions ? (managingPermissionsEmp.permissions[sub.key] ?? false) : false;
+                                  return (
+                                    <label
+                                      key={String(sub.key)}
+                                      className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 cursor-pointer text-[17px] font-medium text-[#0F2942]"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSubChecked}
+                                        onChange={() => handleToggleSinglePermission(managingPermissionsEmp.id, sub.key)}
+                                        className="w-5 h-5 accent-[#0F2942] rounded cursor-pointer shrink-0"
+                                      />
+                                      <span>{sub.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     );
                   })}
                 </div>

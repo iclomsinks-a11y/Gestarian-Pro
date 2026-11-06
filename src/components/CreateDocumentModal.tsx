@@ -42,6 +42,7 @@ import {
   saveStoredSolicitudes,
 } from "../services/storage";
 import { buildDocumentDispatchPayload } from "../services/documentDispatchService";
+import { isVehicleFeatureActive } from "../services/preventiveMaintenanceService";
 
 export function formatDeliveryDateDisplay(dateStr: string): string {
   if (!dateStr) return "";
@@ -187,16 +188,17 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     (e) => e.id === creatorId,
   );
   const canSetPrices =
-    creatorId === "boss"
-      ? true
-      : (selectedCreatorEmp?.permissions?.canSetPrices ?? false);
+    docType === "factura" ||
+    currentUser.currentTier === "quick" ||
+    creatorId === "boss" ||
+    (selectedCreatorEmp?.permissions?.canSetPrices ?? false);
 
   // Estados del documento
   const [series] = useState<string>(initialBudget?.series || "A");
   const [docNumber, setDocNumber] = useState<string>(() => {
-    if (initialBudget && initialBudget.type === docType) return initialBudget.number;
+    if (initialBudget && initialBudget.type === docType && initialBudget.number) return initialBudget.number;
     if (initialBudget) {
-      const exp = initialBudget.expediente || getExpedienteFromDocNumber(initialBudget.number);
+      const exp = initialBudget.expediente || (initialBudget.number ? getExpedienteFromDocNumber(initialBudget.number) : undefined);
       return getNextDocumentNumber(docType, allDocuments, exp);
     }
     return getNextDocumentNumber(docType, allDocuments);
@@ -224,6 +226,40 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
   const [quickPhone, setQuickPhone] = useState("");
   const [quickEmail, setQuickEmail] = useState("");
   const [quickIsAutonomo, setQuickIsAutonomo] = useState(false);
+
+  // Modo Factura de Proveedor (Factura Recibida)
+  const isFacturaRecibida = docType === 'factura_recibida' || initialBudget?.type === 'factura_recibida';
+  const [providerIssuerName, setProviderIssuerName] = useState<string>(() => {
+    if (initialBudget?.type === 'factura_recibida' && initialBudget.issuerName && initialBudget.issuerName !== currentUser.fullName) {
+      return initialBudget.issuerName;
+    }
+    const selProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    return selProv?.name || '';
+  });
+  const [providerIssuerCif, setProviderIssuerCif] = useState<string>(() => {
+    if (initialBudget?.type === 'factura_recibida' && initialBudget.issuerCif && initialBudget.issuerCif !== currentUser.cif) {
+      return initialBudget.issuerCif;
+    }
+    const selProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    return selProv?.cif || '';
+  });
+  const [providerIssuerAddress, setProviderIssuerAddress] = useState<string>(() => {
+    if (initialBudget?.type === 'factura_recibida' && initialBudget.issuerAddress && initialBudget.issuerAddress !== currentUser.fiscalAddress) {
+      return initialBudget.issuerAddress;
+    }
+    const selProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    return selProv?.direccionFiscal || '';
+  });
+  const [providerIssuerPhone, setProviderIssuerPhone] = useState<string>(() => {
+    if (initialBudget?.type === 'factura_recibida') return initialBudget.issuerPhone || '';
+    const selProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    return selProv?.phone || '';
+  });
+  const [providerIssuerEmail, setProviderIssuerEmail] = useState<string>(() => {
+    if (initialBudget?.type === 'factura_recibida') return initialBudget.issuerEmail || '';
+    const selProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    return selProv?.email || '';
+  });
 
   // Búsqueda y selección de cliente registrado
   const [clientSearchQuery, setClientSearchQuery] = useState("");
@@ -329,6 +365,20 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     return [
       {
         id: `item-${Date.now()}-1`,
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0,
+      },
+      {
+        id: `item-${Date.now()}-2`,
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0,
+      },
+      {
+        id: `item-${Date.now()}-3`,
         description: "",
         quantity: 1,
         unitPrice: 0,
@@ -448,7 +498,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
     const isNewlyOpened = !prevIsOpenRef.current;
     const currentTrackId = initialBudget
-      ? `${initialBudget.id}_${docType}`
+      ? `${initialBudget.id || initialBudget.number || 'camera_temp'}_${docType}`
       : `new_${docType}_${preselectedClientId || ''}`;
     const isBudgetChanged = currentTrackId !== prevBudgetTrackIdRef.current;
 
@@ -461,24 +511,31 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     }
 
     if (initialBudget) {
-      setSavedDocId(initialBudget.id);
-      const exp = initialBudget.expediente || getExpedienteFromDocNumber(initialBudget.number);
-      setExpediente(exp);
-      setSavedExpedienteId(exp);
+      setSavedDocId(initialBudget.id || null);
+      const exp = initialBudget.expediente || (initialBudget.number ? getExpedienteFromDocNumber(initialBudget.number) : undefined);
+      const finalExp = exp || getExpedienteFromDocNumber(getNextDocumentNumber(docType, allDocuments));
+      setExpediente(finalExp);
+      setSavedExpedienteId(finalExp);
 
       if (initialBudget.type === docType) {
-        setDocNumber(initialBudget.number);
+        setDocNumber(initialBudget.number || getNextDocumentNumber(docType, allDocuments, finalExp));
         // El presupuesto no se puede dar por guardado si no ha sido cumplimentada la fecha propuesta de entrega
         const hasDeliveryDate = Boolean(
           (initialBudget.vehicleDeliveryDate || initialBudget.proposedDeliveryDate)?.trim()
         );
-        setIsSaved(docType === 'presupuesto' ? hasDeliveryDate : true);
+        setIsSaved(docType === 'presupuesto' ? (hasDeliveryDate && Boolean(initialBudget.id)) : Boolean(initialBudget.id));
       } else {
         // Conversión a otro tipo de documento manteniendo la misma terminación de 4 dígitos del expediente
-        const convertedNum = getNextDocumentNumber(docType, allDocuments, exp);
+        const convertedNum = getNextDocumentNumber(docType, allDocuments, finalExp);
         setDocNumber(convertedNum);
         setIsSaved(false);
       }
+
+      setCreatorId(
+        initialBudget.needsBossPricing
+          ? "boss"
+          : initialBudget.createdByEmployeeId || "boss"
+      );
 
       setDate(initialBudget.date || new Date().toISOString().split("T")[0]);
       setDueDate(initialBudget.dueDate || new Date().toISOString().split("T")[0]);
@@ -512,6 +569,30 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
 
       if (initialBudget.items && initialBudget.items.length > 0) {
         setItems(initialBudget.items.map((it) => ({ ...it })));
+      } else {
+        setItems([
+          {
+            id: `item-${Date.now()}-1`,
+            description: "",
+            quantity: 1,
+            unitPrice: 0,
+            amount: 0,
+          },
+          {
+            id: `item-${Date.now()}-2`,
+            description: "",
+            quantity: 1,
+            unitPrice: 0,
+            amount: 0,
+          },
+          {
+            id: `item-${Date.now()}-3`,
+            description: "",
+            quantity: 1,
+            unitPrice: 0,
+            amount: 0,
+          },
+        ]);
       }
 
       if (docType === 'factura') {
@@ -560,6 +641,19 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
           setQuickAddress(preClient.address || "");
           setQuickPhone(preClient.phone || "");
           setQuickEmail(preClient.email || "");
+          if (preClient.plates && preClient.plates.length > 0) {
+            setVehiclePlate(sanitizePlate(preClient.plates[0]));
+          } else {
+            setVehiclePlate("");
+          }
+          if (preClient.vehicles && preClient.vehicles.length > 0) {
+            setVehicleBrand(preClient.vehicles[0].brand || "");
+            setVehicleModel(preClient.vehicles[0].model || "");
+          } else {
+            setVehicleBrand("");
+            setVehicleModel("");
+          }
+          setTaskLocation(preClient.taskLocation || preClient.address || "");
         }
       } else {
         setSelectedClientId("");
@@ -568,19 +662,33 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         setQuickAddress("");
         setQuickPhone("");
         setQuickEmail("");
+        setVehiclePlate("");
+        setVehicleBrand("");
+        setVehicleModel("");
+        setTaskLocation("");
       }
 
-      setShowVehicleData(currentUser?.enableVehicle !== false);
-      setVehiclePlate("");
-      setVehicleBrand("");
-      setVehicleModel("");
+      setShowVehicleData(isVehicleFeatureActive(currentUser));
       setVehicleDeliveryDate("");
       setVehicleImages([]);
       setShowLocationData(true);
-      setTaskLocation("");
       setItems([
         {
           id: `item-${Date.now()}-1`,
+          description: "",
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0,
+        },
+        {
+          id: `item-${Date.now()}-2`,
+          description: "",
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0,
+        },
+        {
+          id: `item-${Date.now()}-3`,
           description: "",
           quantity: 1,
           unitPrice: 0,
@@ -615,7 +723,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setQuickAddress("");
       setQuickPhone("");
       setQuickEmail("");
-      setShowVehicleData(currentUser?.enableVehicle !== false);
+      setShowVehicleData(isVehicleFeatureActive(currentUser));
       setVehiclePlate("");
       setVehicleBrand("");
       setVehicleModel("");
@@ -626,6 +734,20 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       setItems([
         {
           id: `item-${Date.now()}-1`,
+          description: "",
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0,
+        },
+        {
+          id: `item-${Date.now()}-2`,
+          description: "",
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0,
+        },
+        {
+          id: `item-${Date.now()}-3`,
           description: "",
           quantity: 1,
           unitPrice: 0,
@@ -707,11 +829,13 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     } else if (field === "quantity") {
       const q = parseFloat(String(val)) || 0;
       target.quantity = q;
-      target.amount = Math.round(q * target.unitPrice * 100) / 100;
+      target.amount = Math.round(q * (target.unitPrice || 0) * 100) / 100;
     } else if (field === "unitPrice") {
       const p = parseFloat(String(val)) || 0;
       target.unitPrice = p;
-      target.amount = Math.round(target.quantity * p * 100) / 100;
+      const q = target.quantity > 0 ? target.quantity : 1;
+      target.quantity = q;
+      target.amount = Math.round(q * p * 100) / 100;
     }
     updated[index] = target;
     setItems(updated);
@@ -815,10 +939,94 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
     setDateWarningMsg("");
     setErrorMsg("");
 
+    const docId = initialBudget?.id || `doc_${Date.now()}`;
+
+    // Si es Factura Recibida de Proveedor
+    if (isFacturaRecibida) {
+      const finalIssuerName = providerIssuerName.trim() || 'Proveedor Recambios';
+      const docData: GestarianDocument = {
+        id: docId,
+        type: 'factura_recibida',
+        number: docNumber,
+        series,
+        date,
+        dueDate,
+        issuerId: initialBudget?.issuerId || `prov_${Date.now()}`,
+        issuerName: finalIssuerName,
+        issuerCif: providerIssuerCif.trim(),
+        issuerAddress: providerIssuerAddress.trim(),
+        issuerPhone: providerIssuerPhone.trim(),
+        issuerEmail: providerIssuerEmail.trim(),
+        clientId: currentUser.id,
+        clientName: currentUser.fullName,
+        clientCif: currentUser.cif,
+        clientAddress: currentUser.fiscalAddress || '',
+        clientPhone: currentUser.phone || '',
+        clientEmail: currentUser.email || '',
+        items: validConcepts.map((it) => ({
+          ...it,
+          quantity: it.quantity > 0 ? it.quantity : 1,
+          description: it.description.trim(),
+        })),
+        subtotal,
+        applyIva: effectiveApplyIva,
+        ivaRate: effectiveIvaRate,
+        ivaAmount,
+        applyIrpf: false,
+        irpfRate: 0,
+        irpfAmount: 0,
+        total,
+        status: 'confirmada',
+        isLocked: false,
+        showVehicleData: false,
+        showLocationData: false,
+        notes,
+        payments,
+      };
+
+      try {
+        const storedProvsStr = localStorage.getItem('gestarian_proveedores_v1');
+        const storedProvs: any[] = storedProvsStr ? JSON.parse(storedProvsStr) : [];
+        const cleanProvCif = providerIssuerCif.replace(/[\s-]/g, '').toUpperCase();
+        const existsProv = storedProvs.some((p: any) => {
+          const pCif = (p.cif || '').replace(/[\s-]/g, '').toUpperCase();
+          if (cleanProvCif && pCif === cleanProvCif) return true;
+          return p.name.trim().toLowerCase() === finalIssuerName.toLowerCase();
+        });
+        if (!existsProv && finalIssuerName) {
+          const newProv = {
+            id: `prov-${Date.now()}`,
+            code: `PROV-${String(storedProvs.length + 1).padStart(2, '0')}`,
+            name: finalIssuerName,
+            cif: providerIssuerCif.trim() || '---',
+            direccionFiscal: providerIssuerAddress.trim() || '---',
+            sector: 'RECAMBIOS Y SUMINISTROS',
+            phone: providerIssuerPhone.trim() || '---',
+            email: providerIssuerEmail.trim() || '---',
+            pendingOrderRef: `FACT: ${docNumber}`,
+            expedienteVinculado: '---',
+            lastDelivery: validConcepts[0]?.description || 'Recambios de automoción',
+          };
+          const updatedProvs = [newProv, ...storedProvs];
+          localStorage.setItem('gestarian_proveedores_v1', JSON.stringify(updatedProvs));
+          window.dispatchEvent(new CustomEvent('gestarian_proveedores_updated'));
+        }
+      } catch (e) {
+        console.error('Error auto-saving provider:', e);
+      }
+
+      onSave(docData, { sendDirectly: false });
+      setIsSaved(true);
+      setErrorMsg("");
+      playGentleChime();
+      if (onShowToast) {
+        onShowToast(`Factura recibida ${docNumber} guardada correctamente.`);
+      }
+      return;
+    }
+
     const cleanPlate = sanitizePlate(vehiclePlate);
     const finalExpediente = expediente || getExpedienteFromDocNumber(docNumber);
-
-    const docId = initialBudget?.id || `doc_${Date.now()}`;
     const docData: GestarianDocument = {
       id: docId,
       type: docType,
@@ -839,9 +1047,10 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
       clientAddress: quickAddress.trim() || selectedClient?.address || '',
       clientPhone: quickPhone.trim() || selectedClient?.phone || '',
       clientEmail: quickEmail.trim() || selectedClient?.email || '',
-      items: items.map((it) => ({
+      items: validConcepts.map((it) => ({
         ...it,
-        description: it.description.trim() || "Concepto de taller",
+        quantity: it.quantity > 0 ? it.quantity : 1,
+        description: it.description.trim(),
       })),
       subtotal,
       applyIva: effectiveApplyIva,
@@ -1215,7 +1424,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
             {/* Input Número de Factura / Presupuesto con teclado alfanumérico por defecto en móvil/tablet */}
             <div className="flex-1 flex flex-col justify-center">
               <label className="text-[11px] font-black uppercase text-blue-900 tracking-wider mb-1 block">
-                Nº {docType === 'factura' ? 'Factura' : 'Presupuesto'}:
+                Nº {isFacturaRecibida ? 'Factura Recibida' : docType === 'factura' ? 'Factura' : 'Presupuesto'}:
               </label>
               <input
                 type="text"
@@ -1228,7 +1437,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
                   setIsSaved(false);
                 }}
                 className="w-full font-mono font-black text-xl sm:text-2xl text-blue-950 bg-white border-2 border-sky-400 focus:border-blue-900 rounded-2xl px-4 py-2.5 outline-none shadow-xs transition-all"
-                placeholder={docType === 'factura' ? "Ej: F260001" : "Ej: P260001"}
+                placeholder={isFacturaRecibida ? "Ej: FR260001" : docType === 'factura' ? "Ej: F260001" : "Ej: P260001"}
               />
             </div>
 
@@ -1302,202 +1511,313 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
           </div>
         )}
 
-        {/* SEGUNDA LÍNEA: TARJETAS DE EMPRESA EMISORA Y CLIENTE (PRIMERO EMISOR Y LUEGO CLIENTE) - FONDO CELESTE CLARITO SIN LÍNEA DE BORDE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          {/* 1. Tarjeta Empresa/Taller Emisor: Esquinas redondeadas, relleno fondo celeste clarito visible sin línea de borde */}
-          <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-xs">
-            <div className="flex-1 min-w-0">
-              <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider block mb-2">
-                EMPRESA / TALLER EMISOR:
-              </span>
-              <h2 className="text-lg sm:text-xl font-black text-blue-950 uppercase tracking-tight truncate">
-                {currentUser.fullName}
-              </h2>
-              <p className="text-sm sm:text-base text-blue-900 mt-1 leading-relaxed">
-                {currentUser.fiscalAddress || "Dirección de la empresa"}
-              </p>
-              <p className="text-sm sm:text-base text-blue-900 mt-0.5">
-                NIF/CIF: <span className="font-bold text-blue-950">{currentUser.cif}</span>
-              </p>
-              <p className="text-sm sm:text-base text-blue-900 mt-0.5">
-                Teléfono: <span className="font-bold text-blue-950">{currentUser.phone}</span> {currentUser.email ? `| Email: ${currentUser.email}` : ''}
-              </p>
-            </div>
-
-            {currentUser.logoUrl ? (
-              <div className="shrink-0 flex items-center justify-center p-1.5 bg-white rounded-xl shadow-xs">
-                <img
-                  src={currentUser.logoUrl}
-                  alt="Logo Empresa"
-                  className="w-20 h-20 sm:w-28 sm:h-28 object-contain"
-                />
+        {/* SEGUNDA LÍNEA: TARJETAS DE EMISOR Y CLIENTE */}
+        {isFacturaRecibida ? (
+          /* MODO FACTURA DE PROVEEDOR (FACTURA RECIBIDA):
+             - Tarjeta 1: DATOS DEL PROVEEDOR (EMISOR) para rellenar a mano o pre-rellenos si se seleccionó una tarjeta
+             - Tarjeta 2: CLIENTE / DESTINATARIO: SIEMPRE NUESTRA EMPRESA (EL USUARIO) */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {/* 1. Tarjeta Proveedor Emisor */}
+            <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-start shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider">
+                  PROVEEDOR (EMISOR DE LA FACTURA):
+                </span>
+                {providerIssuerName && (
+                  <span className="bg-sky-200/90 text-sky-950 font-bold text-xs px-2 py-0.5 rounded-lg truncate max-w-[200px]">
+                    {providerIssuerName}
+                  </span>
+                )}
               </div>
-            ) : null}
-          </div>
-
-          {/* 2. Tarjeta Cliente: Selección de lista y/o entrada manual */}
-          <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-start shadow-xs">
-            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-              <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider">
-                DATOS DEL CLIENTE:
-              </span>
-              {selectedClient && (
-                <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-lg text-xs font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="truncate max-w-[150px] sm:max-w-[200px]">Cliente: {selectedClient.name}</span>
-                  <button
-                    type="button"
-                    onClick={handleClearSelectedClient}
-                    className="ml-1 text-slate-400 hover:text-rose-600 font-black cursor-pointer"
-                    title="Desvincular cliente para escribir libremente"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Selector de Cliente: Buscar en listado de clientes */}
-            {!isLocked && (
-              <div ref={clientSearchContainerRef} className="relative mb-3">
-                <div className="relative flex items-center">
-                  <Search className="w-4 h-4 absolute left-3 text-sky-600 pointer-events-none" />
+              <div className="space-y-2 text-blue-950">
+                <input
+                  type="text"
+                  placeholder="Nombre o Razón Social del Proveedor *"
+                  value={providerIssuerName}
+                  readOnly={isLocked}
+                  onChange={(e) => {
+                    setProviderIssuerName(e.target.value);
+                    setIsSaved(false);
+                  }}
+                  className="w-full font-black text-base sm:text-lg uppercase text-blue-950 bg-white/90 px-3.5 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="text"
-                    value={clientSearchQuery}
-                    onFocus={() => setIsClientDropdownOpen(true)}
+                    placeholder="CIF / NIF del Proveedor *"
+                    value={providerIssuerCif}
+                    readOnly={isLocked}
                     onChange={(e) => {
-                      setClientSearchQuery(e.target.value);
-                      setIsClientDropdownOpen(true);
+                      setProviderIssuerCif(e.target.value.toUpperCase());
+                      setIsSaved(false);
                     }}
-                    placeholder="🔍 Buscar en listado de clientes (nombre, CIF, teléfono, matrícula)..."
-                    className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sky-300 rounded-xl outline-none focus:border-sky-500 text-blue-950 placeholder-sky-400/80 shadow-2xs"
+                    className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
                   />
-                  {clientSearchQuery && (
+                  <input
+                    type="tel"
+                    placeholder="Teléfono"
+                    value={providerIssuerPhone}
+                    readOnly={isLocked}
+                    onChange={(e) => {
+                      setProviderIssuerPhone(e.target.value);
+                      setIsSaved(false);
+                    }}
+                    className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                  />
+                </div>
+                <input
+                  type="email"
+                  placeholder="Correo Electrónico (Email)"
+                  value={providerIssuerEmail}
+                  readOnly={isLocked}
+                  onChange={(e) => {
+                    setProviderIssuerEmail(e.target.value);
+                    setIsSaved(false);
+                  }}
+                  className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                />
+                <input
+                  type="text"
+                  placeholder="Dirección Fiscal del Proveedor *"
+                  value={providerIssuerAddress}
+                  readOnly={isLocked}
+                  onChange={(e) => {
+                    setProviderIssuerAddress(e.target.value);
+                    setIsSaved(false);
+                  }}
+                  className="w-full font-medium text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* 2. Tarjeta Cliente / Destinatario: Siempre nuestra empresa */}
+            <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-xs">
+              <div className="flex-1 min-w-0">
+                <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider block mb-2">
+                  CLIENTE / DESTINATARIO (NUESTRA EMPRESA):
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-blue-950 uppercase tracking-tight truncate">
+                  {currentUser.fullName}
+                </h2>
+                <p className="text-sm sm:text-base text-blue-900 mt-1 leading-relaxed">
+                  {currentUser.fiscalAddress || "Dirección de la empresa"}
+                </p>
+                <p className="text-sm sm:text-base text-blue-900 mt-0.5">
+                  NIF/CIF: <span className="font-bold text-blue-950">{currentUser.cif}</span>
+                </p>
+                <p className="text-sm sm:text-base text-blue-900 mt-0.5">
+                  Teléfono: <span className="font-bold text-blue-950">{currentUser.phone}</span> {currentUser.email ? `| Email: ${currentUser.email}` : ''}
+                </p>
+              </div>
+
+              {currentUser.logoUrl ? (
+                <div className="shrink-0 flex items-center justify-center p-1.5 bg-white rounded-xl shadow-xs">
+                  <img
+                    src={currentUser.logoUrl}
+                    alt="Logo Empresa"
+                    className="w-20 h-20 sm:w-28 sm:h-28 object-contain"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {/* 1. Tarjeta Empresa/Taller Emisor */}
+            <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-xs">
+              <div className="flex-1 min-w-0">
+                <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider block mb-2">
+                  EMPRESA / TALLER EMISOR:
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-blue-950 uppercase tracking-tight truncate">
+                  {currentUser.fullName}
+                </h2>
+                <p className="text-sm sm:text-base text-blue-900 mt-1 leading-relaxed">
+                  {currentUser.fiscalAddress || "Dirección de la empresa"}
+                </p>
+                <p className="text-sm sm:text-base text-blue-900 mt-0.5">
+                  NIF/CIF: <span className="font-bold text-blue-950">{currentUser.cif}</span>
+                </p>
+                <p className="text-sm sm:text-base text-blue-900 mt-0.5">
+                  Teléfono: <span className="font-bold text-blue-950">{currentUser.phone}</span> {currentUser.email ? `| Email: ${currentUser.email}` : ''}
+                </p>
+              </div>
+
+              {currentUser.logoUrl ? (
+                <div className="shrink-0 flex items-center justify-center p-1.5 bg-white rounded-xl shadow-xs">
+                  <img
+                    src={currentUser.logoUrl}
+                    alt="Logo Empresa"
+                    className="w-20 h-20 sm:w-28 sm:h-28 object-contain"
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            {/* 2. Tarjeta Cliente: Selección de lista y/o entrada manual */}
+            <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-start shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="font-black text-xs sm:text-sm uppercase text-blue-950 tracking-wider">
+                  DATOS DEL CLIENTE:
+                </span>
+                {selectedClient && (
+                  <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-lg text-xs font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="truncate max-w-[150px] sm:max-w-[200px]">Cliente: {selectedClient.name}</span>
                     <button
                       type="button"
-                      onClick={() => setClientSearchQuery("")}
-                      className="absolute right-2.5 text-slate-400 hover:text-slate-600 text-xs font-black p-1 cursor-pointer"
+                      onClick={handleClearSelectedClient}
+                      className="ml-1 text-slate-400 hover:text-rose-600 font-black cursor-pointer"
+                      title="Desvincular cliente para escribir libremente"
                     >
                       ✕
                     </button>
-                  )}
-                </div>
-
-                {/* Dropdown flotante con los clientes */}
-                {isClientDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-sky-400 rounded-2xl shadow-xl max-h-56 overflow-y-auto z-50 p-1.5 divide-y divide-slate-100">
-                    <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                      <span>Seleccionar de la lista ({filteredSearchClients.length})</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsClientDropdownOpen(false)}
-                        className="text-slate-400 hover:text-slate-700 text-xs font-bold"
-                      >
-                        Cerrar ✕
-                      </button>
-                    </div>
-                    {filteredSearchClients.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-xs text-slate-400 italic">
-                        No se encontraron clientes que coincidan. Puedes rellenar los datos manualmente abajo.
-                      </div>
-                    ) : (
-                      filteredSearchClients.slice(0, 8).map((c) => {
-                        const plateInfo = c.plates && c.plates.length > 0 ? c.plates[0] : (c.vehicles && c.vehicles.length > 0 ? c.vehicles[0].plate : null);
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => handleSelectClientFromList(c)}
-                            className="w-full text-left px-3 py-2 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer flex items-center justify-between gap-2"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="font-black text-xs sm:text-sm text-blue-950 truncate">
-                                {c.name}
-                              </p>
-                              <p className="text-[11px] text-slate-500 font-mono truncate">
-                                {c.cif || 'Sin CIF'} {c.phone ? `· 📞 ${c.phone}` : ''}
-                              </p>
-                            </div>
-                            {plateInfo && (
-                              <span className="shrink-0 bg-white border border-slate-300 font-mono text-[10px] font-black px-2 py-0.5 rounded text-slate-800 shadow-2xs">
-                                {plateInfo}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })
-                    )}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Inputs de añadir cliente manualmente */}
-            <div className="space-y-2 text-blue-950">
-              <input
-                type="text"
-                placeholder="Nombre o Razón Social del Cliente *"
-                value={quickName}
-                readOnly={isLocked}
-                onChange={(e) => {
-                  setQuickName(e.target.value);
-                  setIsSaved(false);
-                }}
-                className="w-full font-black text-base sm:text-lg uppercase text-blue-950 bg-white/90 px-3.5 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Selector de Cliente: Buscar en listado de clientes */}
+              {!isLocked && (
+                <div ref={clientSearchContainerRef} className="relative mb-3">
+                  <div className="relative flex items-center">
+                    <Search className="w-4 h-4 absolute left-3 text-sky-600 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={clientSearchQuery}
+                      onFocus={() => setIsClientDropdownOpen(true)}
+                      onChange={(e) => {
+                        setClientSearchQuery(e.target.value);
+                        setIsClientDropdownOpen(true);
+                      }}
+                      placeholder="🔍 Buscar en listado de clientes (nombre, CIF, teléfono, matrícula)..."
+                      className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sky-300 rounded-xl outline-none focus:border-sky-500 text-blue-950 placeholder-sky-400/80 shadow-2xs"
+                    />
+                    {clientSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setClientSearchQuery("")}
+                        className="absolute right-2.5 text-slate-400 hover:text-slate-600 text-xs font-black p-1 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown flotante con los clientes */}
+                  {isClientDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-sky-400 rounded-2xl shadow-xl max-h-56 overflow-y-auto z-50 p-1.5 divide-y divide-slate-100">
+                      <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                        <span>Seleccionar de la lista ({filteredSearchClients.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsClientDropdownOpen(false)}
+                          className="text-slate-400 hover:text-slate-700 text-xs font-bold"
+                        >
+                          Cerrar ✕
+                        </button>
+                      </div>
+                      {filteredSearchClients.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-xs text-slate-400 italic">
+                          No se encontraron clientes que coincidan. Puedes rellenar los datos manualmente abajo.
+                        </div>
+                      ) : (
+                        filteredSearchClients.slice(0, 8).map((c) => {
+                          const plateInfo = c.plates && c.plates.length > 0 ? c.plates[0] : (c.vehicles && c.vehicles.length > 0 ? c.vehicles[0].plate : null);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleSelectClientFromList(c)}
+                              className="w-full text-left px-3 py-2 hover:bg-sky-50 rounded-xl transition-colors cursor-pointer flex items-center justify-between gap-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="font-black text-xs sm:text-sm text-blue-950 truncate">
+                                  {c.name}
+                                </p>
+                                <p className="text-[11px] text-slate-500 font-mono truncate">
+                                  {c.cif || 'Sin CIF'} {c.phone ? `· 📞 ${c.phone}` : ''}
+                                </p>
+                              </div>
+                              {plateInfo && (
+                                <span className="shrink-0 bg-white border border-slate-300 font-mono text-[10px] font-black px-2 py-0.5 rounded text-slate-800 shadow-2xs">
+                                  {plateInfo}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Inputs de añadir cliente manualmente */}
+              <div className="space-y-2 text-blue-950">
                 <input
                   type="text"
-                  placeholder="NIF / CIF *"
-                  value={quickCif}
+                  placeholder="Nombre o Razón Social del Cliente *"
+                  value={quickName}
                   readOnly={isLocked}
                   onChange={(e) => {
-                    setQuickCif(e.target.value.toUpperCase());
+                    setQuickName(e.target.value);
                     setIsSaved(false);
                   }}
-                  className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                  className="w-full font-black text-base sm:text-lg uppercase text-blue-950 bg-white/90 px-3.5 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="DNI / NIF / CIF *"
+                    value={quickCif}
+                    readOnly={isLocked}
+                    onChange={(e) => {
+                      setQuickCif(e.target.value.toUpperCase());
+                      setIsSaved(false);
+                    }}
+                    className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Teléfono (WhatsApp)"
+                    value={quickPhone}
+                    readOnly={isLocked}
+                    onChange={(e) => {
+                      setQuickPhone(e.target.value);
+                      setIsSaved(false);
+                    }}
+                    className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                  />
+                </div>
+                <input
+                  type="email"
+                  placeholder="Correo Electrónico (Email)"
+                  value={quickEmail}
+                  readOnly={isLocked}
+                  onChange={(e) => {
+                    setQuickEmail(e.target.value);
+                    setIsSaved(false);
+                  }}
+                  className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
                 />
                 <input
-                  type="tel"
-                  placeholder="Teléfono (WhatsApp)"
-                  value={quickPhone}
+                  type="text"
+                  placeholder="Dirección / Domicilio *"
+                  value={quickAddress}
                   readOnly={isLocked}
                   onChange={(e) => {
-                    setQuickPhone(e.target.value);
+                    setQuickAddress(e.target.value);
                     setIsSaved(false);
                   }}
-                  className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
+                  className="w-full font-medium text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
                 />
               </div>
-              <input
-                type="email"
-                placeholder="Correo Electrónico (Email)"
-                value={quickEmail}
-                readOnly={isLocked}
-                onChange={(e) => {
-                  setQuickEmail(e.target.value);
-                  setIsSaved(false);
-                }}
-                className="w-full font-bold text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
-              />
-              <input
-                type="text"
-                placeholder="Dirección / Domicilio *"
-                value={quickAddress}
-                readOnly={isLocked}
-                onChange={(e) => {
-                  setQuickAddress(e.target.value);
-                  setIsSaved(false);
-                }}
-                className="w-full font-medium text-sm sm:text-base text-blue-950 bg-white/90 px-3 py-1 rounded-xl border border-sky-300 outline-none placeholder-blue-300 shadow-2xs"
-              />
             </div>
           </div>
-        </div>
+        )}
 
-        {/* 3. TARJETA VEHÍCULO CON CASILLA ACTIVAR/DESACTIVAR DATOS DE VEHÍCULO */}
-        {currentUser?.enableVehicle !== false && (
+        {/* 3. TARJETA VEHÍCULO CON CASILLA ACTIVAR/DESACTIVAR DATOS DE VEHÍCULO (Ocultar si no es automoción/transporte o en facturas recibidas de proveedor) */}
+        {!isFacturaRecibida && isVehicleFeatureActive(currentUser) && (
           <div className="bg-sky-100/80 rounded-2xl p-4 sm:p-5 mb-3 flex flex-col gap-3 shadow-xs">
             {/* Casilla activar / desactivar datos de vehículo */}
             <div className="flex items-center justify-between pb-2 border-b border-sky-300/80">
@@ -1579,7 +1899,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
         )}
 
         {/* 3B. TARJETA LOCALIZACIÓN CON CASILLA ACTIVAR/DESACTIVAR DATOS DE LOCALIZACIÓN */}
-        {(docType === 'presupuesto' || docType === 'factura' || currentUser?.enableLocation || initialBudget?.taskLocation || initialBudget?.showLocationData !== undefined) && (
+        {!isFacturaRecibida && (currentUser?.enableLocation === true || (initialBudget?.showLocationData === true && Boolean(initialBudget?.taskLocation))) && (
           <div className="bg-emerald-50/90 rounded-2xl p-4 sm:p-5 mb-3 flex flex-col gap-3 shadow-xs border border-emerald-300/80">
             {/* Casilla activar / desactivar datos de localización */}
             <div className="flex items-center justify-between pb-2 border-b border-emerald-300/80">
@@ -1674,87 +1994,98 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = ({
           </div>
         )}
 
-        {/* 4. TABLA DE CONCEPTOS DEL PRESUPUESTO (SOLO: CONCEPTO, UD. PRECIO, IMPORTE - AJUSTE RESPONSIVE SIN SCROLL LATERAL EN MÓVIL) */}
-        <div className="flex-1 flex flex-col mb-6 overflow-x-hidden">
+        {/* 4. TABLA DE CONCEPTOS DEL PRESUPUESTO / FACTURA (CONCEPTO, CANTIDAD, PRECIO, IMPORTE) */}
+        <div className="w-full my-6 flex flex-col overflow-visible">
           <table className="w-full table-fixed border-collapse">
             <thead>
               <tr className="border-b-2 border-blue-950 text-blue-950 font-black uppercase tracking-wider text-xs sm:text-base">
-                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-left">Concepto</th>
-                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-center w-12 sm:w-20">Ud.</th>
-                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-right w-16 sm:w-28">Precio</th>
-                <th className="py-2.5 sm:py-3 px-1 sm:px-2 text-right w-20 sm:w-32">Importe</th>
+                <th className="py-3 sm:py-4 px-1.5 sm:px-3 text-left">Concepto</th>
+                <th className="py-3 sm:py-4 px-1.5 sm:px-3 text-center w-20 sm:w-28">Cantidad</th>
+                <th className="py-3 sm:py-4 px-1.5 sm:px-3 text-right w-24 sm:w-32">Precio</th>
+                <th className="py-3 sm:py-4 px-1.5 sm:px-3 text-right w-28 sm:w-36">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-100">
-              {items.map((it, idx) => (
-                <tr key={it.id || idx} className="group hover:bg-blue-50/50 transition-colors">
-                  <td className="py-2 sm:py-3 px-1 sm:px-2">
-                    <div className="flex items-center gap-1 w-full min-w-0">
-                      <input
-                        type="text"
-                        value={it.description}
-                        readOnly={isLocked}
-                        placeholder="Pulsar para escribir concepto..."
-                        onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                        className="w-full min-w-0 bg-transparent outline-none font-bold text-xs sm:text-lg text-blue-950 placeholder-blue-300"
-                      />
-                      {!isLocked && items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItemRow(idx)}
-                          className="shrink-0 text-slate-300 hover:text-red-500 transition-colors print:hidden cursor-pointer p-0.5"
-                          title="Eliminar fila"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-center">
-                    <input
-                      type="number"
-                      min="0.1"
-                      step="any"
-                      value={it.quantity}
-                      readOnly={isLocked}
-                      onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
-                      className="w-full bg-transparent outline-none text-center font-mono font-bold text-xs sm:text-base text-blue-950 px-0.5"
-                    />
-                  </td>
-                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-right">
-                    {canSetPrices ? (
+              {items.map((it, idx) => {
+                const lineTotal = (Number(it.quantity || 0) * Number(it.unitPrice || 0));
+                return (
+                  <tr key={it.id || idx} className="group hover:bg-blue-50/50 transition-colors">
+                    <td className="py-3.5 sm:py-5 px-1.5 sm:px-3 align-middle">
+                      <div className="flex items-center gap-1.5 w-full min-w-0">
+                        <input
+                          type="text"
+                          value={it.description}
+                          readOnly={isLocked}
+                          placeholder="Concepto..."
+                          onChange={(e) => handleItemChange(idx, "description", e.target.value)}
+                          className="w-full min-w-0 bg-transparent outline-none font-bold text-sm sm:text-lg text-blue-950 placeholder-blue-300 focus:bg-blue-50/80 rounded-lg py-1 px-1.5 transition-colors"
+                        />
+                        {!isLocked && items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(idx)}
+                            className="shrink-0 text-slate-300 hover:text-red-500 transition-colors print:hidden cursor-pointer p-1"
+                            title="Eliminar fila"
+                          >
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 sm:py-5 px-1.5 sm:px-3 text-center align-middle">
                       <input
                         type="number"
-                        min="0"
+                        min="0.01"
                         step="any"
-                        value={it.unitPrice}
+                        value={it.quantity === 0 ? "" : it.quantity}
+                        placeholder="1"
+                        onFocus={(e) => e.target.select()}
                         readOnly={isLocked}
-                        onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value)}
-                        className="w-full bg-transparent outline-none text-right font-mono font-bold text-xs sm:text-base text-blue-950 px-0.5"
+                        onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                        className="w-full bg-transparent outline-none text-center font-mono font-bold text-sm sm:text-base text-blue-950 py-1 px-1 focus:bg-blue-50/80 rounded-lg transition-colors"
                       />
-                    ) : (
-                      <span className="italic text-amber-700 text-xs">A valorar</span>
-                    )}
-                  </td>
-                  <td className="py-2 sm:py-3 px-1 sm:px-2 text-right font-mono font-black text-xs sm:text-base text-blue-950 whitespace-nowrap overflow-hidden text-ellipsis">
-                    {canSetPrices ? `${it.amount.toFixed(2)} €` : "-"}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3.5 sm:py-5 px-1.5 sm:px-3 text-right align-middle">
+                      {canSetPrices ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={it.unitPrice === 0 ? "" : it.unitPrice}
+                          placeholder="0.00"
+                          onFocus={(e) => e.target.select()}
+                          readOnly={isLocked}
+                          onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value)}
+                          className="w-full bg-transparent outline-none text-right font-mono font-bold text-sm sm:text-base text-blue-950 py-1 px-1 focus:bg-blue-50/80 rounded-lg transition-colors"
+                        />
+                      ) : (
+                        <span className="italic text-amber-700 text-xs">A valorar</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 sm:py-5 px-1.5 sm:px-3 text-right font-mono font-black text-sm sm:text-lg text-blue-950 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
+                      {canSetPrices ? `${(it.amount !== undefined ? it.amount : lineTotal).toFixed(2)} €` : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
-          {/* BOTÓN + PARA AÑADIR LÍNEA: CENTRADO DEBAJO DE LA ÚLTIMA LÍNEA */}
+          {/* BOTÓN + PARA AÑADIR NUEVA LÍNEA: CENTRADO CON FORMA DE CÍRCULO CON EL SIGNO + DENTRO */}
           {!isLocked && (
-            <div className="flex justify-center pt-3 pb-2 print:hidden">
+            <div className="flex flex-col items-center justify-center pt-6 pb-6 print:hidden">
               <button
                 type="button"
                 onClick={addItemRow}
-                className="w-10 h-10 rounded-full bg-blue-50 hover:bg-blue-900 hover:text-white text-blue-950 border border-blue-300 flex items-center justify-center transition-all shadow-xs cursor-pointer"
-                title="Añadir nueva línea de concepto"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-900 hover:bg-blue-800 active:scale-95 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 border-white ring-2 ring-blue-900/30 group"
+                title="Añadir nueva línea"
+                aria-label="Añadir nueva línea"
               >
-                <Plus className="w-6 h-6 font-bold" />
+                <Plus className="w-8 h-8 sm:w-9 sm:h-9 stroke-[2.8] group-hover:scale-110 transition-transform" />
               </button>
+              <span className="text-xs font-black uppercase tracking-wider text-blue-900 mt-2">
+                Añadir nueva línea
+              </span>
             </div>
           )}
         </div>

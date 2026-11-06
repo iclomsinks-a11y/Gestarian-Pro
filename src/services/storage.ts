@@ -88,8 +88,8 @@ export function getDocumentPrefix(type: DocumentType | string): string {
   if (lower.includes('presupuesto')) return `P${year2Digits}`;
   if (lower.includes('expediente')) return `E${year2Digits}`;
   if (lower.includes('proforma')) return `FP${year2Digits}`;
-  if (lower.includes('rectificativa')) return `FR${year2Digits}`;
-  if (lower.includes('factura') && !lower.includes('recibida')) return `F${year2Digits}`;
+  if (lower.includes('rectificativa') || lower.includes('recibida')) return `FR${year2Digits}`;
+  if (lower.includes('factura')) return `F${year2Digits}`;
   if (lower.includes('recibo') || lower.includes('abono')) return `R${year2Digits}`;
   if (lower.includes('orden')) return `OT${year2Digits}`;
   return `D${year2Digits}`;
@@ -259,6 +259,8 @@ export const DEFAULT_USER: AppUser = {
   metisTechnicalAdviceEnabled: true,
   enableVehicle: true,
   enableLocation: false,
+  enableDigitalSignature: false,
+  enableVehicleMaintenanceAlerts: true,
   bgPortraitUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop',
   bgLandscapeUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop',
   bgBentoMenuUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=2564&auto=format&fit=crop',
@@ -311,17 +313,17 @@ export const DEFAULT_USER: AppUser = {
     },
     {
       id: 'emp_01',
-      name: 'MIGUEL ÁNGEL TORRES',
-      dni: '48392019K',
-      phone: '+34 611 223 344',
-      email: 'm.torres@dmcar.es',
+      name: 'EMPLEADO 1 (PRUEBA - TALLER Y EXPEDIENTES)',
+      dni: '11111111A',
+      phone: '+34 611 111 111',
+      email: 'empleado1@prueba.es',
       role: 'autorizado',
-      profession: 'Oficial Mecánico y Chapista de Automoción',
-      laborEncomendada: 'Sustitución y estiraje estructural de carrocería en bancada electrónica, soldadura MIG/MAG, desabollado de chapa de aluminio y acero de alta resistencia.',
-      epigrafeActividad: 'Epígrafe 691.2 - Reparación y mantenimiento de vehículos de motor',
+      profession: 'Oficial 1ª Mecánico y Carrocería',
+      laborEncomendada: 'Diagnosis electrónica avanzada, alineación de bancada, desabollado de aluminio/acero, reparación mecánica y gestión de expedientes de taller.',
+      epigrafeActividad: 'Epígrafe 691.2 / CNAE 4520 - Reparación y mantenimiento de vehículos de motor',
       cnoCode: '7313',
-      cnoDescription: 'Chapistas y caldereros',
-      cotizacionGroup: 'Grupo 8: Oficiales de primera y de segunda',
+      cnoDescription: 'Chapistas y caldereros de automoción',
+      cotizacionGroup: 'Grupo 8: Oficiales de 1ª y 2ª (Mecánicos y Chapistas)',
       accidentsEpigrafe: '45.20 (Reparación de vehículos)',
       salaryMonthly: 1950,
       irpfRate: 12,
@@ -338,10 +340,10 @@ export const DEFAULT_USER: AppUser = {
       ],
       permissions: {
         accessExpedientes: true,
-        accessSolicitudes: false,
+        accessSolicitudes: true,
         accessClientes: true,
         accessPresupuestos: true,
-        accessCitas: false,
+        accessCitas: true,
         accessTaller: true,
         accessFacturacion: false,
         accessBalances: false,
@@ -349,27 +351,27 @@ export const DEFAULT_USER: AppUser = {
         accessIncidencias: true,
         manageWorkOrders: true,
         createBudgets: true,
-        canSetPrices: false,
+        canSetPrices: true,
         scanPlates: true,
-        viewAgenda: false,
+        viewAgenda: true,
         viewReports: false,
       },
     },
     {
       id: 'emp_02',
-      name: 'SERGIO NAVARRO',
-      dni: '51928374M',
-      phone: '+34 622 334 455',
-      email: 's.navarro@dmcar.es',
+      name: 'SERGIO NAVARRO (EMPLEADO 2 PRUEBA - ADMÓN Y FACTURACIÓN)',
+      dni: '22222222B',
+      phone: '+34 622 222 222',
+      email: 'empleado2@prueba.es',
       role: 'autorizado',
-      profession: 'Oficial Pintor de Vehículos en Cabina',
-      laborEncomendada: 'Preparación de imprimaciones y aparejos, ajuste colorimétrico computarizado con espectrofotómetro, aplicación de pintura al agua y barniz cerámico en cabina presurizada.',
-      epigrafeActividad: 'Epígrafe 691.2 - Reparación y mantenimiento de vehículos de motor',
-      cnoCode: '7232',
-      cnoDescription: 'Pintores en las industrias manufactureras y de vehículos',
-      cotizacionGroup: 'Grupo 8: Oficiales de primera y de segunda',
-      accidentsEpigrafe: '45.20 (Reparación de vehículos)',
-      salaryMonthly: 1900,
+      profession: 'Oficial Administrativo y Facturación VeriFactu',
+      laborEncomendada: 'Gestión administrativa integral, emisión y custodia de facturas VeriFactu, atención a clientes, presupuestos y control de cobros.',
+      epigrafeActividad: 'Epígrafe 844.0 / CNAE 6920 - Servicios de contabilidad y administración',
+      cnoCode: '4311',
+      cnoDescription: 'Empleados de contabilidad y cálculo de nóminas',
+      cotizacionGroup: 'Grupo 5: Oficiales Administrativos y Contables',
+      accidentsEpigrafe: '84.40 (Servicios administrativos de oficina)',
+      salaryMonthly: 1850,
       irpfRate: 11,
       ssEmployeeRate: 6.35,
       ssEmployerRate: 31.4,
@@ -383,21 +385,21 @@ export const DEFAULT_USER: AppUser = {
       ],
       permissions: {
         accessExpedientes: true,
-        accessSolicitudes: false,
+        accessSolicitudes: true,
         accessClientes: true,
         accessPresupuestos: true,
         accessCitas: true,
         accessTaller: true,
-        accessFacturacion: false,
-        accessBalances: false,
-        accessProveedores: false,
+        accessFacturacion: true,
+        accessBalances: true,
+        accessProveedores: true,
         accessIncidencias: true,
         manageWorkOrders: true,
         createBudgets: true,
-        canSetPrices: false,
+        canSetPrices: true,
         scanPlates: true,
         viewAgenda: true,
-        viewReports: false,
+        viewReports: true,
       },
     },
     {
@@ -495,8 +497,84 @@ export const DEFAULT_USER: AppUser = {
 
 export const INITIAL_CLIENTS: Client[] = [
   {
-    id: 'cli_01',
+    id: 'cli_test_portal',
     clientNumber: 1,
+    name: 'CLIENTE DE PRUEBA (PORTAL CLIENTE)',
+    cif: 'B-99887766',
+    address: 'Avenida de la Constitución 45, 28001 Madrid',
+    phone: '+34 600 999 888',
+    email: 'portal.cliente@prueba.es',
+    clientType: 'empresa',
+    isAutonomo: false,
+    hasAppInstalled: true,
+    taskLocation: 'Paseo de la Castellana 110, 28046 Madrid',
+    plates: ['9147CCW', '4512LKT', '2045MRB'],
+    vehicles: [
+      {
+        plate: '9147CCW',
+        brand: 'AUDI',
+        model: 'e-tron GT Quattro',
+        color: 'Negro Mitos',
+        vin: 'WAUZZZF80MA012345',
+        itvDate: '2026-05-10',
+        mileage: 32000,
+        images: [
+          'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
+          'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80'
+        ],
+        ocrData: {
+          plate: '9147CCW',
+          brand: 'AUDI',
+          model: 'e-tron GT Quattro 350kW',
+          vin: 'WAUZZZF80MA012345',
+          color: 'Negro Mitos',
+          registrationDate: '10/05/2022',
+          engineDisplacement: '0',
+          power: '350 kW (476 CV)',
+          fuelType: 'Eléctrico 100%',
+          euroNorm: 'Cero Emisiones (0)',
+          tareWeight: '2350 kg',
+          maxAuthorizedMass: '2860 kg',
+          seats: '5',
+          vehicleCategory: 'M1 (Turismo Gran Turismo)',
+          version: 'e-tron GT Dynamic Pack',
+          itvExpiryDate: '10/05/2026',
+          circulationPermitImages: [
+            'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=800&q=80'
+          ],
+          technicalSheetImages: [
+            'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80'
+          ]
+        }
+      },
+      {
+        plate: '4512LKT',
+        brand: 'PORSCHE',
+        model: 'Taycan 4S Cross Turismo',
+        color: 'Gris Vulcano',
+        vin: 'WP0ZZZY1ZMSA54321',
+        itvDate: '2026-08-15',
+        mileage: 18500,
+        images: [
+          'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80'
+        ]
+      },
+      {
+        plate: '2045MRB',
+        brand: 'BMW',
+        model: 'i4 M50 Gran Coupé',
+        color: 'Azul Portimao',
+        vin: 'WBA31AW000FP98765',
+        itvDate: '2026-11-20',
+        mileage: 41000,
+        images: []
+      }
+    ],
+    notes: 'Cliente de prueba oficial para validar el Portal del Cliente, seguimiento de expedientes, presupuestos, facturación y avisos ITV.'
+  },
+  {
+    id: 'cli_01',
+    clientNumber: 2,
     name: 'INNOVA CONSULTING S.L.',
     cif: 'B-83492019',
     address: 'Paseo de la Castellana 110, 28046 Madrid',
@@ -512,6 +590,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Megane E-Tech',
         color: 'Azul Rayo',
         vin: 'VF1RJB00568912345',
+        itvDate: '2027-03-15',
+        mileage: 28500,
         images: [
           'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
         ],
@@ -546,6 +626,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Clase A 200d',
         color: 'Gris Montaña',
         vin: 'WDD1770081J456789',
+        itvDate: '2026-03-24',
+        mileage: 64200,
         images: [],
       },
     ],
@@ -570,6 +652,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Golf VII 1.5 TSI EVO',
         color: 'Blanco Puro',
         vin: 'WVWZZZAUZHP123987',
+        itvDate: '2026-04-05',
+        mileage: 91400,
         images: [
           'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80',
         ],
@@ -595,6 +679,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Daily 35S15',
         color: 'Blanco Polar',
         vin: 'ZCFC35A8105987123',
+        itvDate: '2026-03-18',
+        mileage: 145000,
         images: [],
       },
       {
@@ -603,6 +689,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Transit Custom',
         color: 'Plata Moondust',
         vin: 'WF0YXXTTGYLA12345',
+        itvDate: '2026-06-20',
+        mileage: 82000,
         images: [],
       },
       {
@@ -611,6 +699,8 @@ export const INITIAL_CLIENTS: Client[] = [
         model: 'Partner BlueHDi',
         color: 'Gris Artense',
         vin: 'VR3ECYHZJNJ654321',
+        itvDate: '2026-03-12',
+        mileage: 112000,
         images: [],
       },
     ],
@@ -619,6 +709,94 @@ export const INITIAL_CLIENTS: Client[] = [
 ];
 
 export const INITIAL_DOCUMENTS: GestarianDocument[] = [
+  {
+    id: 'doc_pre_000',
+    type: 'presupuesto',
+    number: 'P260000',
+    series: 'A',
+    date: '2026-02-01',
+    dueDate: '2026-03-01',
+    expediente: 'E260000',
+    vehiclePlate: '9147CCW',
+    vehicleBrand: 'AUDI',
+    vehicleModel: 'e-tron GT Quattro',
+    issuerId: 'usr_dmcar_01',
+    issuerName: 'DM CAR',
+    issuerCif: 'B-89324511',
+    issuerAddress: 'Polígono Industrial Las Eras, Nave 14, 28052 Madrid, España',
+    issuerPhone: '+34 912 345 678',
+    issuerEmail: 'contacto@dmcar.es',
+    clientId: 'cli_test_portal',
+    clientName: 'CLIENTE DE PRUEBA (PORTAL CLIENTE)',
+    clientCif: 'B-99887766',
+    clientAddress: 'Avenida de la Constitución 45, 28001 Madrid',
+    clientEmail: 'portal.cliente@prueba.es',
+    clientPhone: '+34 600 999 888',
+    items: [
+      {
+        id: 'item_test_0',
+        description: 'Revisión técnica de alta tensión y mantenimiento preventivo oficial',
+        quantity: 1,
+        unitPrice: 1200,
+        amount: 1200,
+      },
+    ],
+    subtotal: 1200,
+    applyIva: true,
+    ivaRate: 21,
+    ivaAmount: 252,
+    applyIrpf: false,
+    irpfRate: 0,
+    irpfAmount: 0,
+    total: 1452,
+    status: 'aceptado',
+    isLocked: false,
+    notes: 'Presupuesto de prueba oficial para el Portal del Cliente.',
+  },
+  {
+    id: 'doc_fac_000',
+    type: 'factura',
+    number: 'F260000',
+    series: 'A',
+    date: '2026-02-10',
+    dueDate: '2026-03-10',
+    expediente: 'E260000',
+    vehiclePlate: '9147CCW',
+    issuerId: 'usr_dmcar_01',
+    issuerName: 'DM CAR',
+    issuerCif: 'B-89324511',
+    issuerAddress: 'Polígono Industrial Las Eras, Nave 14, 28052 Madrid, España',
+    issuerPhone: '+34 912 345 678',
+    issuerEmail: 'contacto@dmcar.es',
+    clientId: 'cli_test_portal',
+    clientName: 'CLIENTE DE PRUEBA (PORTAL CLIENTE)',
+    clientCif: 'B-99887766',
+    clientAddress: 'Avenida de la Constitución 45, 28001 Madrid',
+    clientEmail: 'portal.cliente@prueba.es',
+    clientPhone: '+34 600 999 888',
+    items: [
+      {
+        id: 'item_test_fac_0',
+        description: 'Revisión técnica de alta tensión y mantenimiento preventivo oficial',
+        quantity: 1,
+        unitPrice: 1200,
+        amount: 1200,
+      },
+    ],
+    subtotal: 1200,
+    applyIva: true,
+    ivaRate: 21,
+    ivaAmount: 252,
+    applyIrpf: false,
+    irpfRate: 0,
+    irpfAmount: 0,
+    total: 1452,
+    status: 'enviada',
+    isLocked: true,
+    sentAt: '2026-02-10T11:00:00Z',
+    confirmedAt: '2026-02-10T12:00:00Z',
+    notes: 'Factura de prueba oficial vinculada al Portal del Cliente.',
+  },
   {
     id: 'doc_pre_001',
     type: 'presupuesto',
@@ -822,6 +1000,8 @@ export function getStoredUser(): AppUser {
   return DEFAULT_USER;
 }
 
+export const getUser = getStoredUser;
+
 export function saveStoredUser(user: AppUser): void {
   localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
 }
@@ -830,7 +1010,10 @@ export function getStoredClients(): Client[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CLIENTS);
     if (raw) {
-      const parsed: Client[] = JSON.parse(raw);
+      let parsed: Client[] = JSON.parse(raw);
+      if (!parsed.some((c) => c.id === 'cli_test_portal' || c.name.includes('PORTAL CLIENTE'))) {
+        parsed.unshift(INITIAL_CLIENTS[0]);
+      }
       let maxNum = 0;
       parsed.forEach((c) => {
         if (c.clientNumber && c.clientNumber > maxNum) maxNum = c.clientNumber;
@@ -842,10 +1025,16 @@ export function getStoredClients(): Client[] {
         // Sanitizar matrículas para que ninguna tenga guiones
         const sanitizedPlates = (c.plates || []).map(p => sanitizePlate(p));
         const sanitizedVehicles = (c.vehicles && c.vehicles.length > 0)
-          ? c.vehicles.map((v) => ({
-              ...v,
-              plate: sanitizePlate(v.plate),
-            }))
+          ? c.vehicles.map((v) => {
+              const cleanP = sanitizePlate(v.plate);
+              const matchingInitVeh = initialMatch?.vehicles?.find(iv => sanitizePlate(iv.plate) === cleanP);
+              return {
+                ...v,
+                plate: cleanP,
+                itvDate: v.itvDate || matchingInitVeh?.itvDate || (v.ocrData?.itvExpiryDate ? v.ocrData.itvExpiryDate.split('/').reverse().join('-') : undefined),
+                mileage: v.mileage ?? matchingInitVeh?.mileage,
+              };
+            })
           : initialMatch?.vehicles?.map(v => ({ ...v, plate: sanitizePlate(v.plate) })) || sanitizedPlates.map(p => ({ plate: p }));
 
         return {
@@ -872,7 +1061,13 @@ export function getStoredDocuments(): GestarianDocument[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
     if (raw) {
-      const docs: GestarianDocument[] = JSON.parse(raw);
+      let docs: GestarianDocument[] = JSON.parse(raw);
+      if (!docs.some((d) => d.id === 'doc_pre_000')) {
+        docs.unshift(INITIAL_DOCUMENTS[0]);
+      }
+      if (!docs.some((d) => d.id === 'doc_fac_000')) {
+        docs.unshift(INITIAL_DOCUMENTS[1]);
+      }
       // Migrar y sanitizar números, expedientes y matrículas existentes
       return docs.map((d) => {
         // REGLA FUNDAMENTAL: Las facturas recibidas NUNCA tienen ni generan expediente

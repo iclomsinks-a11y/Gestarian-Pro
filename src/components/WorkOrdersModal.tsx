@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GestarianDocument, AppUser, Employee, WorkOrderStatus } from '../types';
 import { X, Play, CheckCircle2, Clock, Wrench, ShieldAlert } from 'lucide-react';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface WorkOrdersModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const WorkOrdersModal: React.FC<WorkOrdersModalProps> = ({
   onUpdateStatus,
 }) => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
 
   useEffect(() => {
     if (isOpen && loggedEmployeeSession && !selectedEmployeeId) {
@@ -191,12 +193,12 @@ export const WorkOrdersModal: React.FC<WorkOrdersModalProps> = ({
                       <h4 className="text-sm font-bold text-[#0F172A]">{order.clientName}</h4>
                       
                       <div className="text-xs text-[#64748B] flex flex-wrap items-center gap-x-3 gap-y-1">
-                        {order.vehiclePlate && (
+                        {isVehicleActive && order.vehiclePlate && (
                           <span className="font-mono font-bold text-[#0F2942] bg-[#F1F5F9] px-1.5 py-0.5 rounded-sm border border-[#CBD5E1]">
                             Matrícula: {order.vehiclePlate}
                           </span>
                         )}
-                        {order.vehicleType && (
+                        {isVehicleActive && order.vehicleType && (
                           <span>Tipo: <strong>{order.vehicleType}</strong></span>
                         )}
                         {order.vehicleDeliveryDate && (

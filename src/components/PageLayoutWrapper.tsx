@@ -2,10 +2,12 @@ import React, { useRef, useState } from 'react';
 import { 
   ArrowLeft, Home, Menu, ClipboardList,
   SlidersHorizontal, Search, UserPlus, Calendar,
-  BarChart3, Receipt, Users, Printer, Settings
+  BarChart3, Receipt, Users, Printer, Settings, Calculator, Camera, UserPen
 } from 'lucide-react';
-import { SheetPlusPIcon } from './BudgetIcons';
+import { SheetPlusPIcon, SheetPlusFIcon, TruckPlusIcon } from './BudgetIcons';
 import { GestarianPlan } from '../types';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 const AFFECTED_PAGES = [
   'page-expedientes',
@@ -61,6 +63,9 @@ interface PageLayoutWrapperProps {
   onBack?: () => void;
   onNavigateHome?: () => void;
   vehiclePlate?: string | null;
+  docRefNumber?: string | null;
+  docRefType?: 'presupuesto' | 'factura';
+  expedienteNumber?: string | null;
   onOpenDatos?: () => void;
   datosCount?: number;
   onNewClient?: () => void;
@@ -72,6 +77,7 @@ interface PageLayoutWrapperProps {
   onNewEmployee?: () => void;
   onSearchEmployee?: () => void;
   onNewInvoice?: () => void;
+  onEditClient?: () => void;
   footerExtraAction?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -84,6 +90,9 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
   onBack,
   onNavigateHome,
   vehiclePlate,
+  docRefNumber,
+  docRefType = 'presupuesto',
+  expedienteNumber,
   onOpenDatos,
   datosCount,
   onNewClient,
@@ -95,11 +104,13 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
   onNewEmployee,
   onSearchEmployee,
   onNewInvoice,
+  onEditClient,
   footerExtraAction,
   children,
 }) => {
   const isSplitLayout = AFFECTED_PAGES.includes(pageId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isVehicleActive = isVehicleFeatureActive(getUser());
   
   // Estado de modo filtro para Expedientes
   const [isExpedienteFilterMode, setIsExpedienteFilterMode] = useState(false);
@@ -120,6 +131,37 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
   // Estados para Balances: Horquilla temporal y Modo de vista (Gráfico vs Líneas de importe)
   const [balanceTimeframe, setBalanceTimeframe] = useState<'mensual' | 'trimestral' | 'anual'>('mensual');
   const [balanceViewMode, setBalanceViewMode] = useState<'grafico' | 'lineas'>('grafico');
+
+  // Estado de pestaña activa en Proveedores (proveedores vs facturas)
+  const [proveedoresTab, setProveedoresTab] = useState<'proveedores' | 'facturas'>('proveedores');
+  const [selectedProviderActive, setSelectedProviderActive] = useState<boolean>(() => {
+    return Boolean(typeof window !== 'undefined' && (window as any).__gestarian_selected_provider);
+  });
+
+  // Estado de visualización de ficha (cliente o proveedor) para ocultar el footer de la aplicación
+  const [isFichaOpen, setIsFichaOpen] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    const handleTab = (e: any) => {
+      if (e.detail?.tab) setProveedoresTab(e.detail.tab);
+    };
+    const handleProvSelected = (e: any) => {
+      setSelectedProviderActive(Boolean(e.detail?.provider));
+    };
+    const handleFichaView = (e: any) => {
+      setIsFichaOpen(Boolean(e.detail?.isOpen));
+    };
+
+    window.addEventListener('gestarian_proveedores_tab_changed', handleTab);
+    window.addEventListener('gestarian_provider_selected', handleProvSelected);
+    window.addEventListener('gestarian_ficha_view_changed', handleFichaView);
+
+    return () => {
+      window.removeEventListener('gestarian_proveedores_tab_changed', handleTab);
+      window.removeEventListener('gestarian_provider_selected', handleProvSelected);
+      window.removeEventListener('gestarian_ficha_view_changed', handleFichaView);
+    };
+  }, []);
 
   // Si no pertenece a la serie de expedientes a incidencias, renderizar maquetación estándar
   if (!isSplitLayout) {
@@ -154,24 +196,53 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
             <div className="w-1/4" />
           )}
 
-          <h2 className={`${(pageId === 'page-proveedores' || singleWordTitle.toLowerCase() === 'proveedores') ? 'text-[21.6px] sm:text-[25.6px] md:text-[28.8px]' : 'text-[27px] sm:text-[32px] md:text-[36px]'} font-black tracking-tight text-slate-900 uppercase text-center truncate leading-none flex-1`}>
-            {singleWordTitle}
-          </h2>
+          {(() => {
+            const isConfiguracion = pageId === 'page-configuracion' || singleWordTitle.toLowerCase().includes('configura');
+            const titleColor = isConfiguracion ? 'text-slate-400' : 'text-slate-900';
+            return (
+              <h2 className={`text-[21.6px] sm:text-[25.6px] md:text-[28.8px] font-black tracking-tight ${titleColor} uppercase text-center truncate leading-none flex-1`}>
+                {singleWordTitle}
+              </h2>
+            );
+          })()}
 
           <div className="w-1/4" />
         </div>
 
-        {vehiclePlate && (
-          <div className="mt-1 flex items-center justify-center min-w-0 px-2">
-            <div className="flex items-center bg-white border-2 border-slate-500 rounded-md overflow-hidden h-8 sm:h-9 min-w-[140px] sm:min-w-[160px] shadow-sm shrink-0">
-              <div className="bg-blue-700 h-full w-6 sm:w-7 flex flex-col items-center justify-center shrink-0">
-                <span className="text-[6px] sm:text-[8px] text-yellow-300 font-bold mb-0.5 leading-none">⭐</span>
-                <span className="text-[10px] sm:text-xs text-white font-black leading-none">E</span>
+        {(vehiclePlate || docRefNumber || expedienteNumber) && (
+          <div className="mt-1 flex items-center justify-center gap-3 sm:gap-5 min-w-0 px-2">
+            {/* A la izquierda de la matrícula: Número de Presupuesto o Factura sin recuadro y sin título */}
+            {docRefNumber && (
+              <span
+                className="font-mono font-bold text-sm sm:text-base text-slate-900 tracking-tight leading-none shrink-0 select-all"
+                title={docRefType === 'factura' ? `Factura ${docRefNumber}` : `Presupuesto ${docRefNumber}`}
+              >
+                {docRefNumber}
+              </span>
+            )}
+
+            {/* En el centro: Matrícula (solo en sector automoción/transporte) */}
+            {vehiclePlate && isVehicleActive && (
+              <div className="flex items-center bg-white border-2 border-slate-500 rounded-md overflow-hidden h-7 sm:h-8.5 min-w-[125px] sm:min-w-[150px] shadow-sm shrink-0">
+                <div className="bg-blue-700 h-full w-5 sm:w-6.5 flex flex-col items-center justify-center shrink-0">
+                  <span className="text-[5px] sm:text-[7px] text-yellow-300 font-bold mb-0.5 leading-none">⭐</span>
+                  <span className="text-[9px] sm:text-xs text-white font-black leading-none">E</span>
+                </div>
+                <div className="flex-1 flex items-center justify-center px-2 font-mono font-black text-sm sm:text-base tracking-wider text-[#0F172A] leading-none">
+                  {vehiclePlate}
+                </div>
               </div>
-              <div className="flex-1 flex items-center justify-center px-2 font-mono font-black text-base sm:text-lg tracking-wider text-[#0F172A] leading-none">
-                {vehiclePlate}
-              </div>
-            </div>
+            )}
+
+            {/* A la derecha de la matrícula: Número de Expediente sin recuadro y sin título */}
+            {expedienteNumber && (
+              <span
+                className="font-mono font-bold text-sm sm:text-base text-slate-900 tracking-tight leading-none shrink-0 select-all"
+                title={`Expediente ${expedienteNumber}`}
+              >
+                {expedienteNumber}
+              </span>
+            )}
           </div>
         )}
       </header>
@@ -338,7 +409,17 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                   <button
                     id="btn-footer-back"
                     type="button"
-                    onClick={onBack}
+                    onClick={() => {
+                      if (pageId === 'page-clientes') {
+                        const handled = (window as any).__gestarian_handle_clientes_back?.();
+                        if (handled) return;
+                      }
+                      if (pageId === 'page-proveedores') {
+                        const handled = (window as any).__gestarian_handle_proveedores_back?.();
+                        if (handled) return;
+                      }
+                      onBack();
+                    }}
                     className="inline-flex items-center justify-center p-2 sm:p-2.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95"
                     title="Volver"
                   >
@@ -460,7 +541,7 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                   </>
                 )}
 
-                {/* En Clientes: Icono de lupa, nuevo presupuesto, e icono de añadir cliente */}
+                {/* En Clientes: Icono de lupa, nuevo presupuesto, nueva factura (Quick) e icono de añadir cliente */}
                 {pageId === 'page-clientes' && (
                   <>
                     <button
@@ -490,6 +571,34 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                         <SheetPlusPIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
                       </button>
                     )}
+
+                    {currentPlan === 'quick' && (
+                      <button
+                        id="btn-footer-new-factura-clientes"
+                        type="button"
+                        onClick={() => {
+                          if (onNewInvoice) onNewInvoice();
+                          window.dispatchEvent(new CustomEvent('gestarian_new_invoice'));
+                        }}
+                        className="p-1.5 text-slate-700 hover:text-emerald-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                        title="Nueva Factura"
+                      >
+                        <SheetPlusFIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                      </button>
+                    )}
+
+                    <button
+                      id="btn-footer-edit-cliente"
+                      type="button"
+                      onClick={() => {
+                        if (onEditClient) onEditClient();
+                        window.dispatchEvent(new CustomEvent('gestarian_edit_client'));
+                      }}
+                      className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                      title="Editar Cliente"
+                    >
+                      <UserPen className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                    </button>
 
                     <button
                       id="btn-footer-new-cliente"
@@ -580,8 +689,69 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                     className="p-1.5 text-slate-700 hover:text-emerald-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
                     title="Nueva Factura (Abrir Hoja A4)"
                   >
-                    <Receipt className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                    <SheetPlusFIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
                   </button>
+                )}
+
+                {/* En Proveedores (page-proveedores): Lupa, Nuevo Proveedor (si pestaña proveedores), Cámara OCR (si proveedor seleccionado o pestaña facturas), y Nueva Factura (+F) */}
+                {pageId === 'page-proveedores' && (
+                  <>
+                    <button
+                      id="btn-footer-search-proveedores"
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('gestarian_toggle_proveedores_search'));
+                      }}
+                      className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                      title="Buscar proveedor o factura recibida"
+                    >
+                      <Search className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                    </button>
+
+                    {proveedoresTab === 'proveedores' && (
+                      <button
+                        id="btn-footer-new-proveedor"
+                        type="button"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('gestarian_new_proveedor'));
+                        }}
+                        className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                        title="Nuevo Proveedor (+ dentro del camión)"
+                      >
+                        <TruckPlusIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                      </button>
+                    )}
+
+                    {(selectedProviderActive || proveedoresTab === 'facturas') && (
+                      <button
+                        id="btn-footer-scan-factura-proveedor"
+                        type="button"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('gestarian_scan_proveedor_factura'));
+                        }}
+                        className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center animate-in zoom-in-90 duration-200"
+                        title="Escanear Factura OCR para proveedor"
+                      >
+                        <Camera className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                      </button>
+                    )}
+
+                    <button
+                      id="btn-footer-new-factura-proveedores"
+                      type="button"
+                      onClick={() => {
+                        if (onNewInvoice) {
+                          onNewInvoice();
+                        } else {
+                          window.dispatchEvent(new CustomEvent('gestarian_new_invoice_proveedor'));
+                        }
+                      }}
+                      className="p-1.5 text-slate-700 hover:text-emerald-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center"
+                      title="Nueva Factura (Abrir Hoja A4)"
+                    >
+                      <SheetPlusFIcon className="w-9 h-9 sm:w-10 sm:h-10 stroke-[1.8]" />
+                    </button>
+                  </>
                 )}
 
                 {/* En Mi Equipo (page-equipo): Icono de lupa e icono de añadir empleado (+muñequito) */}
@@ -706,8 +876,8 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                 {footerExtraAction}
 
 
-                {/* Botón de Configuración en el footer para la versión Quick y Lite (Oculto en Proveedores de Quick) */}
-                {(currentPlan === 'quick' || currentPlan === 'lite') && (pageId !== 'page-proveedores') && (
+                {/* Botón de Configuración en el footer para la versión Quick y Lite (Oculto en Proveedores de Quick y Clientes de Quick) */}
+                {(currentPlan === 'lite' || (currentPlan === 'quick' && pageId !== 'page-proveedores' && pageId !== 'page-clientes')) && (
                   <button
                     id="btn-footer-configuracion"
                     type="button"
@@ -721,20 +891,22 @@ export const PageLayoutWrapper: React.FC<PageLayoutWrapperProps> = ({
                   </button>
                 )}
 
-                {/* Botón de Inicio en forma de dibujo de casita flotante (x1.5) */}
-                <button
-                  id="btn-footer-home"
-                  type="button"
-                  onClick={() => {
-                    if (onNavigateHome) onNavigateHome();
-                    window.dispatchEvent(new CustomEvent('gestarian_navigate_section', { detail: { sectionId: 'page-inicio' } }));
-                  }}
-                  className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center shrink-0"
-                  title="Ir a Inicio"
-                  aria-label="Ir a pantalla de inicio"
-                >
-                  <Home className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
-                </button>
+                {/* Botón de Inicio en forma de dibujo de casita flotante (x1.5) - Oculto en Clientes de Quick */}
+                {!(currentPlan === 'quick' && pageId === 'page-clientes') && (
+                  <button
+                    id="btn-footer-home"
+                    type="button"
+                    onClick={() => {
+                      if (onNavigateHome) onNavigateHome();
+                      window.dispatchEvent(new CustomEvent('gestarian_navigate_section', { detail: { sectionId: 'page-inicio' } }));
+                    }}
+                    className="p-1.5 text-slate-700 hover:text-sky-600 transition-all hover:scale-115 active:scale-90 cursor-pointer flex items-center justify-center shrink-0"
+                    title="Ir a Inicio"
+                    aria-label="Ir a pantalla de inicio"
+                  >
+                    <Home className="w-9 h-9 sm:w-10 sm:h-10 stroke-[2]" />
+                  </button>
+                )}
               </div>
             </div>
         )}

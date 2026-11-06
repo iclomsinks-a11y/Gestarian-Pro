@@ -15,6 +15,7 @@ import { AssignEmployeeModal } from './AssignEmployeeModal';
 import { formatDeliveryDateDisplay } from './CreateDocumentModal';
 import { DeliveryDatePickerModal } from './DeliveryDatePickerModal';
 import { DocumentSheet } from './DocumentSheet';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface RoadmapTrackerProps {
   document: GestarianDocument;
@@ -40,6 +41,7 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
     return null;
   }
 
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
   const [viewerDoc, setViewerDoc] = useState<GestarianDocument | null>(null);
   const [showImagesModal, setShowImagesModal] = useState<boolean>(false);
@@ -1313,15 +1315,17 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
           <div className="w-full space-y-6 text-base">
             {/* Datos Vehículo y Cliente sin recuadros a todo el ancho */}
             <div className="flex flex-wrap items-start justify-between gap-6 py-3 border-b-2 border-slate-200 w-full">
-              {/* Vehículo: Marca y Modelo (Tamaño x2, sin matrícula) */}
-              <div className="space-y-1">
-                <span className="text-slate-500 font-bold block uppercase text-base sm:text-xl tracking-wider">
-                  Vehículo:
-                </span>
-                <div className="font-black text-slate-900 text-3xl sm:text-5xl uppercase tracking-tight">
-                  {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'Vehículo Registrado'}
+              {/* Vehículo: Marca y Modelo (Tamaño x2, sin matrícula, solo si es sector automoción/transporte) */}
+              {isVehicleActive && (
+                <div className="space-y-1">
+                  <span className="text-slate-500 font-bold block uppercase text-base sm:text-xl tracking-wider">
+                    Vehículo:
+                  </span>
+                  <div className="font-black text-slate-900 text-3xl sm:text-5xl uppercase tracking-tight">
+                    {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'Vehículo Registrado'}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Cliente: Label x2, Nombre x1.5 */}
               <div className="space-y-1 sm:text-right">
@@ -1574,15 +1578,17 @@ export const RoadmapTracker: React.FC<RoadmapTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Vehículo: Label y únicamente Marca y Modelo (sin matrícula) */}
-                <div className="space-y-0.5 sm:text-right">
-                  <span className="text-slate-500 font-bold block uppercase text-xs sm:text-sm tracking-wider">
-                    Vehículo:
-                  </span>
-                  <div className="font-black text-slate-900 text-xl sm:text-2xl uppercase tracking-tight">
-                    {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || '-'}
+                {/* Vehículo: Label y únicamente Marca y Modelo (sin matrícula, solo si es sector automoción/transporte) */}
+                {isVehicleActive && (
+                  <div className="space-y-0.5 sm:text-right">
+                    <span className="text-slate-500 font-bold block uppercase text-xs sm:text-sm tracking-wider">
+                      Vehículo:
+                    </span>
+                    <div className="font-black text-slate-900 text-xl sm:text-2xl uppercase tracking-tight">
+                      {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || '-'}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Partidas / Conceptos */}

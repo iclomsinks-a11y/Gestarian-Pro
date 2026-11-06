@@ -15,7 +15,7 @@ import { PlateScannerModal } from './components/PlateScannerModal';
 
 import { HomeView } from './components/HomeView';
 import { NavigationMenu } from './components/NavigationMenu';
-import { ExpedientesView } from './components/ExpedientesView';
+import { ExpedientesView, ExpedienteHeaderDetails } from './components/ExpedientesView';
 import { PlaceholderView } from './components/PlaceholderView';
 import { FacturacionView } from './components/FacturacionView';
 import { BalancesView } from './components/BalancesView';
@@ -99,6 +99,7 @@ export default function App() {
   const [targetExpedienteId, setTargetExpedienteId] = useState<string | null>(null);
   const [isExpedienteRoadmapOpen, setIsExpedienteRoadmapOpen] = useState<boolean>(false);
   const [activeExpedientePlate, setActiveExpedientePlate] = useState<string | null>(null);
+  const [activeExpedienteDetails, setActiveExpedienteDetails] = useState<ExpedienteHeaderDetails | null>(null);
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>(getStoredClients);
@@ -135,39 +136,23 @@ export default function App() {
 
   const handleSelectPlan = (plan: GestarianPlan) => {
     setCurrentTier(plan);
+    setIsAuthenticated(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gestarian_auth_session', 'true');
+      const url = new URL(window.location.href);
+      url.searchParams.set('plan', plan);
+      window.history.replaceState({}, '', url.toString());
+    }
     setUser((prev) => {
       const next = { ...prev, currentTier: plan };
       saveStoredUser(next);
       return next;
     });
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('plan', plan);
-      window.history.replaceState({}, '', url.toString());
+    if (plan === 'quick') {
+      setIsQuickExtrasOpen(true);
     }
     showToast(`Conmutado a GESTARIAN ${plan.toUpperCase()}`);
-    if (plan === 'lite') {
-      const current = screenHistory[screenHistory.length - 1];
-      if (
-        current !== 'page-inicio' &&
-        current !== 'page-presupuestos' &&
-        current !== 'page-facturacion' &&
-        current !== 'page-configuracion'
-      ) {
-        navigateToSection('page-presupuestos');
-      }
-    } else if (plan === 'quick') {
-      const current = screenHistory[screenHistory.length - 1];
-      if (
-        current !== 'page-inicio' &&
-        current !== 'page-clientes' &&
-        current !== 'page-proveedores' &&
-        current !== 'page-balances' &&
-        current !== 'page-configuracion'
-      ) {
-        navigateToSection('page-clientes');
-      }
-    }
+    navigateToSection('page-inicio');
   };
 
   // Landing pública — visible cuando el usuario no ha configurado la app
@@ -214,23 +199,26 @@ export default function App() {
 
   // Autenticación unificada de acceso (Email + Contraseña)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const hasPassword = Boolean(localStorage.getItem('gestarian_auth_password'));
-    const sessionActive = localStorage.getItem('gestarian_auth_session') === 'true';
-    return sessionActive && hasPassword;
+    if (typeof window === 'undefined') return true;
+    const sessionActive = localStorage.getItem('gestarian_auth_session');
+    if (sessionActive === 'false') return false;
+    return true;
   });
 
   const handleLoginSuccess = (email: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gestarian_auth_session', 'true');
+    }
     setIsAuthenticated(true);
     showToast(`Acceso concedido para ${email}`);
   };
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('gestarian_auth_session');
+      localStorage.setItem('gestarian_auth_session', 'false');
     }
     setIsAuthenticated(false);
-    showToast('Sesión cerrada y acceso bloqueado');
+    showToast('Sesión cerrada y acceso a landing page');
     const el = document.getElementById('page-inicio');
     if (el && scrollContainerRef.current) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -670,6 +658,7 @@ export default function App() {
   useEffect(() => {
     const handleNewBudget = () => handleOpenNewBudget();
     const handleNewInvoice = () => handleOpenNewInvoice();
+    const handleNewInvoiceProv = () => handleOpenNewProviderInvoice();
     const handleNavigateSection = (e: any) => {
       if (e?.detail?.sectionId) {
         navigateToSection(e.detail.sectionId);
@@ -685,11 +674,13 @@ export default function App() {
     };
     window.addEventListener('gestarian_new_budget', handleNewBudget);
     window.addEventListener('gestarian_new_invoice', handleNewInvoice);
+    window.addEventListener('gestarian_new_invoice_proveedor', handleNewInvoiceProv);
     window.addEventListener('gestarian_navigate_section', handleNavigateSection);
     window.addEventListener('gestarian_close_budget', handleCloseBudget);
     return () => {
       window.removeEventListener('gestarian_new_budget', handleNewBudget);
       window.removeEventListener('gestarian_new_invoice', handleNewInvoice);
+      window.removeEventListener('gestarian_new_invoice_proveedor', handleNewInvoiceProv);
       window.removeEventListener('gestarian_navigate_section', handleNavigateSection);
       window.removeEventListener('gestarian_close_budget', handleCloseBudget);
     };
@@ -1252,10 +1243,117 @@ export default function App() {
       navigateToSection('page-facturacion');
       return;
     }
-    setBudgetToConvert(null);
-    setPreselectedClientIdForNewDoc(null);
+    const activeClient: Client | null = (window as any).__gestarian_selected_client || null;
+    if (activeClient) {
+      setPreselectedClientIdForNewDoc(activeClient.id);
+      setBudgetToConvert({
+        id: '',
+        type: 'factura',
+        number: getNextDocumentNumber('factura', documents),
+        series: '2026',
+        date: new Date().toISOString().split('T')[0],
+        dueDate: new Date().toISOString().split('T')[0],
+        issuerId: user.id,
+        issuerName: user.fullName,
+        issuerCif: user.cif,
+        issuerAddress: user.fiscalAddress,
+        issuerPhone: user.phone,
+        issuerEmail: user.email,
+        clientId: activeClient.id,
+        clientName: activeClient.name,
+        clientCif: activeClient.cif || '',
+        clientAddress: activeClient.address || '',
+        clientPhone: activeClient.phone || '',
+        clientEmail: activeClient.email || '',
+        vehiclePlate: activeClient.plates && activeClient.plates.length > 0 ? activeClient.plates[0] : '',
+        vehicleBrand: activeClient.vehicles && activeClient.vehicles.length > 0 ? activeClient.vehicles[0].brand : '',
+        vehicleModel: activeClient.vehicles && activeClient.vehicles.length > 0 ? activeClient.vehicles[0].model : '',
+        taskLocation: activeClient.taskLocation || activeClient.address || '',
+        items: [
+          {
+            id: '1',
+            description: '',
+            quantity: 1,
+            unitPrice: 0,
+            amount: 0,
+          },
+        ],
+        subtotal: 0,
+        applyIva: true,
+        ivaRate: 21,
+        ivaAmount: 0,
+        applyIrpf: false,
+        irpfRate: 0,
+        irpfAmount: 0,
+        total: 0,
+        status: 'confirmada',
+        isLocked: false,
+      });
+      showToast(`Nueva factura para ${activeClient.name}`);
+    } else {
+      setBudgetToConvert(null);
+      setPreselectedClientIdForNewDoc(null);
+    }
     setCreateDocType('factura');
     setIsCreateDocOpen(true);
+  };
+
+  const handleOpenNewProviderInvoice = () => {
+    const selectedProv: any = (typeof window !== 'undefined' && (window as any).__gestarian_selected_provider) || null;
+    const currentYear = new Date().getFullYear().toString().slice(-2);
+    const frDocs = documents.filter((d) => d.type === 'factura_recibida');
+    const nextSeq = frDocs.length + 1;
+    const invoiceNum = `FR${currentYear}${String(nextSeq).padStart(4, '0')}`;
+
+    setPreselectedClientIdForNewDoc(null);
+    setBudgetToConvert({
+      id: `doc_${Date.now()}`,
+      type: 'factura_recibida',
+      number: invoiceNum,
+      series: '2026',
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date().toISOString().split('T')[0],
+      // EMISOR: Es el proveedor (si está seleccionado, sus datos; si no, vacíos para rellenar a mano)
+      issuerId: selectedProv?.id || `prov_manual_${Date.now()}`,
+      issuerName: selectedProv?.name || '',
+      issuerCif: selectedProv?.cif || '',
+      issuerAddress: selectedProv?.direccionFiscal || '',
+      issuerPhone: selectedProv?.phone || '',
+      issuerEmail: selectedProv?.email || '',
+      // CLIENTE: Somos nosotros siempre (el usuario / taller)
+      clientId: user.id,
+      clientName: user.fullName,
+      clientCif: user.cif || '',
+      clientAddress: user.fiscalAddress || '',
+      clientPhone: user.phone || '',
+      clientEmail: user.email || '',
+      items: [
+        {
+          id: '1',
+          description: '',
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0,
+        },
+      ],
+      subtotal: 0,
+      applyIva: true,
+      ivaRate: 21,
+      ivaAmount: 0,
+      applyIrpf: false,
+      irpfRate: 0,
+      irpfAmount: 0,
+      total: 0,
+      status: 'confirmada',
+      isLocked: false,
+    });
+    setCreateDocType('factura_recibida');
+    setIsCreateDocOpen(true);
+    if (selectedProv) {
+      showToast(`Nueva factura recibida de ${selectedProv.name}`);
+    } else {
+      showToast('Nueva factura recibida: complete los datos del emisor');
+    }
   };
 
   const handleClientSelectForDoc = (client: Client, type: DocumentType) => {
@@ -1358,22 +1456,17 @@ export default function App() {
     setIsMenuOpen(false);
     setTimeout(() => {
       if (sectionId === 'page-inicio') {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-          scrollContainerRef.current.scrollLeft = 0;
-        }
         const el = document.getElementById('page-inicio');
         if (el) {
           el.scrollTop = 0;
+        }
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+        if (el) {
           el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
         }
         setScreenHistory(['page-inicio']);
-        // Refuerzo para asegurar el snap en dispositivos móviles
-        setTimeout(() => {
-          if (scrollContainerRef.current && scrollContainerRef.current.scrollLeft !== 0) {
-            scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-          }
-        }, 120);
         return;
       }
 
@@ -1645,6 +1738,61 @@ export default function App() {
     );
   }
 
+  // Info del Roadmap para cabecera del módulo Expedientes
+  const activeRoadmapInfo = React.useMemo(() => {
+    if (!isExpedienteRoadmapOpen || !targetExpedienteId) {
+      return { plate: null, docRefNumber: null, docRefType: 'presupuesto' as const, expedienteNumber: null };
+    }
+
+    const cleanTarget = targetExpedienteId.replace(/\D/g, '');
+    const activeDoc = documents.find((d) => 
+      d.type !== 'factura_recibida' && (
+        d.expediente === targetExpedienteId ||
+        d.number === targetExpedienteId ||
+        d.id === targetExpedienteId ||
+        (cleanTarget && d.expediente && d.expediente.replace(/\D/g, '') === cleanTarget)
+      )
+    );
+
+    const expId = activeDoc?.expediente || targetExpedienteId;
+
+    const invoiceDoc = documents.find((d) => 
+      d.type === 'factura' && (
+        (expId && d.expediente === expId) ||
+        (activeDoc?.convertedToInvoiceId && (d.id === activeDoc.convertedToInvoiceId || d.number === activeDoc.convertedToInvoiceId))
+      )
+    );
+
+    const budgetDoc = documents.find((d) => 
+      (d.type === 'presupuesto' || (d.type as string) === 'budget') && (
+        (expId && d.expediente === expId) ||
+        (activeDoc?.linkedBudgetId && d.id === activeDoc.linkedBudgetId)
+      )
+    );
+
+    const isInvoiceEmitted = Boolean(
+      invoiceDoc || 
+      activeDoc?.type === 'factura' || 
+      Boolean(activeDoc?.convertedToInvoiceId) ||
+      activeDoc?.facturacionStatus === 'facturado' ||
+      activeDoc?.facturacionStatus === 'factura_enviada'
+    );
+
+    const docRefNumber = isInvoiceEmitted
+      ? (invoiceDoc?.number || (activeDoc?.type === 'factura' ? activeDoc.number : null) || activeDoc?.convertedToInvoiceId || null)
+      : (budgetDoc?.number || (activeDoc?.type === 'presupuesto' ? activeDoc.number : null) || null);
+
+    const docRefType: 'presupuesto' | 'factura' = isInvoiceEmitted ? 'factura' : 'presupuesto';
+    const plate = activeDoc?.vehiclePlate || activeExpedientePlate || null;
+
+    return {
+      plate,
+      docRefNumber,
+      docRefType,
+      expedienteNumber: expId,
+    };
+  }, [isExpedienteRoadmapOpen, targetExpedienteId, documents, activeExpedientePlate]);
+
   return (
     <div className="relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-white text-[#1E293B] font-sans selection:bg-[#0F2942] selection:text-white">
       {/* Toast Notification (sin animación, sonido no molesto) */}
@@ -1738,60 +1886,69 @@ export default function App() {
             {/* 2. Expedientes */}
             <PageLayoutWrapper
               pageId="page-expedientes"
-          title="Expedientes"
-          currentPlan={currentTier}
-          vehiclePlate={isExpedienteRoadmapOpen ? activeExpedientePlate : null}
-          onOpenDatos={isExpedienteRoadmapOpen ? () => window.dispatchEvent(new CustomEvent('gestarian_open_expediente_datos')) : undefined}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onBack={() => {
-            if (isExpedienteRoadmapOpen) {
-              window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
-              setIsExpedienteRoadmapOpen(false);
-              setTargetExpedienteId(null);
-              setActiveExpedientePlate(null);
-            } else {
-              setTargetExpedienteId(null);
-              setClientExpedienteFilter(null);
-              handleBackToPreviousScreen();
-            }
-          }}
-          onNavigateHome={navigateToHome}
-        >
-          <ExpedientesView 
-            documents={documents}
-            clients={clients}
-            onBack={() => {
-              if (isExpedienteRoadmapOpen) {
-                window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
-                setIsExpedienteRoadmapOpen(false);
-                setTargetExpedienteId(null);
-                setActiveExpedientePlate(null);
-              } else {
-                setTargetExpedienteId(null);
-                setClientExpedienteFilter(null);
-                handleBackToPreviousScreen();
-              }
-            }}
-            logoUrl={user.logoUrl}
-            userFullName={user.fullName}
-            onNavigateHome={navigateToHome}
-            onOpenMenu={() => setIsMenuOpen(true)}
-            initialExpedienteId={targetExpedienteId}
-            initialClientId={clientExpedienteFilter}
-            currentUser={user}
-            onUpdateDocument={(updated) => handleSaveDocument(updated)}
-            onGenerateInvoiceFromBudget={(budget) => handleConvertToInvoice(budget)}
-            onShowToast={showToast}
-            onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
-            onRoadmapOpenChange={(isOpen) => setIsExpedienteRoadmapOpen(isOpen)}
-            onSelectExpediente={(expId) => {
-              setTargetExpedienteId(expId);
-              setIsExpedienteRoadmapOpen(Boolean(expId));
-              if (!expId) setActiveExpedientePlate(null);
-            }}
-            onPlateChange={(plate) => setActiveExpedientePlate(plate)}
-          />
-        </PageLayoutWrapper>
+              title="Expedientes"
+              currentPlan={currentTier}
+              vehiclePlate={isExpedienteRoadmapOpen ? (activeExpedienteDetails?.plate || activeRoadmapInfo.plate) : null}
+              docRefNumber={isExpedienteRoadmapOpen ? (activeExpedienteDetails?.docRefNumber || activeRoadmapInfo.docRefNumber) : null}
+              docRefType={isExpedienteRoadmapOpen ? (activeExpedienteDetails?.docRefType || activeRoadmapInfo.docRefType) : undefined}
+              expedienteNumber={isExpedienteRoadmapOpen ? (activeExpedienteDetails?.expedienteNumber || activeRoadmapInfo.expedienteNumber) : null}
+              onOpenDatos={isExpedienteRoadmapOpen ? () => window.dispatchEvent(new CustomEvent('gestarian_open_expediente_datos')) : undefined}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onBack={() => {
+                if (isExpedienteRoadmapOpen) {
+                  window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
+                  setIsExpedienteRoadmapOpen(false);
+                  setTargetExpedienteId(null);
+                  setActiveExpedientePlate(null);
+                  setActiveExpedienteDetails(null);
+                } else {
+                  setTargetExpedienteId(null);
+                  setClientExpedienteFilter(null);
+                  handleBackToPreviousScreen();
+                }
+              }}
+              onNavigateHome={navigateToHome}
+            >
+              <ExpedientesView 
+                documents={documents}
+                clients={clients}
+                onBack={() => {
+                  if (isExpedienteRoadmapOpen) {
+                    window.dispatchEvent(new CustomEvent('gestarian_close_roadmap'));
+                    setIsExpedienteRoadmapOpen(false);
+                    setTargetExpedienteId(null);
+                    setActiveExpedientePlate(null);
+                    setActiveExpedienteDetails(null);
+                  } else {
+                    setTargetExpedienteId(null);
+                    setClientExpedienteFilter(null);
+                    handleBackToPreviousScreen();
+                  }
+                }}
+                logoUrl={user.logoUrl}
+                userFullName={user.fullName}
+                onNavigateHome={navigateToHome}
+                onOpenMenu={() => setIsMenuOpen(true)}
+                initialExpedienteId={targetExpedienteId}
+                initialClientId={clientExpedienteFilter}
+                currentUser={user}
+                onUpdateDocument={(updated) => handleSaveDocument(updated)}
+                onGenerateInvoiceFromBudget={(budget) => handleConvertToInvoice(budget)}
+                onShowToast={showToast}
+                onOpenWorkOrdersModal={() => setIsWorkOrdersOpen(true)}
+                onRoadmapOpenChange={(isOpen) => setIsExpedienteRoadmapOpen(isOpen)}
+                onSelectExpediente={(expId) => {
+                  setTargetExpedienteId(expId);
+                  setIsExpedienteRoadmapOpen(Boolean(expId));
+                  if (!expId) {
+                    setActiveExpedientePlate(null);
+                    setActiveExpedienteDetails(null);
+                  }
+                }}
+                onPlateChange={(plate) => setActiveExpedientePlate(plate)}
+                onExpedienteDetailsChange={(details) => setActiveExpedienteDetails(details)}
+              />
+            </PageLayoutWrapper>
 
         {/* 3. Solicitudes */}
         <PageLayoutWrapper
@@ -1968,6 +2125,16 @@ export default function App() {
           onBack={handleBackToPreviousScreen}
           onNavigateHome={navigateToHome}
           onNewBudget={handleOpenNewBudget}
+          onNewInvoice={handleOpenNewInvoice}
+          onEditClient={() => {
+            const activeClient: Client | null = (window as any).__gestarian_selected_client || (clients.length > 0 ? clients[0] : null);
+            if (activeClient) {
+              setEditingClient(activeClient);
+              setIsNewClientFullScreenOpen(true);
+            } else {
+              showToast('Seleccione un cliente para editar');
+            }
+          }}
           onNewClient={() => {
             setEditingClient(null);
             setIsNewClientFullScreenOpen(true);
@@ -1978,6 +2145,7 @@ export default function App() {
             logoUrl={user.logoUrl}
             userFullName={user.fullName}
             currentUser={user}
+            currentPlan={currentTier}
             clients={clients}
             documents={documents}
             isSelectingForBudget={isSelectingClientForBudget}
@@ -2044,6 +2212,11 @@ export default function App() {
               setSelectedDoc(doc);
               setIsClientDocViewMode(false);
               setIsViewDocOpen(true);
+            }}
+            onAddPreItvBudgetAndAppointment={(budget, app) => {
+              setDocuments((prev) => [budget, ...prev]);
+              setAppointments((prev) => [app, ...prev]);
+              showToast(`Presupuesto Pre-ITV ${budget.number} y cita generados con éxito`);
             }}
           />
         </PageLayoutWrapper>
@@ -2357,6 +2530,7 @@ export default function App() {
               onOpenMenu={() => setIsMenuOpen(true)}
               onBack={handleBackToPreviousScreen}
               onNavigateHome={navigateToHome}
+              onNewInvoice={handleOpenNewProviderInvoice}
             >
               <ProveedoresView
                 id="page-proveedores"
@@ -2478,6 +2652,7 @@ export default function App() {
           onNavigateHome={navigateToHome}
           onOpenMenu={() => setIsMenuOpen(true)}
           onOpenCompanyConfig={() => setIsNewUserOpen(true)}
+          onOpenEnterpriseAeat={() => setIsEnterpriseAeatOpen(true)}
           onShowToast={showToast}
           onLogout={handleLogout}
           onScanComplete={(newInvoices) => {
@@ -2604,6 +2779,8 @@ export default function App() {
       <FullScreenClientForm
         isOpen={isNewClientFullScreenOpen}
         initialClient={editingClient}
+        currentUser={user}
+        currentPlan={currentTier}
         onClose={() => {
           setIsNewClientFullScreenOpen(false);
           setEditingClient(null);
@@ -2697,6 +2874,7 @@ export default function App() {
         isOpen={isFiscalReportsOpen}
         onClose={() => setIsFiscalReportsOpen(false)}
         documents={documents}
+        user={user}
       />
       
       <AgendaModal
@@ -2735,11 +2913,12 @@ export default function App() {
             showToast(`Matrícula ${plate} lista con ${vehicleImages.length} foto(s) para expediente`);
           }
 
-          const newExp = `EXP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const newDocNum = getNextDocumentNumber('presupuesto', documents);
+          const newExp = getExpedienteFromDocNumber(newDocNum);
           setBudgetToConvert({
             id: '',
             type: 'presupuesto',
-            number: '',
+            number: newDocNum,
             series: 'A',
             date: new Date().toISOString().split('T')[0],
             issuerId: user.id,
@@ -2757,8 +2936,22 @@ export default function App() {
             clientPhone: clientToUse?.phone || '',
             items: [
               {
-                id: `item_${Date.now()}`,
-                description: `Reparación y servicios - Vehículo ${plate}${vehicleModel ? ` (${vehicleModel})` : ''}`,
+                id: `item_${Date.now()}_1`,
+                description: '',
+                quantity: 1,
+                unitPrice: 0,
+                amount: 0,
+              },
+              {
+                id: `item_${Date.now()}_2`,
+                description: '',
+                quantity: 1,
+                unitPrice: 0,
+                amount: 0,
+              },
+              {
+                id: `item_${Date.now()}_3`,
+                description: '',
                 quantity: 1,
                 unitPrice: 0,
                 amount: 0,
@@ -2778,7 +2971,7 @@ export default function App() {
             vehiclePlate: plate,
             vehicleModel: vehicleModel,
             vehicleImages: vehicleImages,
-            notes: `Vehículo matrícula ${plate}. ${vehicleImages.length} foto(s) adjuntas al expediente. Validez: 30 días.${isManualEntry ? ' (Entrada manual)' : ''}`,
+            notes: `Vehículo matrícula ${plate}${vehicleModel ? ` (${vehicleModel})` : ''}. ${vehicleImages.length} foto(s) adjuntas al expediente. Validez: 30 días.${isManualEntry ? ' (Entrada manual)' : ''}`,
           });
 
           setCreateDocType('presupuesto');
@@ -2993,6 +3186,12 @@ export default function App() {
         }}
         isClientView={isClientDocViewMode}
         userLogoUrl={user.logoUrl}
+        currentUser={user}
+        currentPlan={currentTier}
+        onDocumentSigned={(updatedDoc) => {
+          setSelectedDoc(updatedDoc);
+          setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
+        }}
         onConfirmInvoice={handleConfirmInvoice}
         onSendInvoice={handleSendInvoice}
         onAcceptBudget={handleAcceptBudget}

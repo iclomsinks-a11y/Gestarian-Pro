@@ -2,6 +2,8 @@ import React from 'react';
 import { Home } from 'lucide-react';
 import { GestarianDocument, DocumentPayment } from '../types';
 import { VerifactuSection } from './VerifactuSection';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 /**
  * Hoja oficial unificada de Factura / Presupuesto para todas las vistas.
@@ -86,6 +88,7 @@ interface DocumentSheetProps {
   onUpdateItem?: (idx: number, field: string, value: any) => void;
   onUpdateNotes?: (notes: string) => void;
   printMode?: boolean;
+  hidePayments?: boolean;
 }
 
 export const DocumentSheet: React.FC<DocumentSheetProps> = ({
@@ -95,7 +98,10 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
   onUpdateItem,
   onUpdateNotes,
   printMode = false,
+  hidePayments = false,
 }) => {
+  const currentUser = getUser();
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
   const isInvoice = isInvoiceType(doc.type);
   const isBudget = isBudgetType(doc.type);
   const title = getDocumentSheetTitle(doc.type);
@@ -111,7 +117,7 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
   const isTotalPaid =
     (total > 0 && totalPaid >= total - 0.01) || doc.status === 'pagada' || (doc.status as string) === 'liquidada';
   const pendingAmount = Math.max(0, total - totalPaid);
-  const showPayments = !printMode && (isInvoice || doc.type === 'recibo_abono') && (isTotalPaid || payments.length > 0);
+  const showPayments = !printMode && !hidePayments && (isInvoice || doc.type === 'recibo_abono') && (isTotalPaid || payments.length > 0);
 
   const defaultNotes = isBudget
     ? 'Validez del presupuesto: 30 días. Este presupuesto puede verse alterado en función de incidencias no contempladas en primera valoración. Se ruega puntualidad para entregar el vehículo en la fecha y hora establecida.'
@@ -119,7 +125,7 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
 
   const vehicleLabel =
     `${doc.vehicleBrand || ''} ${doc.vehicleModel || ''}`.trim() || (doc as any).vehicleType || '';
-  const showVehicle = doc.showVehicleData !== false && Boolean(doc.vehiclePlate || vehicleLabel);
+  const showVehicle = isVehicleActive && doc.showVehicleData !== false && Boolean(doc.vehiclePlate || vehicleLabel);
 
   return (
     <div className="space-y-5 text-slate-900 w-full max-w-full">
@@ -389,6 +395,34 @@ export const DocumentSheet: React.FC<DocumentSheetProps> = ({
           </div>
         )}
       </div>
+
+      {/* 6.1 CONFORMIDAD Y FIRMA DIGITAL DEL CLIENTE (SI EL DOCUMENTO ESTÁ FIRMADO) */}
+      {doc.digitalSignature && (
+        <div className="border border-slate-300 rounded-2xl p-4 mb-5 shadow-2xs" style={GREY_FILL}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <span className="font-bold text-xs uppercase text-slate-500 tracking-wider block">
+                CONFORMIDAD Y FIRMA DIGITAL DEL CLIENTE:
+              </span>
+              <p className="text-xs sm:text-sm text-slate-900 font-bold">
+                Documento firmado electrónicamente por {doc.signedByName || doc.clientName || 'el cliente'}
+              </p>
+              {doc.signedAt && (
+                <p className="text-[11px] font-mono text-slate-600">
+                  Fecha y hora de registro: {new Date(doc.signedAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+              )}
+            </div>
+            <div className="bg-white p-2 border border-slate-300 rounded-xl shadow-xs shrink-0 self-center sm:self-auto">
+              <img
+                src={doc.digitalSignature}
+                alt={`Firma de ${doc.signedByName || doc.clientName || 'Cliente'}`}
+                className="h-14 sm:h-16 max-w-[220px] object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7. HISTORIAL DE ABONOS (solo en pantalla, oculto en impresión) */}
       {showPayments && (

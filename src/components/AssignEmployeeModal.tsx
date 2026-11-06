@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, UserCheck, Wrench, Check, Plus, User } from 'lucide-react';
 import { AppUser, Employee, GestarianDocument } from '../types';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface AssignEmployeeModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
   const [selectedId, setSelectedId] = useState<string>('');
   const [customName, setCustomName] = useState<string>('');
   const [isCustom, setIsCustom] = useState<boolean>(false);
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
 
   // Lista combinada de todos los empleados
   const rawEmployees = (currentUser.employees && currentUser.employees.length > 0)
@@ -137,14 +139,25 @@ export const AssignEmployeeModal: React.FC<AssignEmployeeModalProps> = ({
             </span>
           </div>
 
-          <div className="text-right">
-            <span className="text-[#64748B] block text-[10px] uppercase font-bold">
-              Vehículo / Matrícula
-            </span>
-            <span className="font-mono font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-200">
-              {doc.vehiclePlate || 'SIN-MAT'}
-            </span>
-          </div>
+          {isVehicleActive ? (
+            <div className="text-right">
+              <span className="text-[#64748B] block text-[10px] uppercase font-bold">
+                Vehículo / Matrícula
+              </span>
+              <span className="font-mono font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-200">
+                {doc.vehiclePlate || 'SIN-MAT'}
+              </span>
+            </div>
+          ) : (
+            <div className="text-right">
+              <span className="text-[#64748B] block text-[10px] uppercase font-bold">
+                Cliente
+              </span>
+              <span className="font-bold text-[#0F2942] text-xs">
+                {doc.clientName || 'Cliente'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Banner Informativo de Filtro de Rol */}

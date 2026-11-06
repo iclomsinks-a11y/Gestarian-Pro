@@ -29,6 +29,8 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
   const [model, setModel] = useState<string>('');
   const [color, setColor] = useState<string>('');
   const [vin, setVin] = useState<string>('');
+  const [itvDate, setItvDate] = useState<string>('');
+  const [mileage, setMileage] = useState<string>('');
   const [images, setImages] = useState<string[]>([]);
   const [ocrData, setOcrData] = useState<VehicleOcrData | undefined>(undefined);
 
@@ -50,6 +52,8 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
         setModel(initialVehicle.model || '');
         setColor(initialVehicle.color || '');
         setVin(initialVehicle.vin || '');
+        setItvDate(initialVehicle.itvDate || (initialVehicle.ocrData?.itvExpiryDate ? initialVehicle.ocrData.itvExpiryDate.split('/').reverse().join('-') : ''));
+        setMileage(initialVehicle.mileage !== undefined ? String(initialVehicle.mileage) : '');
         setImages(initialVehicle.images || []);
         setOcrData(initialVehicle.ocrData);
       } else {
@@ -58,6 +62,8 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
         setModel('');
         setColor('');
         setVin('');
+        setItvDate('');
+        setMileage('');
         setImages([]);
         setOcrData(undefined);
       }
@@ -187,6 +193,8 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
       model: cleanModel,
       color: cleanColor,
       vin: cleanVin,
+      itvDate: itvDate.trim() || undefined,
+      mileage: mileage.trim() ? parseInt(mileage.trim(), 10) : undefined,
       images,
       ocrData: ocrData ? {
         ...ocrData,
@@ -195,6 +203,7 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
         model: cleanModel,
         color: cleanColor,
         vin: cleanVin,
+        itvExpiryDate: itvDate.trim() ? itvDate.trim().split('-').reverse().join('/') : ocrData.itvExpiryDate,
       } : undefined,
     });
 
@@ -375,6 +384,33 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
                     onChange={(e) => setVin(e.target.value.toUpperCase())}
                     placeholder="NÚMERO DE BASTIDOR (VIN)"
                     className="w-full px-4 py-3.5 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-lg sm:text-xl font-mono font-black tracking-wider text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-[#0F2942]/60 focus:placeholder:text-transparent uppercase transition-all"
+                  />
+                </div>
+
+                {/* Vencimiento ITV */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#0F2942] mb-1">
+                    Próximo Vencimiento ITV
+                  </label>
+                  <input
+                    type="date"
+                    value={itvDate}
+                    onChange={(e) => setItvDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-sm sm:text-base font-bold text-[#0F2942] focus:border-[#0F2942] focus:outline-none transition-all"
+                  />
+                </div>
+
+                {/* Kilometraje */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#0F2942] mb-1">
+                    Kilometraje Actual (km)
+                  </label>
+                  <input
+                    type="number"
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value)}
+                    placeholder="Ej: 95000"
+                    className="w-full px-4 py-3 bg-black/[0.03] border-2 border-slate-300 rounded-2xl text-sm sm:text-base font-mono font-bold text-[#0F2942] focus:border-[#0F2942] focus:outline-none placeholder:text-slate-400 transition-all"
                   />
                 </div>
               </div>

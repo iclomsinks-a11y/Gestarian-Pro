@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { PageHeader } from './PageHeader';
 import { StandardCard } from './StandardCard';
 import { Search, AlertTriangle, FolderKanban, MessageCircle, Phone, Car, CheckCircle } from 'lucide-react';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface IncidenciasViewProps {
   id: string;
@@ -80,13 +82,14 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [incidencias] = useState<IncidenciaItem[]>(INITIAL_INCIDENCIAS);
+  const isVehicleActive = isVehicleFeatureActive(getUser());
 
   const filtered = incidencias.filter((inc) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
       inc.clientName.toLowerCase().includes(q) ||
-      inc.vehiclePlate.toLowerCase().includes(q) ||
+      (isVehicleActive && inc.vehiclePlate.toLowerCase().includes(q)) ||
       inc.category.toLowerCase().includes(q) ||
       inc.number.toLowerCase().includes(q)
     );
@@ -113,7 +116,7 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar incidencia por matrícula, cliente o motivo..."
+              placeholder={isVehicleActive ? "Buscar incidencia por matrícula, cliente o motivo..." : "Buscar incidencia por cliente o motivo..."}
               className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#CBD5E1] rounded-lg outline-none focus:border-[#0F2942]"
             />
           </div>
@@ -136,7 +139,8 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
                 status="PENDIENTE"
                 statusColor="border-[3px] border-orange-500"
                 statusTextColor="text-orange-500"
-                vehiclePlate={inc.vehiclePlate}
+                vehiclePlate={isVehicleActive ? inc.vehiclePlate : undefined}
+                hidePlate={!isVehicleActive}
                 subtitle={inc.category}
                 title={inc.clientName}
                 refCode={inc.number}
@@ -152,7 +156,9 @@ export const IncidenciasView: React.FC<IncidenciasViewProps> = ({
                       {/* 1. WhatsApp avisar cliente */}
                       <a
                         href={`https://wa.me/34${inc.clientPhone}?text=${encodeURIComponent(
-                          `Estimado/a ${inc.clientName}, le contactamos de su taller respecto a su vehículo matrícula ${inc.vehiclePlate}: ${inc.description}`
+                          isVehicleActive
+                            ? `Estimado/a ${inc.clientName}, le contactamos de su taller respecto a su vehículo matrícula ${inc.vehiclePlate}: ${inc.description}`
+                            : `Estimado/a ${inc.clientName}, le contactamos respecto a su incidencia ${inc.number}: ${inc.description}`
                         )}`}
                         target="_blank"
                         rel="noreferrer"

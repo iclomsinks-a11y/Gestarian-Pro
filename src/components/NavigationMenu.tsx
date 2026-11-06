@@ -175,7 +175,6 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
                   if (currentPlan === 'quick') {
                     return (
                       item.id === 'page-inicio' ||
-                      item.id === 'page-facturacion' ||
                       item.id === 'page-clientes' ||
                       item.id === 'page-proveedores' ||
                       item.id === 'page-balances' ||
@@ -186,7 +185,7 @@ export const NavigationMenu: React.FC<NavigationMenuProps> = ({
                 })
                 .sort((a, b) => {
                   if (currentPlan === 'quick') {
-                    const order = ['page-inicio', 'page-facturacion', 'page-clientes', 'page-proveedores', 'page-balances', 'page-configuracion'];
+                    const order = ['page-inicio', 'page-clientes', 'page-proveedores', 'page-balances', 'page-configuracion'];
                     return order.indexOf(a.id) - order.indexOf(b.id);
                   }
                   return 0;

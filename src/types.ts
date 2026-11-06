@@ -114,6 +114,11 @@ export interface GestarianDocument {
   attachmentBase64?: string;
   attachmentFilename?: string;
   attachmentMimeType?: string;
+  digitalSignature?: string; // Firma digital interactiva en base64 (PNG dataURL)
+  signedAt?: string; // Fecha y hora ISO en que se firmó el documento
+  signedByName?: string; // Nombre de la persona o cliente que firmó
+  isPreItv?: boolean; // Presupuesto de revisión y diagnosis pre-ITV
+  isPreventiveMaintenance?: boolean; // Mantenimiento preventivo programado
 }
 
 export interface PlateRecognizerResult {
@@ -131,25 +136,61 @@ export interface SystemConfig {
 }
 
 export interface EmployeePermissions {
-  // Acceso a conceptos / módulos de la aplicación
-  accessExpedientes?: boolean; // Roadmap y seguimiento de reparaciones
-  accessSolicitudes?: boolean; // Solicitudes de clientes
-  accessClientes?: boolean;    // Ficha de clientes y vehículos del taller
-  accessPresupuestos?: boolean;// Elaboración de presupuestos
-  accessCitas?: boolean;       // Agenda y citas de taller
-  accessTaller?: boolean;      // Taller y órdenes de trabajo (OTs)
-  accessFacturacion?: boolean; // Facturación y cobros
-  accessBalances?: boolean;    // Balances económicos y rendimiento
-  accessProveedores?: boolean; // Proveedores y recambios
-  accessIncidencias?: boolean; // Gestión de incidencias
+  // Acceso a conceptos / módulos de la aplicación y sus sub-acciones
+  accessExpedientes?: boolean;
+  permExpedientesView?: boolean;
+  permExpedientesRoadmap?: boolean;
+
+  accessSolicitudes?: boolean;
+  permSolicitudesManage?: boolean;
+
+  accessClientes?: boolean;
+  permClientesView?: boolean;
+  permClientesEdit?: boolean;
+
+  accessPresupuestos?: boolean;
+  permPresupuestosView?: boolean;
+  permPresupuestosEditDeliveryDate?: boolean;
+  permPresupuestosEditItemsPrices?: boolean;
+  permPresupuestosEditLocation?: boolean;
+  permPresupuestosAddImages?: boolean;
+  permPresupuestosDownload?: boolean;
+  permPresupuestosPrint?: boolean;
+  permPresupuestosSend?: boolean;
+
+  accessCitas?: boolean;
+  permCitasView?: boolean;
+  permCitasEdit?: boolean;
+
+  accessTaller?: boolean;
+  permTallerFactoryView?: boolean;
+  permTallerChangeStatus?: boolean;
+  permTallerAssign?: boolean;
+
+  accessFacturacion?: boolean;
+  permFacturacionView?: boolean;
+  permFacturacionDownload?: boolean;
+  permFacturacionPrint?: boolean;
+  permFacturacionSend?: boolean;
+  permFacturacionPayments?: boolean;
+
+  accessBalances?: boolean;
+  permBalancesView?: boolean;
+
+  accessProveedores?: boolean;
+  permProveedoresView?: boolean;
+  permProveedoresInvoices?: boolean;
+
+  accessIncidencias?: boolean;
+  permIncidenciasManage?: boolean;
 
   // Permisos operativos específicos
-  manageWorkOrders: boolean; // default: true (Iniciar y Finalizar OTs)
-  createBudgets: boolean;    // default: true (cumplimentar líneas de presupuesto)
-  canSetPrices: boolean;     // default: false (solo el jefe puede asignar precios por defecto en DM CAR)
-  scanPlates: boolean;       // default: true (usar cámara OCR para generar presupuesto)
-  viewAgenda: boolean;       // default: false
-  viewReports: boolean;      // default: false
+  manageWorkOrders: boolean;
+  createBudgets: boolean;
+  canSetPrices: boolean;
+  scanPlates: boolean;
+  viewAgenda: boolean;
+  viewReports: boolean;
 }
 
 export type GestarianPlan = 'lite' | 'quick' | 'pro' | 'enterprise';
@@ -195,6 +236,7 @@ export interface QuickExtrasConfig {
   custodiaFiscalAnios?: 1 | 4 | 8;
   ocrOrganismosEnabled?: boolean;
   emailScannerEnabled?: boolean;
+  vehicleMaintenanceAlertsEnabled?: boolean; // Avisos de mantenimiento de vehículos e ITV (+60€/año)
 }
 
 export interface EnterpriseB2BOrder {
@@ -279,6 +321,8 @@ export interface AppUser {
   metisTechnicalAdviceEnabled?: boolean;
   enableVehicle?: boolean; // Activar o desactivar apartado de vehículos (por defecto true)
   enableLocation?: boolean; // Activar o desactivar apartado de localización (lugar de realización de la tarea)
+  enableDigitalSignature?: boolean; // Activar o desactivar firma digital interactiva en presupuestos (reservada para Pro mediante suscripción y Enterprise por defecto)
+  enableVehicleMaintenanceAlerts?: boolean; // Activar avisos de mantenimiento de vehículos (en todas las versiones excepto lite)
   defaultIvaRate?: number; // Tasa de IVA por defecto (por defecto 21%)
 }
 
@@ -335,6 +379,10 @@ export interface ClientVehicle {
   vin?: string;
   images?: string[];
   ocrData?: VehicleOcrData;
+  itvDate?: string; // Fecha de vencimiento de ITV (YYYY-MM-DD o DD/MM/YYYY)
+  lastMaintenanceDate?: string; // Fecha de último mantenimiento
+  nextMaintenanceDate?: string; // Fecha estimada de próximo mantenimiento
+  mileage?: number; // Kilometraje del vehículo
 }
 
 export interface Client {

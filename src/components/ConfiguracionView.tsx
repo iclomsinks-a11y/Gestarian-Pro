@@ -4,12 +4,14 @@ import { auth, googleSignIn, getAccessToken } from '../firebase';
 import { 
   Mail, Briefcase, Inbox, WifiOff, Sparkles, Palette, 
   Upload, Image as ImageIcon, Save, CheckCircle2,
-  Car, Home, Sliders, Percent
+  Car, Home, Sliders, Percent, FileSignature, ShieldCheck, Building2, ExternalLink,
+  Lock, Check, ArrowRight, Zap, Users, TrendingUp, Layers, Package, Camera, FileText
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AppUser, GestarianDocument, GestarianPlan, getDefaultIvaRate } from '../types';
 import { ReplaceImageModal, ReplaceTargetInfo } from './ReplaceImageModal';
 import { scanGmailForInvoices } from '../services/gmailScannerService';
+import { isVehicleMaintenanceEligible, isLocationFeatureEligible } from '../services/preventiveMaintenanceService';
 
 interface ConfiguracionViewProps {
   id: string;
@@ -23,10 +25,170 @@ interface ConfiguracionViewProps {
   onNavigateHome?: () => void;
   onOpenMenu?: () => void;
   onOpenCompanyConfig: () => void;
+  onOpenEnterpriseAeat?: () => void;
   onLogout?: () => void;
   onScanComplete?: (invoices: GestarianDocument[]) => void;
   onShowToast?: (msg: string) => void;
 }
+
+export interface FeatureCatalogItem {
+  id: string;
+  name: string;
+  category: 'Facturación' | 'Compras y Proveedores' | 'Taller y Vehículos' | 'Clientes y Portal' | 'Equipo y Fiscalidad';
+  minPlan: 'lite' | 'quick' | 'pro' | 'enterprise';
+  minPlanName: string;
+  description: string;
+  icon: any;
+  quickNote?: string;
+}
+
+export const GESTARIAN_FEATURES_CATALOG: FeatureCatalogItem[] = [
+  {
+    id: 'feat-facturas',
+    name: 'Emisión de Facturas Oficiales A4',
+    category: 'Facturación',
+    minPlan: 'lite',
+    minPlanName: 'Lite',
+    description: 'Generación legal de facturas con cálculo automático de bases, tipos de IVA, retención de IRPF y descarga en formato oficial imprimible.',
+    icon: FileText,
+  },
+  {
+    id: 'feat-clientes',
+    name: 'Fichero Maestro de Clientes',
+    category: 'Clientes y Portal',
+    minPlan: 'lite',
+    minPlanName: 'Lite',
+    description: 'Directorio unificado de clientes con NIF/CIF, teléfonos, emails, direcciones fiscales e histórico de documentos emitidos.',
+    icon: Users,
+  },
+  {
+    id: 'feat-ocr',
+    name: 'Escáner Inteligente OCR de Facturas de Proveedores',
+    category: 'Compras y Proveedores',
+    minPlan: 'quick',
+    minPlanName: 'Quick',
+    description: 'Extracción instantánea por IA de CIF, emisor, importes y partidas de recambios al tomar una fotografía o cargar un documento.',
+    icon: Camera,
+  },
+  {
+    id: 'feat-proveedores',
+    name: 'Fichas de Proveedores, Historial y Foto OCR',
+    category: 'Compras y Proveedores',
+    minPlan: 'quick',
+    minPlanName: 'Quick',
+    description: 'Fichas automáticas de suministradores, listado de pedidos en una sola línea con importe y botón para ver la fotografía original escaneada.',
+    icon: Package,
+  },
+  {
+    id: 'feat-verifactu',
+    name: 'Cumplimiento Normativo Veri*Factu (RD 1007/2023)',
+    category: 'Facturación',
+    minPlan: 'quick',
+    minPlanName: 'Quick',
+    description: 'Encadenamiento inalterable mediante huella criptográfica SHA-256 y preparación para facturación electrónica conforme a la Ley Antifraude.',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'feat-location',
+    name: 'Geolocalización de Tareas en Destino',
+    category: 'Clientes y Portal',
+    minPlan: 'quick',
+    minPlanName: 'Quick',
+    description: 'Registro de la ubicación física o lugar exacto donde se realiza la intervención para su inclusión en la cabecera del documento.',
+    icon: Home,
+  },
+  {
+    id: 'feat-whatsapp',
+    name: 'Enlace Directo con WhatsApp de Clientes',
+    category: 'Clientes y Portal',
+    minPlan: 'quick',
+    minPlanName: 'Quick',
+    description: 'Envío automático de mensajes y enlaces oficiales al WhatsApp del cliente con un solo toque desde la tarjeta o visor.',
+    icon: Mail,
+  },
+  {
+    id: 'feat-presupuestos',
+    name: 'Presupuestos Valorados y Cálculo de Margen',
+    category: 'Facturación',
+    minPlan: 'pro',
+    minPlanName: 'Pro',
+    description: 'Elaboración de presupuestos con cálculo de rentabilidad y conversión instantánea a factura oficial sin duplicidad de datos.',
+    icon: Sliders,
+  },
+  {
+    id: 'feat-firma',
+    name: 'Firma Digital Interactiva del Cliente',
+    category: 'Facturación',
+    minPlan: 'pro',
+    minPlanName: 'Pro (Suscripción)',
+    description: 'Conformidad táctil o con cursor directamente en el visor de documentos, sellada legalmente con fecha y hora electrónica.',
+    icon: FileSignature,
+  },
+  {
+    id: 'feat-itv',
+    name: 'Avisos Automáticos de ITV y Citas Pre-ITV',
+    category: 'Taller y Vehículos',
+    minPlan: 'pro',
+    minPlanName: 'Pro',
+    description: 'Detección proactiva de vencimientos reglamentarios y generación automática con un clic de presupuesto y cita previa vinculada.',
+    icon: Car,
+    quickNote: 'Disponible en Quick como opción extra (+60 €/año)',
+  },
+  {
+    id: 'feat-portal',
+    name: 'Portal Web Interactivo para Clientes',
+    category: 'Clientes y Portal',
+    minPlan: 'pro',
+    minPlanName: 'Pro',
+    description: 'Acceso online exclusivo donde el cliente consulta presupuestos, firma documentos y solicita citas desde cualquier dispositivo.',
+    icon: ExternalLink,
+  },
+  {
+    id: 'feat-gmail',
+    name: 'Rastreo Inteligente de Facturas en Gmail',
+    category: 'Compras y Proveedores',
+    minPlan: 'pro',
+    minPlanName: 'Pro',
+    description: 'Sincronización con tu cuenta de correo para detectar facturas de proveedores adjuntas y cargarlas automáticamente en el sistema.',
+    icon: Inbox,
+  },
+  {
+    id: 'feat-metis',
+    name: 'Asesor Técnico Metis para Automoción',
+    category: 'Taller y Vehículos',
+    minPlan: 'pro',
+    minPlanName: 'Pro',
+    description: 'Asesoramiento especializado en tiempos de secado de cabina, proporciones de mezcla OEM y técnicas de preparación de carrocería.',
+    icon: Sparkles,
+  },
+  {
+    id: 'feat-empleados',
+    name: 'Control de Equipo y Permisos Granulares (RBAC)',
+    category: 'Equipo y Fiscalidad',
+    minPlan: 'enterprise',
+    minPlanName: 'Enterprise',
+    description: 'Gestión de operarios con asignación de órdenes de trabajo, control horario y bloqueo selectivo de precios y datos fiscales.',
+    icon: Users,
+  },
+  {
+    id: 'feat-aeat',
+    name: 'Sede Electrónica AEAT en Tiempo Real',
+    category: 'Equipo y Fiscalidad',
+    minPlan: 'enterprise',
+    minPlanName: 'Enterprise',
+    description: 'Conexión telemática mediante certificado digital para la remisión directa de registros de facturación a la Agencia Tributaria.',
+    icon: Building2,
+  },
+  {
+    id: 'feat-sla',
+    name: 'SLA Corporativo y Soporte Dedicado 24/7',
+    category: 'Equipo y Fiscalidad',
+    minPlan: 'enterprise',
+    minPlanName: 'Enterprise',
+    description: 'Canal prioritario continuo, copias de seguridad de alta frecuencia y asistencia técnica personalizada para flotas y grandes empresas.',
+    icon: Zap,
+  },
+];
 
 export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   id,
@@ -40,6 +202,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   onNavigateHome,
   onOpenMenu,
   onOpenCompanyConfig,
+  onOpenEnterpriseAeat,
   onLogout,
   onScanComplete,
   onShowToast,
@@ -55,13 +218,67 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   const [userFiscalAddress, setUserFiscalAddress] = useState(currentUser?.fiscalAddress || '');
   const [userPhone, setUserPhone] = useState(currentUser?.phone || '');
   const [userEmail, setUserEmail] = useState(currentUser?.email || '');
+  const [userSector, setUserSector] = useState(currentUser?.sector || '');
+  const [userBranch, setUserBranch] = useState(currentUser?.branch || '');
+  const [userSpecialty, setUserSpecialty] = useState(currentUser?.specialty || '');
   const [isSavedFiscal, setIsSavedFiscal] = useState(false);
 
-  // Estados de configuración de módulos: Vehículo, Localización e IVA
+  // Estados de configuración de módulos: Vehículo, Localización, IVA y Firma Digital
+  const isLite = currentPlan === 'lite' || currentUser?.currentTier === 'lite';
+  const isQuick = currentPlan === 'quick' || currentUser?.currentTier === 'quick';
+  const isPlanAllowedForSignature =
+    currentPlan === 'pro' ||
+    currentPlan === 'enterprise' ||
+    currentUser?.currentTier === 'pro' ||
+    currentUser?.currentTier === 'enterprise';
+
   const [enableVehicle, setEnableVehicle] = useState<boolean>(currentUser?.enableVehicle !== false);
   const [enableLocation, setEnableLocation] = useState<boolean>(currentUser?.enableLocation === true);
+  const [enableDigitalSignature, setEnableDigitalSignature] = useState<boolean>(
+    Boolean(isPlanAllowedForSignature && currentUser?.enableDigitalSignature)
+  );
+  const [enableVehicleMaintenanceAlerts, setEnableVehicleMaintenanceAlerts] = useState<boolean>(() => {
+    if (isLite) return false;
+    if (isQuick) {
+      return Boolean(currentUser?.enableVehicleMaintenanceAlerts || currentUser?.quickExtras?.vehicleMaintenanceAlertsEnabled);
+    }
+    return currentUser?.enableVehicleMaintenanceAlerts !== false;
+  });
   const [defaultIvaRate, setDefaultIvaRate] = useState<number>(() => {
     return getDefaultIvaRate(currentUser);
+  });
+
+  // Filtros interactivos del catálogo de funcionalidades
+  const [featureFilter, setFeatureFilter] = useState<'all' | 'active' | 'locked'>('all');
+  const [featureCategory, setFeatureCategory] = useState<string>('all');
+
+  const userEffectiveTier: 'lite' | 'quick' | 'pro' | 'enterprise' = (
+    currentUser?.currentTier || currentPlan || (isQuick ? 'quick' : isLite ? 'lite' : 'pro')
+  ) as any;
+
+  const PLAN_RANK: Record<string, number> = {
+    lite: 1,
+    quick: 2,
+    pro: 3,
+    enterprise: 4,
+  };
+
+  const userRank = PLAN_RANK[userEffectiveTier] || 2;
+
+  const activeFeaturesCount = GESTARIAN_FEATURES_CATALOG.filter(
+    (f) => userRank >= PLAN_RANK[f.minPlan]
+  ).length;
+
+  const lockedFeaturesCount = GESTARIAN_FEATURES_CATALOG.filter(
+    (f) => userRank < PLAN_RANK[f.minPlan]
+  ).length;
+
+  const displayedFeatures = GESTARIAN_FEATURES_CATALOG.filter((f) => {
+    const isAct = userRank >= PLAN_RANK[f.minPlan];
+    if (featureFilter === 'active' && !isAct) return false;
+    if (featureFilter === 'locked' && isAct) return false;
+    if (featureCategory !== 'all' && f.category !== featureCategory) return false;
+    return true;
   });
 
   React.useEffect(() => {
@@ -71,13 +288,41 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
       setUserFiscalAddress(currentUser.fiscalAddress || '');
       setUserPhone(currentUser.phone || '');
       setUserEmail(currentUser.email || '');
+      setUserSector(currentUser.sector || '');
+      setUserBranch(currentUser.branch || '');
+      setUserSpecialty(currentUser.specialty || '');
       setEnableVehicle(currentUser.enableVehicle !== false);
       setEnableLocation(currentUser.enableLocation === true);
+      setEnableDigitalSignature(Boolean(isPlanAllowedForSignature && currentUser.enableDigitalSignature));
+      if (!isLite) {
+        if (isQuick) {
+          setEnableVehicleMaintenanceAlerts(Boolean(currentUser.enableVehicleMaintenanceAlerts || currentUser.quickExtras?.vehicleMaintenanceAlertsEnabled));
+        } else {
+          setEnableVehicleMaintenanceAlerts(currentUser.enableVehicleMaintenanceAlerts !== false);
+        }
+      } else {
+        setEnableVehicleMaintenanceAlerts(false);
+      }
       if (currentUser.defaultIvaRate !== undefined) {
         setDefaultIvaRate(currentUser.defaultIvaRate);
       }
     }
-  }, [currentUser]);
+  }, [currentUser, isLite, isQuick, isPlanAllowedForSignature]);
+
+  const handleToggleDigitalSignature = () => {
+    if (!isPlanAllowedForSignature) {
+      if (onShowToast) {
+        onShowToast('La firma digital interactiva está reservada para Pro (mediante suscripción) y Enterprise por defecto.');
+      }
+      return;
+    }
+    const nextVal = !enableDigitalSignature;
+    setEnableDigitalSignature(nextVal);
+    onUpdateUser?.({ enableDigitalSignature: nextVal });
+    if (onShowToast) {
+      onShowToast(`Firma digital interactiva ${nextVal ? 'activada' : 'desactivada'}`);
+    }
+  };
 
   const handleSaveIvaRate = () => {
     if (typeof window !== 'undefined') {
@@ -107,6 +352,27 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
     }
   };
 
+  const handleToggleVehicleMaintenanceAlerts = () => {
+    if (isLite) {
+      if (onShowToast) onShowToast('Los avisos de mantenimiento de vehículos no están disponibles en la versión Lite.');
+      return;
+    }
+    const nextVal = !enableVehicleMaintenanceAlerts;
+    setEnableVehicleMaintenanceAlerts(nextVal);
+    onUpdateUser?.({
+      enableVehicleMaintenanceAlerts: nextVal,
+      ...(isQuick ? {
+        quickExtras: {
+          ...currentUser?.quickExtras,
+          vehicleMaintenanceAlertsEnabled: nextVal,
+        }
+      } : {})
+    });
+    if (onShowToast) {
+      onShowToast(`Avisos de mantenimiento de vehículos ${nextVal ? 'activados' : 'desactivados'}`);
+    }
+  };
+
   const handleSaveFiscalData = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!userName.trim()) return;
@@ -116,6 +382,9 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
       fiscalAddress: userFiscalAddress.trim(),
       phone: userPhone.trim(),
       email: userEmail.trim().toLowerCase(),
+      sector: userSector.trim(),
+      branch: userBranch.trim(),
+      specialty: userSpecialty.trim(),
     });
     setIsSavedFiscal(true);
     if (onShowToast) {
@@ -203,8 +472,6 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
-
-  const isLite = (currentPlan || currentUser?.currentTier) === 'lite';
 
   return (
     <div id={id} className="w-screen h-screen shrink-0 snap-start flex flex-col bg-[#0F172A] overflow-y-auto">
@@ -317,6 +584,48 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               />
             </div>
 
+            {/* Actividad Empresarial: Sector, Rama y Especialidad */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-sky-300 uppercase tracking-wider mb-1.5">
+                  Sector
+                </label>
+                <input
+                  type="text"
+                  value={userSector}
+                  onChange={(e) => setUserSector(e.target.value)}
+                  placeholder="Ej: Automoción"
+                  className="w-full px-4 py-3 bg-[#0F172A] border border-slate-600 focus:border-sky-400 rounded-xl text-white font-bold text-sm sm:text-base outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-sky-300 uppercase tracking-wider mb-1.5">
+                  Rama
+                </label>
+                <input
+                  type="text"
+                  value={userBranch}
+                  onChange={(e) => setUserBranch(e.target.value)}
+                  placeholder="Ej: Reparación / Alquiler"
+                  className="w-full px-4 py-3 bg-[#0F172A] border border-slate-600 focus:border-sky-400 rounded-xl text-white font-bold text-sm sm:text-base outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-sky-300 uppercase tracking-wider mb-1.5">
+                  Especialidad
+                </label>
+                <input
+                  type="text"
+                  value={userSpecialty}
+                  onChange={(e) => setUserSpecialty(e.target.value)}
+                  placeholder="Ej: Mantenimiento, Taller"
+                  className="w-full px-4 py-3 bg-[#0F172A] border border-slate-600 focus:border-sky-400 rounded-xl text-white font-bold text-sm sm:text-base outline-none transition-colors"
+                />
+              </div>
+            </div>
+
             <div className="pt-2 flex items-center justify-between gap-4 flex-wrap">
               <button
                 type="submit"
@@ -366,11 +675,11 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               <Sliders className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Módulos de Tarea: Vehículo y Localización
+              <h3 className="text-3xl sm:text-4xl font-black text-white leading-tight">
+                Módulos Operativos y Firma Digital
               </h3>
-              <p className="text-sm sm:text-base text-slate-300 mt-1">
-                Activa o desactiva la gestión de vehículos o la localización de tareas según tu modelo de negocio
+              <p className="text-base sm:text-lg text-slate-300 mt-1">
+                Activa o desactiva la gestión de vehículos, localización de tareas y la firma digital interactiva de documentos
               </p>
             </div>
           </div>
@@ -383,10 +692,10 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                   <Car className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
                     Apartado de Vehículo
                   </span>
-                  <span className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
                     Habilita datos de vehículo (matrícula, marca y modelo) en la creación de facturas/presupuestos y el icono de vehículo en el desplegable de clientes.
                   </span>
                 </div>
@@ -401,30 +710,82 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               </button>
             </div>
 
-            {/* Apartado 2: Localización */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border border-emerald-500/30 transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
-                  <Home className="w-6 h-6" />
+            {/* Apartado 1.5: Avisos de Mantenimiento de Vehículos e ITV (Solo si el sector es automoción y especialidad mecánica/reparación/mantenimiento) */}
+            {isVehicleMaintenanceEligible(currentUser) && (
+              <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border ${enableVehicleMaintenanceAlerts ? 'border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-amber-500/30'} transition-all`}>
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        Avisos de Mantenimiento de Vehículos e ITV
+                      </span>
+                      {isLite ? (
+                        <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-slate-700 text-slate-300">
+                          No disponible en Lite
+                        </span>
+                      ) : isQuick ? (
+                        <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                          +60 €/año (Opción Extra Quick)
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                          Incluido en tu Plan
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      Supervisa automáticamente las fechas de caducidad de ITV y mantenimientos periódicos de los vehículos de los clientes con 60 días de margen, permitiendo emitir presupuestos y agendar citas preventivas.
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                    Apartado de Localización
-                  </span>
-                  <span className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
-                    Habilita la casilla e input de localización (lugar donde se realiza la tarea u obra) en facturas y muestra el icono de casita en el desplegable de clientes.
-                  </span>
-                </div>
+
+                {!isLite ? (
+                  <button 
+                    type="button"
+                    onClick={handleToggleVehicleMaintenanceAlerts}
+                    className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer self-end sm:self-center ${enableVehicleMaintenanceAlerts ? "bg-amber-500" : "bg-slate-700"}`}
+                    title={enableVehicleMaintenanceAlerts ? 'Desactivar avisos de mantenimiento de vehículos' : 'Activar avisos de mantenimiento de vehículos'}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableVehicleMaintenanceAlerts ? "translate-x-7" : "translate-x-0"}`} />
+                  </button>
+                ) : (
+                  <div className="text-xs text-slate-400 font-bold px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 shrink-0 self-end sm:self-center">
+                    Disponible en Quick, Pro y Enterprise
+                  </div>
+                )}
               </div>
-              <button 
-                type="button"
-                onClick={handleToggleLocation}
-                className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer self-end sm:self-center ${enableLocation ? "bg-emerald-500" : "bg-slate-700"}`}
-                title={enableLocation ? 'Desactivar apartado de localización' : 'Activar apartado de localización'}
-              >
-                <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableLocation ? "translate-x-7" : "translate-x-0"}`} />
-              </button>
-            </div>
+            )}
+
+            {/* Apartado 2: Localización (Solo si la empresa es de servicios/obras en inmueble del cliente) */}
+            {isLocationFeatureEligible(currentUser) && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border border-emerald-500/30 transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Home className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      Apartado de Localización
+                    </span>
+                    <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      Habilita la casilla e input de localización (lugar donde se realiza la tarea u obra) en facturas y muestra el icono de casita en el desplegable de clientes.
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleToggleLocation}
+                  className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer self-end sm:self-center ${enableLocation ? "bg-emerald-500" : "bg-slate-700"}`}
+                  title={enableLocation ? 'Desactivar apartado de localización' : 'Activar apartado de localización'}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableLocation ? "translate-x-7" : "translate-x-0"}`} />
+                </button>
+              </div>
+            )}
+
 
             {/* Apartado 3: Configuración de IVA */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border border-teal-500/30 transition-all">
@@ -433,10 +794,10 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                   <Percent className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
                     Tasa de IVA por Defecto (%)
                   </span>
-                  <span className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
                     Especifica el porcentaje de IVA por defecto (ej. 21%). En <strong>facturas</strong> este IVA se aplicará siempre obligatoriamente, mientras que en <strong>presupuestos</strong> se podrá activar o desactivar libremente.
                   </span>
                 </div>
@@ -461,13 +822,352 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveIvaRate}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl transition-colors cursor-pointer text-sm shadow-md flex items-center gap-1.5"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl transition-colors cursor-pointer text-base shadow-md flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
                   Guardar
                 </button>
               </div>
             </div>
+
+            {/* Apartado 4: Firma Digital Interactiva (Solo para Pro mediante suscripción y Enterprise por defecto) */}
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border ${enableDigitalSignature ? 'border-indigo-400/60 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-indigo-500/30'} transition-all`}>
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <FileSignature className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      Firma Digital Interactiva
+                    </span>
+                    <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-400/40">
+                      Pro (Suscripción) • Enterprise
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
+                    Permite a los clientes firmar presupuestos directamente desde la pantalla táctil o con el cursor del ratón en el visor oficial de documentos, registrando su conformidad con fecha y hora. Esta herramienta está reservada para Pro (mediante suscripción) y Enterprise por defecto (la versión Quick solo realiza facturas, no presupuestos).
+                  </span>
+                </div>
+              </div>
+
+              {isPlanAllowedForSignature ? (
+                <button 
+                  type="button"
+                  onClick={handleToggleDigitalSignature}
+                  className={`w-14 h-7 rounded-full p-1 transition-colors relative shadow-inner shrink-0 cursor-pointer self-end sm:self-center ${enableDigitalSignature ? "bg-indigo-500" : "bg-slate-700"}`}
+                  title={enableDigitalSignature ? 'Desactivar firma digital interactiva' : 'Activar firma digital interactiva'}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${enableDigitalSignature ? "translate-x-7" : "translate-x-0"}`} />
+                </button>
+              ) : (
+                <div className="text-sm text-amber-400 font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0 self-end sm:self-center">
+                  Solo Pro y Enterprise
+                </div>
+              )}
+            </div>
+
+            {/* Apartado 5: Información Veri*Factu (Quick) o Sede Electrónica AEAT (Pro / Enterprise) */}
+            {isQuick ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border border-emerald-500/30 transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        Información Veri*Factu
+                      </span>
+                      <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                        Cumplimiento Legal RD 1007/2023
+                      </span>
+                    </div>
+                    <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      El sistema emite facturas con encadenamiento inalterable mediante huella criptográfica SHA-256 y código QR oficial Veri*Factu según la Ley Antifraude y el RD 1007/2023. No requiere conexión telemática externa en la versión Quick.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider shrink-0 self-end sm:self-center flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Activo y Conforme</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-[#0F172A]/70 border border-blue-500/30 transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        Sede Electrónica AEAT (Veri*Factu)
+                      </span>
+                      <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/40">
+                        Enterprise / Conexión Oficial
+                      </span>
+                    </div>
+                    <span className="text-sm sm:text-base text-slate-300 mt-1 max-w-xl leading-relaxed">
+                      Canal seguro con certificado digital para la remisión telemática de registros de facturación, códigos QR Veri*Factu y Red B2B interempresas.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onOpenEnterpriseAeat}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2 shrink-0 self-end sm:self-center"
+                >
+                  <span>Abrir Sede AEAT</span>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Tarjeta de Ecosistema de Versiones y Catálogo de Funcionalidades (Para todas las versiones) */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, margin: "-50px" }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+          variants={cardVariants}
+          className="p-6 sm:p-8 rounded-2xl bg-[#090D16] border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-6 relative"
+        >
+          {/* Cabecera del Bloque */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 via-sky-500/20 to-amber-500/20 border border-white/20 flex items-center justify-center text-sky-400 shrink-0 shadow-inner">
+                <Layers className="w-6 h-6 text-sky-400" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-wide">
+                    Ecosistema y Herramientas Gestarian
+                  </h3>
+                  <span className={`px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md border ${
+                    userEffectiveTier === 'enterprise'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+                      : userEffectiveTier === 'pro'
+                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-400/40 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                      : userEffectiveTier === 'quick'
+                      ? 'bg-sky-500/20 text-sky-300 border-sky-400/40 shadow-[0_0_10px_rgba(56,189,248,0.2)]'
+                      : 'bg-slate-500/20 text-slate-300 border-slate-400/40'
+                  }`}>
+                    Tu Versión Activa: {userEffectiveTier.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Catálogo de herramientas operativas clasificadas por versión. Revisa las funciones activas en tu plan actual y las herramientas avanzadas disponibles para cuando tu volumen de negocio requiera dar el salto a un plan superior.
+                </p>
+              </div>
+            </div>
+
+            {/* Botón de acción para subir de plan */}
+            {userEffectiveTier !== 'enterprise' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateHome) onNavigateHome();
+                  if (onShowToast) onShowToast('Selecciona tu plan deseado en las tarjetas de Inicio para tramitar la ampliación.');
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.35)] flex items-center justify-center gap-2 cursor-pointer shrink-0 self-start md:self-center"
+              >
+                <TrendingUp className="w-4 h-4 text-amber-300" />
+                <span>Mejorar Mi Versión</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Banner Estratégico de Escalado según Plan Actual */}
+          {userEffectiveTier !== 'enterprise' ? (
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-r from-sky-950/70 via-indigo-950/60 to-purple-950/70 border border-sky-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner">
+              <div className="flex items-start gap-3">
+                <Zap className="w-6 h-6 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                <div>
+                  <h4 className="text-sm sm:text-base font-black text-white uppercase tracking-wide">
+                    {userEffectiveTier === 'lite'
+                      ? '¿Tu negocio necesita escaneo OCR y facturación ágil?'
+                      : userEffectiveTier === 'quick'
+                      ? '¿Tu negocio necesita presupuestos valorados y firma digital?'
+                      : '¿Tu empresa cuenta con empleados y requiere conexión AEAT?'}
+                  </h4>
+                  <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                    {userEffectiveTier === 'lite'
+                      ? 'Avanza a Quick o Pro para desbloquear el escaneo inteligente de compras, geolocalización de tareas, presupuestos y firma digital del cliente.'
+                      : userEffectiveTier === 'quick'
+                      ? 'La versión Quick está optimizada para emisión de facturas directas. Al avanzar a Gestarian Pro desbloquearás presupuestos valorados, firma táctil del cliente en pantalla, portal web interactivo y avisos de ITV.'
+                      : 'Evoluciona a Gestarian Enterprise para gestionar operarios y empleados con control horario y permisos selectivos (RBAC), conexión directa con la Sede Electrónica AEAT y soporte corporativo 24/7.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateHome) onNavigateHome();
+                  if (onShowToast) onShowToast('Selecciona tu plan superior en las tarjetas de Inicio.');
+                }}
+                className="whitespace-nowrap px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 self-end sm:self-center"
+              >
+                Ver Ventajas {userEffectiveTier === 'lite' ? 'Quick / Pro' : userEffectiveTier === 'quick' ? 'Pro' : 'Enterprise'}
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center gap-3 text-emerald-300">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div className="text-xs sm:text-sm font-bold">
+                Cuentas con la versión <strong>Enterprise</strong>. Tienes activadas el 100% de las herramientas del catálogo sin restricciones operativas.
+              </div>
+            </div>
+          )}
+
+          {/* Filtros de visualización */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setFeatureFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  featureFilter === 'all'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                Todas ({GESTARIAN_FEATURES_CATALOG.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeatureFilter('active')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                  featureFilter === 'active'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Activas en tu Plan ({activeFeaturesCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeatureFilter('locked')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                  featureFilter === 'locked'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Bloqueadas / Requiere Upgrade ({lockedFeaturesCount})</span>
+              </button>
+            </div>
+
+            {/* Filtro por categoría */}
+            <div className="flex items-center gap-1 overflow-x-auto py-1">
+              {['all', 'Facturación', 'Compras y Proveedores', 'Taller y Vehículos', 'Clientes y Portal', 'Equipo y Fiscalidad'].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFeatureCategory(cat)}
+                  className={`whitespace-nowrap px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    featureCategory === cat
+                      ? 'bg-sky-500/30 text-sky-200 border border-sky-400/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {cat === 'all' ? 'Categorías: Todas' : cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid de Funcionalidades */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            {displayedFeatures.map((feat) => {
+              const IconComp = feat.icon;
+              const isFeatureActive = userRank >= PLAN_RANK[feat.minPlan];
+
+              return (
+                <div
+                  key={feat.id}
+                  onClick={() => {
+                    if (!isFeatureActive) {
+                      if (onShowToast) {
+                        onShowToast(`La funcionalidad "${feat.name}" está disponible a partir de la versión ${feat.minPlanName}. Pulsa en "Mejorar Mi Versión" para acceder.`);
+                      }
+                    }
+                  }}
+                  className={`p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all ${
+                    isFeatureActive
+                      ? 'bg-[#0F172A]/80 border-emerald-500/30 hover:border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
+                      : 'bg-slate-950/60 border-amber-500/20 hover:border-amber-500/50 opacity-90 cursor-pointer hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                  }`}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          isFeatureActive
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          {feat.category}
+                        </span>
+                      </div>
+
+                      {/* Badge de estado en la versión del usuario */}
+                      {isFeatureActive ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                          <Check className="w-3 h-3" />
+                          <span>Activa</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 shrink-0">
+                          <Lock className="w-3 h-3 text-amber-400" />
+                          <span>{feat.minPlanName}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className={`text-sm sm:text-base font-black leading-snug ${
+                      isFeatureActive ? 'text-white' : 'text-slate-200'
+                    }`}>
+                      {feat.name}
+                    </h4>
+
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {feat.description}
+                    </p>
+
+                    {feat.quickNote && (
+                      <span className="text-[11px] font-bold text-sky-400 mt-0.5">
+                        ℹ️ {feat.quickNote}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 font-medium">
+                      Plan mínimo: <strong className="text-white">{feat.minPlanName}</strong>
+                    </span>
+
+                    {!isFeatureActive && (
+                      <span className="font-black text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                        <span>Desbloquear</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
 

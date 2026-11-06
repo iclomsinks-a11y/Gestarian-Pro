@@ -144,9 +144,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
         {/* Centro: Título */}
         <div className="flex-1 flex justify-center">
-          <h2 className={`${(pageId === 'page-proveedores' || title.toLowerCase().includes('proveedor')) ? 'text-[21.6px] sm:text-[25.6px] md:text-[28.8px]' : 'text-[27px] sm:text-[32px] md:text-[36px]'} font-black text-[#0F2942] tracking-tight truncate text-center`}>
-            {title}
-          </h2>
+          {(() => {
+            const isConfiguracion = pageId === 'page-configuracion' || title.toLowerCase().includes('configura');
+            const titleColor = isConfiguracion ? 'text-slate-300' : 'text-[#0F2942]';
+            return (
+              <h2 className={`text-[21.6px] sm:text-[25.6px] md:text-[28.8px] font-black ${titleColor} tracking-tight truncate text-center`}>
+                {title}
+              </h2>
+            );
+          })()}
         </div>
 
         {/* Lado Derecho: Inicio (si no es Lite) */}

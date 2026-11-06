@@ -8,6 +8,8 @@ import { DocumentType, GestarianDocument } from '../types';
 import { StandardCard } from './StandardCard';
 import { SheetPlusPIcon, SheetPIcon, SheetFIcon } from './BudgetIcons';
 import { getDocStatusColors } from '../utils/clientStatusHelper';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface DocumentListProps {
   documents: GestarianDocument[];
@@ -41,6 +43,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'presupuesto' | 'factura'>('all');
   const [search, setSearch] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const isVehicleActive = isVehicleFeatureActive(getUser());
 
   React.useEffect(() => {
     if (initialSearch !== undefined) {
@@ -86,7 +89,9 @@ export const DocumentList: React.FC<DocumentListProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filtered.map((doc) => {
               const isBudget = doc.type === 'presupuesto';
-              const subtitle = [doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico';
+              const subtitle = isVehicleActive
+                ? ([doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico')
+                : (doc.taskLocation || (isBudget ? 'Presupuesto' : 'Factura'));
 
               const isRejected = doc.status === 'rechazado';
               const isPaid = doc.status === 'pagado' || doc.status === 'PAGADO' || doc.status === 'confirmada';
@@ -132,7 +137,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                   status={cardStatus}
                   statusColor={statusColor}
                   statusTextColor={statusTextColor}
-                  vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
+                  vehiclePlate={isVehicleActive ? (doc.vehiclePlate || 'SIN-MAT') : undefined}
+                  hidePlate={!isVehicleActive}
                   subtitle={subtitle}
                   title={doc.clientName}
                   refCode={singleDocColors.budgetNum || doc.number}
@@ -369,7 +375,9 @@ export const DocumentList: React.FC<DocumentListProps> = ({
               {filtered.map((doc) => {
                 const isBudget = doc.type === 'presupuesto';
                 const isInvoice = doc.type === 'factura';
-                const subtitle = [doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico';
+                const subtitle = isVehicleActive
+                  ? ([doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico')
+                  : (doc.taskLocation || (isBudget ? 'Presupuesto' : 'Factura'));
 
                 const isAccepted = doc.acceptedByClient || doc.status === 'aceptado';
                 const isRejected = doc.status === 'rechazado';
@@ -410,7 +418,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                     status={cardStatus}
                     statusColor={statusColor}
                     statusTextColor={statusTextColor}
-                    vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
+                    vehiclePlate={isVehicleActive ? (doc.vehiclePlate || 'SIN-MAT') : undefined}
+                    hidePlate={!isVehicleActive}
                     subtitle={subtitle}
                     title={doc.clientName}
                     refCode={singleDocColors.budgetNum || doc.number}

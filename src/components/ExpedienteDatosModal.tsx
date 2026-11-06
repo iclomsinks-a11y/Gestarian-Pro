@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ClipboardList, User, Users, Wrench, Phone, CheckCircle2, Eye } from 'lucide-react';
 import { GestarianDocument, Client, AppUser } from '../types';
 import { DocumentViewerModal } from './DocumentViewerModal';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface ExpedienteDatosModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
     doc.assignedEmployeeId || ''
   );
   const [viewBudgetModalOpen, setViewBudgetModalOpen] = useState<boolean>(false);
+  const isVehicleActive = isVehicleFeatureActive(currentUser);
 
   React.useEffect(() => {
     setAssignedEmployeeId(doc.assignedEmployeeId || '');
@@ -127,18 +129,20 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
                   </span>
                 </div>
 
-                {/* Matrícula arriba centrada (misma altura h-8 que en solicitudes) */}
-                <div className="flex flex-col items-center justify-center shrink-0">
-                  <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-xs">
-                    <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
-                      <span className="text-[10px] text-white font-bold leading-none">E</span>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
-                      {doc.vehiclePlate || 'SIN-MAT'}
+                {/* Matrícula arriba centrada (solo sector automoción/transporte) */}
+                {isVehicleActive ? (
+                  <div className="flex flex-col items-center justify-center shrink-0">
+                    <div className="flex items-center bg-white border-2 border-gray-400 rounded overflow-hidden h-8 min-w-[120px] shadow-xs">
+                      <div className="bg-blue-700 h-full w-6 flex flex-col items-center justify-center shrink-0">
+                        <span className="text-[6px] text-yellow-300 font-bold mb-0.5">⭐</span>
+                        <span className="text-[10px] text-white font-bold leading-none">E</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center px-3 font-mono font-black text-lg tracking-widest text-[#0F172A]">
+                        {doc.vehiclePlate || 'SIN-MAT'}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : <div className="flex-1" />}
 
                 {/* Expediente sólo el número sin envoltorio ni texto */}
                 <div className="flex flex-col items-end min-w-[70px] sm:min-w-[100px]">
@@ -148,12 +152,14 @@ export const ExpedienteDatosModal: React.FC<ExpedienteDatosModalProps> = ({
                 </div>
               </div>
 
-              {/* Debajo: Marca y Modelo */}
-              <div className="text-center mb-1">
-                <span className="text-base sm:text-lg font-black text-[#0F172A] uppercase tracking-wide">
-                  {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'Vehículo Taller'}
-                </span>
-              </div>
+              {/* Debajo: Marca y Modelo (solo si vehículo activo) */}
+              {isVehicleActive && (
+                <div className="text-center mb-1">
+                  <span className="text-base sm:text-lg font-black text-[#0F172A] uppercase tracking-wide">
+                    {[doc.vehicleBrand, doc.vehicleModel].filter(Boolean).join(' ') || doc.vehicleType || 'Vehículo'}
+                  </span>
+                </div>
+              )}
 
               {/* Debajo: Nombre del Titular */}
               <div className="text-center mb-5">

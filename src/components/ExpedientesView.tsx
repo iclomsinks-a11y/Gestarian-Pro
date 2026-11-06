@@ -6,6 +6,15 @@ import { StandardCard } from './StandardCard';
 import { getExpedienteStatus } from '../utils/clientStatusHelper';
 import { RoadmapTracker } from './RoadmapTracker';
 import { ExpedienteDatosModal } from './ExpedienteDatosModal';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
+
+export interface ExpedienteHeaderDetails {
+  plate: string | null;
+  docRefNumber: string | null;
+  docRefType: 'presupuesto' | 'factura';
+  expedienteNumber: string | null;
+}
 
 interface ExpedientesViewProps {
   documents: GestarianDocument[];
@@ -25,6 +34,7 @@ interface ExpedientesViewProps {
   onRoadmapOpenChange?: (isOpen: boolean) => void;
   onSelectExpediente?: (expId: string | null) => void;
   onPlateChange?: (plate: string | null) => void;
+  onExpedienteDetailsChange?: (details: ExpedienteHeaderDetails | null) => void;
 }
 
 export const ExpedientesView: React.FC<ExpedientesViewProps> = ({ 
@@ -45,11 +55,13 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
   onRoadmapOpenChange,
   onSelectExpediente,
   onPlateChange,
+  onExpedienteDetailsChange,
 }) => {
   const [selectedExpediente, setSelectedExpediente] = useState<string | null>(initialExpedienteId);
   const [clientFilter, setClientFilter] = useState<string | null>(initialClientId);
   const [statusFilter, setStatusFilter] = useState<'todos' | 'en_curso' | 'cerrados'>('todos');
   const [showDatosModal, setShowDatosModal] = useState<boolean>(false);
+  const isVehicleActive = isVehicleFeatureActive(currentUser || getUser());
 
   React.useEffect(() => {
     const handleFilter = (e: any) => {
@@ -73,7 +85,7 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
         (d) => d.expediente === initialExpedienteId || d.number === initialExpedienteId || d.id === initialExpedienteId
       );
       if (onPlateChange) {
-        onPlateChange(expDoc?.vehiclePlate || null);
+        onPlateChange(isVehicleActive ? (expDoc?.vehiclePlate || null) : null);
       }
     } else {
       if (onPlateChange) {
@@ -117,7 +129,7 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
         (d) => d.expediente === expId || d.number === expId || d.id === expId
       );
       if (onPlateChange) {
-        onPlateChange(expDoc?.vehiclePlate || null);
+        onPlateChange(isVehicleActive ? (expDoc?.vehiclePlate || null) : null);
       }
     } else {
       if (onPlateChange) {
@@ -131,31 +143,132 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
   };
   
   // Extract unique expedientes: ÚNICAMENTE se generan a partir de presupuestos
-  const expedientesMap = new Map<string, { doc: GestarianDocument, client?: Client }>();
-  documents.forEach(doc => {
-    // REGLA FUNDAMENTAL: Las facturas recibidas NUNCA generan expediente ni aparecen en expedientes ni en roadmap
-    if (doc.type === 'factura_recibida') return;
+  const expedientesMap = React.useMemo(() => {
+    const map = new Map<string, { doc: GestarianDocument, client?: Client }>();
+    documents.forEach(doc => {
+      // REGLA FUNDAMENTAL: Las facturas recibidas NUNCA generan expediente ni aparecen en expedientes ni en roadmap
+      if (doc.type === 'factura_recibida') return;
 
-    // Los expedientes ÚNICAMENTE se generan a partir de los presupuestos (o facturas derivadas de un presupuesto)
-    if (doc.expediente) {
-      if (doc.type === 'presupuesto' || (doc.type as string) === 'budget') {
-        if (!expedientesMap.has(doc.expediente)) {
-          const client = clients.find(c => c.id === doc.clientId);
-          expedientesMap.set(doc.expediente, { doc, client });
+      // Los expedientes ÚNICAMENTE se generan a partir de los presupuestos (o facturas derivadas de un presupuesto)
+      if (doc.expediente) {
+        if (doc.type === 'presupuesto' || (doc.type as string) === 'budget') {
+          if (!map.has(doc.expediente)) {
+            const client = clients.find(c => c.id === doc.clientId);
+            map.set(doc.expediente, { doc, client });
+          }
+        } else if (doc.type === 'factura') {
+          // Si ya existe el presupuesto registrado para este expediente, preferimos la factura para el último estado
+          const existing = map.get(doc.expediente);
+          if (existing) {
+            map.set(doc.expediente, { doc, client: existing.client });
+          } else if (doc.linkedBudgetId) {
+            // Factura emitida con presupuesto vinculado
+            const client = clients.find(c => c.id === doc.clientId);
+            map.set(doc.expediente, { doc, client });
+          }
         }
-      } else if (doc.type === 'factura') {
-        // Si ya existe el presupuesto registrado para este expediente, preferimos la factura para el último estado
-        const existing = expedientesMap.get(doc.expediente);
-        if (existing) {
-          expedientesMap.set(doc.expediente, { doc, client: existing.client });
-        } else if (doc.linkedBudgetId) {
-          // Factura emitida con presupuesto vinculado
-          const client = clients.find(c => c.id === doc.clientId);
-          expedientesMap.set(doc.expediente, { doc, client });
+      }
+    });
+    return map;
+  }, [documents, clients]);
+
+  const activeExpedienteData = React.useMemo(() => {
+    if (!selectedExpediente) return null;
+    let found = expedientesMap.get(selectedExpediente);
+    if (!found) {
+      const cleanTarget = selectedExpediente.replace(/\D/g, '');
+      for (const [expKey, item] of expedientesMap.entries()) {
+        const cleanKey = expKey.replace(/\D/g, '');
+        if (
+          item.doc.id === selectedExpediente ||
+          item.doc.number === selectedExpediente ||
+          item.doc.expediente === selectedExpediente ||
+          (cleanTarget && cleanKey && cleanTarget === cleanKey) ||
+          expKey.toLowerCase() === selectedExpediente.toLowerCase()
+        ) {
+          found = item;
+          break;
         }
       }
     }
-  });
+    if (!found) {
+      const fallbackDoc = documents.find(
+        (d) =>
+          d.type !== 'factura_recibida' &&
+          (d.type === 'presupuesto' || (d.type as string) === 'budget' || d.type === 'factura') &&
+          (d.expediente === selectedExpediente ||
+            d.number === selectedExpediente ||
+            d.id === selectedExpediente)
+      );
+      if (fallbackDoc && fallbackDoc.expediente) {
+        const client = clients.find((c) => c.id === fallbackDoc.clientId);
+        found = { doc: fallbackDoc, client };
+      }
+    }
+    return found || null;
+  }, [selectedExpediente, expedientesMap, documents, clients]);
+
+  const activeDocDetails = React.useMemo((): ExpedienteHeaderDetails | null => {
+    if (!activeExpedienteData) return null;
+    const { doc } = activeExpedienteData;
+
+    const foundInvoiceDoc = doc.type === 'factura'
+      ? doc
+      : documents.find(
+          (d) =>
+            d.type === 'factura' &&
+            (d.expediente === doc.expediente ||
+              d.id === doc.convertedToInvoiceId ||
+              d.number === doc.convertedToInvoiceId)
+        );
+
+    const foundBudgetDoc = doc.type === 'presupuesto'
+      ? doc
+      : documents.find(
+          (d) =>
+            (d.type === 'presupuesto' || (d.type as string) === 'budget') &&
+            (d.expediente === doc.expediente || d.id === doc.linkedBudgetId)
+        );
+
+    const isInvoiceEmitted = Boolean(
+      foundInvoiceDoc ||
+      doc.type === 'factura' ||
+      Boolean(doc.convertedToInvoiceId) ||
+      doc.facturacionStatus === 'facturado' ||
+      doc.facturacionStatus === 'factura_enviada'
+    );
+
+    const docRefNumber = isInvoiceEmitted
+      ? (foundInvoiceDoc?.number || (doc.type === 'factura' ? doc.number : null) || doc.convertedToInvoiceId || null)
+      : (foundBudgetDoc?.number || (doc.type === 'presupuesto' ? doc.number : null) || null);
+
+    const docRefType: 'presupuesto' | 'factura' = isInvoiceEmitted ? 'factura' : 'presupuesto';
+
+    return {
+      plate: doc.vehiclePlate || null,
+      docRefNumber,
+      docRefType,
+      expedienteNumber: doc.expediente || selectedExpediente,
+    };
+  }, [activeExpedienteData, documents, selectedExpediente]);
+
+  React.useEffect(() => {
+    if (selectedExpediente && activeDocDetails) {
+      if (onExpedienteDetailsChange) {
+        onExpedienteDetailsChange(activeDocDetails);
+      }
+      if (onPlateChange) {
+        onPlateChange(activeDocDetails.plate);
+      }
+    } else if (!selectedExpediente) {
+      if (onExpedienteDetailsChange) {
+        onExpedienteDetailsChange(null);
+      }
+      if (onPlateChange) {
+        onPlateChange(null);
+      }
+    }
+  }, [selectedExpediente, activeDocDetails, onExpedienteDetailsChange, onPlateChange]);
 
   const expedientes = Array.from(expedientesMap.values());
 
@@ -185,45 +298,13 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
     };
   });
 
-  if (selectedExpediente) {
-    let data = expedientesMap.get(selectedExpediente);
-    if (!data) {
-      const cleanTarget = selectedExpediente.replace(/\D/g, '');
-      for (const [expKey, item] of expedientesMap.entries()) {
-        const cleanKey = expKey.replace(/\D/g, '');
-        if (
-          item.doc.id === selectedExpediente ||
-          item.doc.number === selectedExpediente ||
-          item.doc.expediente === selectedExpediente ||
-          (cleanTarget && cleanKey && cleanTarget === cleanKey) ||
-          expKey.toLowerCase() === selectedExpediente.toLowerCase()
-        ) {
-          data = item;
-          break;
-        }
-      }
-    }
-    if (!data) {
-      const fallbackDoc = documents.find(
-        (d) =>
-          d.type !== 'factura_recibida' &&
-          (d.type === 'presupuesto' || (d.type as string) === 'budget' || d.type === 'factura') &&
-          (d.expediente === selectedExpediente ||
-          d.number === selectedExpediente ||
-          d.id === selectedExpediente)
-      );
-      if (fallbackDoc && fallbackDoc.expediente) {
-        const client = clients.find((c) => c.id === fallbackDoc.clientId);
-        data = { doc: fallbackDoc, client };
-      }
-    }
-    if (data) {
-      const { doc, client } = data;
-      return (
-        <div className="w-full min-h-screen flex flex-col bg-white animate-in fade-in duration-300">
-          <div className="w-full px-3 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col">
-            {/* Roadmap Interactivo con 6 paradas (sin header superior) */}
-            <RoadmapTracker
+  if (selectedExpediente && activeExpedienteData) {
+    const { doc, client } = activeExpedienteData;
+    return (
+      <div className="w-full min-h-screen flex flex-col bg-white animate-in fade-in duration-300">
+        <div className="w-full px-3 sm:px-6 lg:px-8 pb-8 flex-1 flex flex-col">
+          {/* Roadmap Interactivo con 6 paradas (sin header superior) */}
+          <RoadmapTracker
               document={doc}
               client={client}
               allDocuments={documents}
@@ -252,7 +333,6 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
           </div>
         </div>
       );
-    }
   }
 
   // Dashboard de Tarjetas de Expedientes
@@ -323,9 +403,9 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
             {displayedExpedientes.map((data, index) => {
               const { doc, client, expStatus } = data;
 
-              const subtitle =
-                [doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') ||
-                'Vehículo Genérico';
+              const subtitle = isVehicleActive
+                ? ([doc.vehicleBrand, doc.vehicleModel || doc.vehicleType].filter(Boolean).join(' ') || 'Vehículo Genérico')
+                : (client?.name || doc.clientName || 'Expediente');
               return (
                 <StandardCard
                   id={`card-expediente-${doc.expediente || index}`}
@@ -333,7 +413,8 @@ export const ExpedientesView: React.FC<ExpedientesViewProps> = ({
                   status={expStatus.label}
                   statusColor={expStatus.borderClass}
                   statusTextColor={expStatus.textColor}
-                  vehiclePlate={doc.vehiclePlate || 'SIN-MAT'}
+                  vehiclePlate={isVehicleActive ? (doc.vehiclePlate || 'SIN-MAT') : undefined}
+                  hidePlate={!isVehicleActive}
                   subtitle={subtitle}
                   title={client?.name || doc.clientName || 'Cliente'}
                   refCode={doc.number}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StandardCard } from './StandardCard';
 import { Appointment, GestarianDocument } from '../types';
 import { Calendar, FolderKanban, MessageCircle, Phone, Printer } from 'lucide-react';
+import { getUser } from '../services/storage';
+import { isVehicleFeatureActive } from '../services/preventiveMaintenanceService';
 
 interface CitasViewProps {
   id: string;
@@ -24,6 +26,7 @@ export const CitasView: React.FC<CitasViewProps> = ({
   onNavigateToExpediente,
 }) => {
   const [search, setSearch] = useState('');
+  const isVehicleActive = isVehicleFeatureActive(getUser());
 
   useEffect(() => {
     const handleCitasSearch = (e: Event) => {
@@ -96,7 +99,7 @@ export const CitasView: React.FC<CitasViewProps> = ({
               statusTextColor = 'text-blue-600';
             }
 
-            const plate = linkedDoc?.vehiclePlate || '9821-KLS';
+            const plate = isVehicleActive ? (linkedDoc?.vehiclePlate || '9821-KLS') : undefined;
             const vehicle =
               [linkedDoc?.vehicleBrand, linkedDoc?.vehicleModel || linkedDoc?.vehicleType].filter(Boolean).join(' ') ||
               'Vehículo en Taller';
@@ -109,7 +112,8 @@ export const CitasView: React.FC<CitasViewProps> = ({
                 statusColor={statusColor}
                 statusTextColor={statusTextColor}
                 vehiclePlate={plate}
-                subtitle={`CITA TALLER: ${app.date} • ${app.time}H — ${vehicle}`}
+                hidePlate={!isVehicleActive}
+                subtitle={isVehicleActive ? `CITA TALLER: ${app.date} • ${app.time}H — ${vehicle}` : `CITA: ${app.date} • ${app.time}H`}
                 title={app.clientName}
                 refCode={`CITA-${app.id.slice(0, 6).toUpperCase()}`}
                 expediente={targetExp}
@@ -119,9 +123,16 @@ export const CitasView: React.FC<CitasViewProps> = ({
                   <div className="flex flex-col gap-3">
                     {/* Asunto con tamaño de texto x2 (text-xl sm:text-2xl) */}
                     <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200">
-                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 block mb-0.5">
-                        Asunto:
-                      </span>
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 block">
+                          Asunto:
+                        </span>
+                        {(linkedDoc?.isPreItv || app.title.toLowerCase().includes('itv')) && (
+                          <span className="px-2 py-0.5 bg-teal-100 text-teal-900 border border-teal-300 rounded font-bold text-[10px] uppercase tracking-wider">
+                            🛡️ Revisión Pre-ITV
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
                         {app.title}
                       </div>

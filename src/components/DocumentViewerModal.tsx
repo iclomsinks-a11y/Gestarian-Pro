@@ -9,10 +9,11 @@ import {
   MessageCircle,
   ArrowLeft,
 } from 'lucide-react';
-import { GestarianDocument, DocumentPayment, InternalNotification, getDefaultIvaRate } from '../types';
+import { GestarianDocument, DocumentPayment, InternalNotification, getDefaultIvaRate, AppUser, GestarianPlan } from '../types';
 import { generateDocumentPdf, printDocumentPdf } from '../services/pdfGenerator';
 import { ReceivedInvoiceViewer } from './ReceivedInvoiceViewer';
 import { DocumentSheet, isInvoiceType, isBudgetType } from './DocumentSheet';
+import { DigitalSignaturePad } from './DigitalSignaturePad';
 import {
   getStoredDocuments,
   saveStoredDocuments,
@@ -27,6 +28,8 @@ interface DocumentViewerModalProps {
   onClose: () => void;
   isClientView?: boolean;
   userLogoUrl?: string;
+  currentUser?: AppUser;
+  currentPlan?: GestarianPlan;
   onConfirmInvoice?: (docId: string) => void;
   onSendInvoice?: (docId: string) => void;
   onAcceptBudget?: (doc: GestarianDocument) => void;
@@ -36,6 +39,7 @@ interface DocumentViewerModalProps {
   onNavigateToExpediente?: (expNum: string) => void;
   onShowToast?: (msg: string, duration?: number) => void;
   onDiscardInvoice?: (docId: string) => void;
+  onDocumentSigned?: (updatedDoc: GestarianDocument) => void;
 }
 
 export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
@@ -44,6 +48,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   onClose,
   isClientView = false,
   userLogoUrl,
+  currentUser,
+  currentPlan,
   onConfirmInvoice,
   onSendInvoice,
   onAcceptBudget,
@@ -53,6 +59,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   onNavigateToExpediente,
   onShowToast,
   onDiscardInvoice,
+  onDocumentSigned,
 }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [editableDoc, setEditableDoc] = useState<GestarianDocument | null>(doc);
@@ -119,9 +126,33 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const isInvoice = isInvoiceType(doc.type);
   const isBudget = isBudgetType(doc.type);
   const isBudgetOrInvoice = isBudget || isInvoice;
+  const isQuick = currentPlan === 'quick' || currentUser?.currentTier === 'quick';
   const docTitle = isInvoice ? 'Factura' : isBudget ? 'Presupuesto' : 'Documento';
   const effectiveLogoUrl = userLogoUrl || (doc as any).issuerLogoUrl || (doc as any).issuerLogo;
   const sheetDoc: GestarianDocument = editableDoc || doc;
+
+  const formatInvoiceSentDate = (dateVal?: string): string => {
+    let d: Date;
+    if (!dateVal) {
+      d = new Date();
+    } else {
+      d = new Date(dateVal);
+      if (isNaN(d.getTime())) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+          const [y, m, day] = dateVal.split('-').map(Number);
+          d = new Date(y, m - 1, day, 12, 0);
+        } else {
+          d = new Date();
+        }
+      }
+    }
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} a las ${hours}:${minutes}`;
+  };
 
   const handleUpdateItem = (idx: number, field: string, value: any) => {
     if (!editableDoc) return;
@@ -229,6 +260,77 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const clientPhoneDigits = (sheetDoc.clientPhone || '').replace(/\D/g, '');
   const whatsappNumber = clientPhoneDigits.startsWith('34') ? clientPhoneDigits : `34${clientPhoneDigits}`;
 
+  const effectivePlan = currentPlan || currentUser?.currentTier;
+  const isPlanAllowedForSignature =
+    effectivePlan === 'pro' ||
+    effectivePlan === 'enterprise';
+
+  const isDigitalSignatureActive =
+    isPlanAllowedForSignature &&
+    Boolean(currentUser?.enableDigitalSignature) &&
+    isBudgetOrInvoice;
+
+  const handleSaveSignature = (signatureDataUrl: string) => {
+    const currentBase = editableDoc || doc;
+    if (!currentBase) return;
+    const nowIso = new Date().toISOString();
+    const updated: GestarianDocument = {
+      ...currentBase,
+      digitalSignature: signatureDataUrl,
+      signedAt: nowIso,
+      signedByName: currentBase.clientName || 'Cliente',
+      ...(isBudget && (currentBase.status === 'borrador' || currentBase.status === 'enviado')
+        ? { acceptedByClient: true, status: 'aceptado' as any }
+        : {}),
+    };
+
+    setEditableDoc(updated);
+
+    try {
+      const stored = getStoredDocuments();
+      const updatedList = stored.map((d) => (d.id === updated.id ? updated : d));
+      saveStoredDocuments(updatedList);
+      window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+    } catch (e) {
+      console.error('Error guardando firma en storedDocuments:', e);
+    }
+
+    if (onDocumentSigned) {
+      onDocumentSigned(updated);
+    }
+    if (onShowToast) {
+      onShowToast(`Firma digital guardada y registrada en ${docTitle} ${updated.number}.`, 4000);
+    }
+  };
+
+  const handleClearSignature = () => {
+    const currentBase = editableDoc || doc;
+    if (!currentBase) return;
+    const updated: GestarianDocument = {
+      ...currentBase,
+      digitalSignature: undefined,
+      signedAt: undefined,
+      signedByName: undefined,
+    };
+    setEditableDoc(updated);
+
+    try {
+      const stored = getStoredDocuments();
+      const updatedList = stored.map((d) => (d.id === updated.id ? updated : d));
+      saveStoredDocuments(updatedList);
+      window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (onDocumentSigned) {
+      onDocumentSigned(updated);
+    }
+    if (onShowToast) {
+      onShowToast(`Firma digital eliminada de ${docTitle} ${updated.number}.`);
+    }
+  };
+
   return (
     <div
       id="document-viewer-modal-container"
@@ -254,21 +356,38 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             onUpdateNotes={(notes) =>
               setEditableDoc((prev) => (prev ? { ...prev, notes } : null))
             }
+            hidePayments={isQuick}
           />
+
+          {/* CAMPO DE FIRMA DIGITAL INTERACTIVO (SOLO PRO Y ENTERPRISE SI ESTÁ ACTIVADO EN CONFIGURACIÓN) */}
+          {isDigitalSignatureActive && (
+            <DigitalSignaturePad
+              existingSignature={sheetDoc.digitalSignature}
+              signedAt={sheetDoc.signedAt}
+              signedByName={sheetDoc.signedByName}
+              clientName={sheetDoc.clientName}
+              docTitle={docTitle}
+              documentNumber={sheetDoc.number}
+              onSaveSignature={handleSaveSignature}
+              onClearSignature={handleClearSignature}
+            />
+          )}
 
           {/* Aviso de estado oficial (solo en pantalla, oculto en impresión y budgets si aplica) */}
           {isBudgetOrInvoice && isSent && (
-            <div className="w-full bg-blue-50 border-2 border-blue-500 rounded-xl p-3.5 sm:p-4 text-center mt-5 print:hidden no-print">
+            <div className="w-full bg-blue-50 border-2 border-blue-500 rounded-xl p-4 sm:p-5 text-center mt-5 print:hidden no-print">
               <div className="text-sm sm:text-base font-black text-blue-900 uppercase tracking-wide">
                 {isBudget ? 'PRESUPUESTO ENVIADO AL CLIENTE' : 'FACTURA ENVIADA AL CLIENTE'}
               </div>
-              <div className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wider mt-1">
-                {isBudget
-                  ? 'PENDIENTE DE ACEPTACIÓN'
-                  : isTotalPaid
-                  ? 'FACTURA ABONADA'
-                  : 'PENDIENTE DE COBRO'}
-              </div>
+              {!isBudget ? (
+                <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-wide mt-2 font-mono">
+                  {formatInvoiceSentDate(sheetDoc.sentAt || doc.sentAt || sheetDoc.date || doc.date)}
+                </div>
+              ) : (
+                <div className="text-xs sm:text-sm font-bold text-amber-800 uppercase tracking-wider mt-1">
+                  PENDIENTE DE ACEPTACIÓN
+                </div>
+              )}
             </div>
           )}
 

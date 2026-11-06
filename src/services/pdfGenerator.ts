@@ -431,6 +431,43 @@ export async function buildDocumentPdf(doc: GestarianDocument, options: Generate
     }
   }
 
+  // 5.2 FIRMA DIGITAL DEL CLIENTE (SI EL DOCUMENTO ESTÁ FIRMADO DIGITALMENTE)
+  if (doc.digitalSignature) {
+    const signatureBoxHeight = 24;
+    if (currentY + signatureBoxHeight > pageHeight - 30) {
+      pdf.addPage();
+      currentY = margin;
+    }
+
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.roundedRect(margin, currentY, contentWidth, signatureBoxHeight, 2, 2, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('CONFORMIDAD Y FIRMA DIGITAL DEL CLIENTE', margin + 4, currentY + 6);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(71, 85, 105);
+    const dateFormatted = doc.signedAt
+      ? new Date(doc.signedAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
+      : doc.date;
+    pdf.text(`Documento firmado electrónicamente por ${doc.signedByName || doc.clientName || 'el cliente'} (${dateFormatted})`, margin + 4, currentY + 11);
+    pdf.text('Validez y conformidad registrada en GESTARIAN', margin + 4, currentY + 16);
+
+    try {
+      const sigWidth = 38;
+      const sigHeight = 18;
+      pdf.addImage(doc.digitalSignature, 'PNG', pageWidth - margin - sigWidth - 4, currentY + 3, sigWidth, sigHeight);
+    } catch (sigErr) {
+      console.warn('No se pudo añadir imagen de firma al PDF:', sigErr);
+    }
+
+    currentY += signatureBoxHeight + 6;
+  }
+
   // 6. HISTORIAL DE ABONOS (SI ES FACTURA CON ABONOS O ESTÁ TOTALMENTE ABONADA)
   const docPayments: DocumentPayment[] = (doc as any).payments || [];
   const totalPaid = docPayments.reduce((sum, p) => sum + (p.amount || 0), 0);

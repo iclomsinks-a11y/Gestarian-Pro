@@ -5,8 +5,15 @@ import {
   CreditCard, Check, ChevronRight, LogOut, Car, Wrench, Upload, MessageSquare,
   ChevronDown, ChevronUp, CheckCircle, Info
 } from 'lucide-react';
-import { Client, GestarianDocument, AppUser, InternalNotification, BudgetStatus, SolicitudItem } from '../types';
-import { addStoredSolicitud, getStoredSolicitudes, saveStoredSolicitudes, getNextSolicitudData } from '../services/storage';
+import { Client, GestarianDocument, AppUser, InternalNotification, BudgetStatus, SolicitudItem, ClientVehicle } from '../types';
+import { 
+  addStoredSolicitud, getStoredSolicitudes, saveStoredSolicitudes, getNextSolicitudData,
+  getStoredAppointments, saveStoredAppointments, saveStoredDocuments, sanitizePlate
+} from '../services/storage';
+import { 
+  isAutomotiveWorkshop, getVehicleItvAlerts, generatePreItvBudgetAndAppointment, 
+  parseItvDate, formatDateDmy 
+} from '../services/preventiveMaintenanceService';
 
 interface ClientPortalModalProps {
   isOpen: boolean;
@@ -129,6 +136,26 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
   const clientBudgets = clientDocs.filter((d) => d.type === 'presupuesto');
   const clientInvoices = clientDocs.filter((d) => d.type === 'factura');
 
+  // Detección automática de taller y de revisiones pre-ITV
+  const isWorkshopAuto = isAutomotiveWorkshop(user);
+  const preItvBudgets = clientBudgets.filter((d) => d.isPreItv && d.status !== 'rechazado');
+  const vehiclesNeedingPreItv = isWorkshopAuto
+    ? (loggedClient.vehicles || []).filter((veh) => {
+        const cleanP = sanitizePlate(veh.plate);
+        if (!cleanP) return false;
+        const alreadyHasBudget = preItvBudgets.some((d) => sanitizePlate(d.vehiclePlate) === cleanP);
+        if (alreadyHasBudget) return false;
+        const itvD = veh.itvDate || (veh.ocrData?.itvExpiryDate ? veh.ocrData.itvExpiryDate.split('/').reverse().join('-') : undefined);
+        if (!itvD) return false;
+        const parsed = parseItvDate(itvD);
+        if (!parsed) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((parsed.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays <= 60;
+      })
+    : [];
+
   // Cálculo de Deudas
   const totalBilled = clientInvoices.reduce((acc, i) => acc + i.total, 0);
   const totalPaid = clientInvoices
@@ -182,16 +209,73 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
       console.error('Error sincronizando solicitud tras aceptar presupuesto:', e);
     }
 
+    // Sincronizar cita vinculada en agenda a 'confirmada'
+    try {
+      const storedApps = getStoredAppointments();
+      const updatedApps = storedApps.map((a) => {
+        if (
+          a.budgetId === doc.id ||
+          (doc.expediente && a.budgetId === doc.expediente) ||
+          (doc.number && a.budgetId === doc.number) ||
+          (doc.vehiclePlate && a.title.includes(doc.vehiclePlate))
+        ) {
+          return {
+            ...a,
+            status: 'confirmada' as const,
+            date: workshopDate,
+            time: workshopTime,
+          };
+        }
+        return a;
+      });
+      saveStoredAppointments(updatedApps);
+      window.dispatchEvent(new CustomEvent('gestarian_appointments_updated'));
+    } catch (e) {
+      console.error('Error sincronizando cita tras aceptación:', e);
+    }
+
     const notif: InternalNotification = {
       id: `notif_${Date.now()}`,
-      title: 'Presupuesto y Fecha de Entrega Aceptados',
-      message: `El cliente ${loggedClient.name} ha ACEPTADO el presupuesto ${doc.number} y la fecha/hora propuesta de entrega (${workshopDate} a las ${workshopTime}).`,
+      title: doc.isPreItv ? 'Revisión Pre-ITV y Cita Aceptadas' : 'Presupuesto y Fecha de Entrega Aceptados',
+      message: doc.isPreItv
+        ? `El cliente ${loggedClient.name} ha ACEPTADO la revisión Pre-ITV ${doc.number} para el vehículo [${doc.vehiclePlate || 'Vehículo'}]. Acudirá al taller el ${workshopDate} a las ${workshopTime}.`
+        : `El cliente ${loggedClient.name} ha ACEPTADO el presupuesto ${doc.number} y la fecha/hora propuesta de entrega (${workshopDate} a las ${workshopTime}).`,
       timestamp: now,
       read: false,
       type: 'general',
       budgetId: doc.id,
     };
 
+    onSendNotificationToWorkshop(notif);
+  };
+
+  // Generación bajo demanda de presupuesto y cita Pre-ITV
+  const handleGeneratePreItvProposal = (vehicle: ClientVehicle, targetItvDateStr?: string) => {
+    const { budget: newBudget, appointment: newAppointment } = generatePreItvBudgetAndAppointment(
+      loggedClient,
+      vehicle,
+      user,
+      documents,
+      targetItvDateStr
+    );
+
+    const nextDocs = [newBudget, ...documents];
+    saveStoredDocuments(nextDocs);
+    window.dispatchEvent(new CustomEvent('gestarian_documents_updated'));
+
+    const storedApps = getStoredAppointments();
+    saveStoredAppointments([newAppointment, ...storedApps]);
+    window.dispatchEvent(new CustomEvent('gestarian_appointments_updated'));
+
+    const notif: InternalNotification = {
+      id: `notif_itv_${Date.now()}`,
+      title: 'Presupuesto y Cita Pre-ITV Preparados',
+      message: `Se ha facilitado automáticamente el presupuesto ${newBudget.number} y cita previa (${newBudget.vehicleDeliveryDate} a las ${newBudget.vehicleDeliveryTime}) para el vehículo [${vehicle.plate}] de ${loggedClient.name}.`,
+      timestamp: new Date().toISOString(),
+      read: false,
+      type: 'general',
+      budgetId: newBudget.id,
+    };
     onSendNotificationToWorkshop(notif);
   };
 
@@ -495,6 +579,189 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                 </span>
               </div>
 
+              {/* CAMPAÑA DE REVISIÓN PRE-ITV Y MANTENIMIENTO PREVENTIVO */}
+              {isWorkshopAuto && preItvBudgets.length > 0 && (
+                <div className="space-y-4 mb-4">
+                  {preItvBudgets.map((doc) => {
+                    const isAccepted = doc.status === 'aceptado';
+                    const { date: workshopDate, time: workshopTime } = extractDateAndTime(doc);
+
+                    return (
+                      <div
+                        key={`preitv_hero_${doc.id}`}
+                        className={`p-5 sm:p-6 rounded-2xl border-2 transition-all shadow-md ${
+                          isAccepted
+                            ? 'bg-gradient-to-br from-emerald-50 via-white to-teal-50 border-emerald-400'
+                            : 'bg-gradient-to-br from-blue-50/80 via-white to-amber-50/60 border-blue-400'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-[#0F2942] text-white flex items-center justify-center font-bold shadow-xs">
+                              <ShieldCheck className="w-6 h-6 text-teal-300" />
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-black uppercase tracking-wider text-blue-900 block">
+                                Campaña Oficial de Mantenimiento Preventivo
+                              </span>
+                              <h4 className="text-base sm:text-lg font-black uppercase text-[#0F172A] leading-tight">
+                                Revisión y Diagnosis Pre-ITV Programada
+                              </h4>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-[#0F2942] text-white font-mono font-bold text-xs rounded-md shadow-2xs">
+                              {doc.number}
+                            </span>
+                            {doc.expediente && (
+                              <span className="px-3 py-1 bg-blue-100 text-blue-900 font-mono font-bold text-xs rounded-md border border-blue-300">
+                                Exp. {doc.expediente}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Vehículo y Fecha Propuesta */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3">
+                          <div className="p-3 bg-white/90 border border-slate-200 rounded-xl">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                              Vehículo a Inspeccionar
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Car className="w-5 h-5 text-blue-900 shrink-0" />
+                              <strong className="text-base text-slate-900">
+                                {doc.vehicleBrand} {doc.vehicleModel}
+                              </strong>
+                              {doc.vehiclePlate && (
+                                <span className="font-mono font-black text-xs px-2 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-900">
+                                  🇪🇸 {doc.vehiclePlate}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-white/90 border border-slate-200 rounded-xl">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                              Cita Previa en Taller Asignada
+                            </span>
+                            <div className="flex items-center gap-2 text-slate-900">
+                              <Calendar className="w-5 h-5 text-teal-700 shrink-0" />
+                              <span className="font-mono font-bold text-sm">
+                                📅 {workshopDate}
+                              </span>
+                              <span className="font-mono font-bold text-sm flex items-center gap-1 text-slate-700">
+                                <Clock className="w-4 h-4 text-teal-700" /> {workshopTime} h
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Desglose de servicios pre-ITV incluidos */}
+                        <div className="p-4 bg-white/95 border border-slate-200 rounded-xl space-y-2 mt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
+                              Trabajos Incluidos en la Revisión Oficial
+                            </span>
+                            <span className="text-lg font-black font-mono text-slate-950">
+                              {doc.total.toFixed(2)} € <span className="text-xs text-slate-500 font-sans font-normal">(IVA 21% incl.)</span>
+                            </span>
+                          </div>
+
+                          <ul className="space-y-1.5 text-xs text-slate-700">
+                            {doc.items.map((item, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <span className="flex-1 font-medium">{item.description}</span>
+                                <span className="font-mono font-bold text-slate-900 shrink-0">{item.amount.toFixed(2)} €</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Acciones o Estado */}
+                        {isAccepted ? (
+                          <div className="mt-4 p-4 bg-emerald-100/90 border border-emerald-300 rounded-xl flex flex-wrap items-center justify-between gap-3 text-emerald-950">
+                            <div className="flex items-center gap-2.5">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                              <div>
+                                <strong className="text-sm block">¡Cita y Presupuesto Aceptados!</strong>
+                                <span className="text-xs text-emerald-800">
+                                  Te esperamos el <strong>{workshopDate} a las {workshopTime} h</strong> en <strong>{user?.fullName || 'DM CAR'}</strong>. Únicamente debes traer el vehículo en la fecha acordada.
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => onViewDoc(doc)}
+                              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-xs cursor-pointer transition-all"
+                            >
+                              Ver Presupuesto Firmado
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                              💡 El taller ha preparado esta revisión pre-ITV y fijado la cita para que tu vehículo supere la inspección técnica sin faltas ni retrasos. Al pulsar en <strong>Aceptar</strong>, la cita quedará confirmada automáticamente en la agenda del taller y únicamente tendrás que traer el vehículo en la fecha y hora indicadas.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleAcceptBudget(doc)}
+                                className="flex-1 sm:flex-none px-6 py-3 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>Aceptar Presupuesto y Confirmar Cita (1 Clic)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onViewDoc(doc)}
+                                className="px-5 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-bold text-xs uppercase tracking-wider rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
+                              >
+                                <FileText className="w-4 h-4 text-blue-800" />
+                                <span>Ver Presupuesto y Firmar</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Sugerencia para vehículos con ITV próxima sin propuesta generada aún */}
+              {isWorkshopAuto && vehiclesNeedingPreItv.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {vehiclesNeedingPreItv.map((veh) => (
+                    <div
+                      key={`unbudgeted_${veh.plate}`}
+                      className="p-4 bg-amber-50/80 border border-amber-300 rounded-xl flex flex-wrap items-center justify-between gap-3 text-amber-950"
+                    >
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
+                            Aviso de ITV Próxima
+                          </span>
+                          <span className="text-xs font-semibold text-slate-900">
+                            La ITV de tu vehículo <strong>{veh.brand} {veh.model} ({veh.plate})</strong> vence el <strong>{formatDateDmy(veh.itvDate)}</strong>.
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleGeneratePreItvProposal(veh, veh.itvDate)}
+                        className="px-4 py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Facilitar Presupuesto y Cita Pre-ITV</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {clientBudgets.length === 0 ? (
                 <div className="text-center py-12 bg-white border border-[#E2E0D8] rounded-xl text-[18px] text-[#64748B]">
                   <FileText className="w-10 h-10 mx-auto text-[#CBD5E1] mb-2" />
@@ -544,6 +811,12 @@ export const ClientPortalModal: React.FC<ClientPortalModalProps> = ({
                             {doc.expediente && (
                               <span className="px-2.5 py-1 bg-blue-100 text-blue-900 font-mono font-bold text-[18px] rounded border border-blue-200">
                                 Expediente {doc.expediente}
+                              </span>
+                            )}
+                            {doc.isPreItv && (
+                              <span className="px-2.5 py-1 bg-teal-100 text-teal-900 font-bold text-xs uppercase tracking-wider rounded border border-teal-300 flex items-center gap-1">
+                                <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+                                <span>Revisión Pre-ITV</span>
                               </span>
                             )}
                             <span className="text-[18px] text-[#64748B]">
